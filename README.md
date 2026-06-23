@@ -2,7 +2,7 @@
 
 See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
 
-![demo](docs/demo.svg)
+![demo](docs/demo.png)
 
 A deterministic **legal function operating system**: it takes incoming legal requests and runs each through **intake → risk → priority → routing → SLA → approval matrix → external-counsel decision tree → escalation**, then rolls them up into a **board-ready operations pack**.
 
