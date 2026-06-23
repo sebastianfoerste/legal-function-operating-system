@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legal-function-os"
+version = "0.1.0"
+description = "Deterministic legal function operating system: routing, SLAs, approval matrix, and a board-ready operations pack."
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [{ name = "Sebastian Förste" }]
+keywords = ["legal-ops", "legal-engineering", "governance", "gc", "ai-saas"]
+dependencies = []
+
+[project.scripts]
+legal-function-os = "legal_function_os.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

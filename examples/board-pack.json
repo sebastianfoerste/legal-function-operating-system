@@ -1,0 +1,284 @@
+{
+  "title": "Legal Function — Board Operations Pack",
+  "period": "Q2 2026 (synthetic)",
+  "disclaimer": "Board pack generated from deterministic legal-operations rules over synthetic requests. It is a management and triage artifact, not legal advice, and does not establish a lawyer-client relationship.",
+  "totals": {
+    "requests": 8,
+    "high_risk": 5,
+    "external_referrals": 3,
+    "board_attention_items": 3,
+    "sla_breaches": 1,
+    "gc_approvals_required": 5
+  },
+  "by_type": {
+    "commercial_contract": 2,
+    "dpa": 1,
+    "ai_governance": 1,
+    "fundraising": 1,
+    "vendor_review": 1,
+    "dispute": 1,
+    "employment": 1
+  },
+  "by_priority": {
+    "P2_high": 4,
+    "P4_low": 1,
+    "P3_standard": 2,
+    "P1_blocker": 1
+  },
+  "by_risk": {
+    "HIGH": 5,
+    "LOW": 1,
+    "MEDIUM": 2
+  },
+  "by_queue": {
+    "Commercial": 3,
+    "Privacy": 2,
+    "Corporate / GC": 1,
+    "Litigation": 1,
+    "Employment": 1
+  },
+  "approvals_pending": {
+    "Board note": 2,
+    "General Counsel": 3,
+    "Reviewer": 2,
+    "Legal Ops Lead": 1
+  },
+  "external_referrals": [
+    {
+      "id": "REQ-1004",
+      "title": "AI feature governance review — agent autonomy (synthetic)",
+      "referral": "External: cross-border AI/privacy specialist"
+    },
+    {
+      "id": "REQ-1005",
+      "title": "Series B financing — term sheet (synthetic)",
+      "referral": "External: corporate counsel"
+    },
+    {
+      "id": "REQ-1007",
+      "title": "Customer dispute — SLA credits claim (synthetic)",
+      "referral": "External: litigation counsel"
+    }
+  ],
+  "board_attention": [
+    {
+      "id": "REQ-1001",
+      "title": "Enterprise MSA — Globex (synthetic)",
+      "risk": "HIGH",
+      "type": "commercial_contract"
+    },
+    {
+      "id": "REQ-1005",
+      "title": "Series B financing — term sheet (synthetic)",
+      "risk": "HIGH",
+      "type": "fundraising"
+    },
+    {
+      "id": "REQ-1007",
+      "title": "Customer dispute — SLA credits claim (synthetic)",
+      "risk": "HIGH",
+      "type": "dispute"
+    }
+  ],
+  "sla_breaches": [
+    {
+      "id": "REQ-1006",
+      "title": "Vendor security questionnaire — analytics tool (synthetic)"
+    }
+  ],
+  "decisions": [
+    {
+      "request_id": "REQ-1001",
+      "title": "Enterprise MSA — Globex (synthetic)",
+      "type": "commercial_contract",
+      "risk": "HIGH",
+      "priority": "P2_high",
+      "queue": "Commercial",
+      "sla_response_hours": 8,
+      "sla_resolution_days": 3,
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel",
+        "Board note"
+      ],
+      "external_counsel": "in-house",
+      "escalations": [
+        "Value above €1m — add to board awareness list."
+      ],
+      "board_attention": true,
+      "rationale": [
+        "Contract value above €1m.",
+        "Uncapped liability exposure.",
+        "Priority P2_high from urgency 'high' and risk HIGH.",
+        "Routed to Commercial; approval chain: Reviewer -> Legal Ops Lead -> General Counsel -> Board note."
+      ]
+    },
+    {
+      "request_id": "REQ-1002",
+      "title": "DPA — US support sub-processor (synthetic)",
+      "type": "dpa",
+      "risk": "HIGH",
+      "priority": "P2_high",
+      "queue": "Privacy",
+      "sla_response_hours": 8,
+      "sla_resolution_days": 3,
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel"
+      ],
+      "external_counsel": "in-house",
+      "escalations": [],
+      "board_attention": false,
+      "rationale": [
+        "Personal data transferred outside the EEA.",
+        "Priority P2_high from urgency 'standard' and risk HIGH.",
+        "Routed to Privacy; approval chain: Reviewer -> Legal Ops Lead -> General Counsel."
+      ]
+    },
+    {
+      "request_id": "REQ-1003",
+      "title": "NDA — design agency (synthetic)",
+      "type": "commercial_contract",
+      "risk": "LOW",
+      "priority": "P4_low",
+      "queue": "Commercial",
+      "sla_response_hours": 40,
+      "sla_resolution_days": 10,
+      "approval_chain": [
+        "Reviewer"
+      ],
+      "external_counsel": "in-house",
+      "escalations": [],
+      "board_attention": false,
+      "rationale": [
+        "No elevated-risk signals detected.",
+        "Priority P4_low from urgency 'low' and risk LOW.",
+        "Routed to Commercial; approval chain: Reviewer."
+      ]
+    },
+    {
+      "request_id": "REQ-1004",
+      "title": "AI feature governance review — agent autonomy (synthetic)",
+      "type": "ai_governance",
+      "risk": "HIGH",
+      "priority": "P2_high",
+      "queue": "Privacy",
+      "sla_response_hours": 8,
+      "sla_resolution_days": 3,
+      "approval_chain": [
+        "Reviewer",
+        "General Counsel"
+      ],
+      "external_counsel": "External: cross-border AI/privacy specialist",
+      "escalations": [],
+      "board_attention": false,
+      "rationale": [
+        "Personal data transferred outside the EEA.",
+        "Priority P2_high from urgency 'high' and risk HIGH.",
+        "Routed to Privacy; approval chain: Reviewer -> General Counsel.",
+        "External: cross-border AI/privacy specialist indicated."
+      ]
+    },
+    {
+      "request_id": "REQ-1005",
+      "title": "Series B financing — term sheet (synthetic)",
+      "type": "fundraising",
+      "risk": "HIGH",
+      "priority": "P2_high",
+      "queue": "Corporate / GC",
+      "sla_response_hours": 8,
+      "sla_resolution_days": 3,
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel",
+        "Board note"
+      ],
+      "external_counsel": "External: corporate counsel",
+      "escalations": [
+        "Value above €1m — add to board awareness list."
+      ],
+      "board_attention": true,
+      "rationale": [
+        "Contract value above €1m.",
+        "Priority P2_high from urgency 'standard' and risk HIGH.",
+        "Routed to Corporate / GC; approval chain: Reviewer -> Legal Ops Lead -> General Counsel -> Board note.",
+        "External: corporate counsel indicated."
+      ]
+    },
+    {
+      "request_id": "REQ-1006",
+      "title": "Vendor security questionnaire — analytics tool (synthetic)",
+      "type": "vendor_review",
+      "risk": "MEDIUM",
+      "priority": "P3_standard",
+      "queue": "Commercial",
+      "sla_response_hours": 16,
+      "sla_resolution_days": 5,
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead"
+      ],
+      "external_counsel": "in-house",
+      "escalations": [
+        "SLA breached — escalate to Legal Ops Lead."
+      ],
+      "board_attention": false,
+      "rationale": [
+        "Personal data processed.",
+        "Priority P3_standard from urgency 'standard' and risk MEDIUM.",
+        "Routed to Commercial; approval chain: Reviewer -> Legal Ops Lead."
+      ]
+    },
+    {
+      "request_id": "REQ-1007",
+      "title": "Customer dispute — SLA credits claim (synthetic)",
+      "type": "dispute",
+      "risk": "HIGH",
+      "priority": "P1_blocker",
+      "queue": "Litigation",
+      "sla_response_hours": 4,
+      "sla_resolution_days": 1,
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel"
+      ],
+      "external_counsel": "External: litigation counsel",
+      "escalations": [
+        "High-risk blocker — escalate to General Counsel immediately.",
+        "Active dispute — notify General Counsel."
+      ],
+      "board_attention": true,
+      "rationale": [
+        "Dispute above €250k.",
+        "Priority P1_blocker from urgency 'blocker' and risk HIGH.",
+        "Routed to Litigation; approval chain: Reviewer -> Legal Ops Lead -> General Counsel.",
+        "External: litigation counsel indicated."
+      ]
+    },
+    {
+      "request_id": "REQ-1008",
+      "title": "Employment offer — senior engineer (synthetic)",
+      "type": "employment",
+      "risk": "MEDIUM",
+      "priority": "P3_standard",
+      "queue": "Employment",
+      "sla_response_hours": 16,
+      "sla_resolution_days": 5,
+      "approval_chain": [
+        "Reviewer"
+      ],
+      "external_counsel": "in-house",
+      "escalations": [],
+      "board_attention": false,
+      "rationale": [
+        "Personal data processed.",
+        "Priority P3_standard from urgency 'standard' and risk MEDIUM.",
+        "Routed to Employment; approval chain: Reviewer."
+      ]
+    }
+  ]
+}

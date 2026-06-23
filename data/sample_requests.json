@@ -1,0 +1,88 @@
+[
+  {
+    "id": "REQ-1001",
+    "title": "Enterprise MSA — Globex (synthetic)",
+    "type": "commercial_contract",
+    "counterparty": "Globex Inc. (synthetic)",
+    "value_band": ">1m",
+    "personal_data": true,
+    "non_eea_transfer": false,
+    "uncapped_liability": true,
+    "urgency": "high",
+    "requested_by": "sales"
+  },
+  {
+    "id": "REQ-1002",
+    "title": "DPA — US support sub-processor (synthetic)",
+    "type": "dpa",
+    "counterparty": "Support Tools LLC (synthetic)",
+    "value_band": "50k-250k",
+    "personal_data": true,
+    "non_eea_transfer": true,
+    "urgency": "standard",
+    "requested_by": "product"
+  },
+  {
+    "id": "REQ-1003",
+    "title": "NDA — design agency (synthetic)",
+    "type": "commercial_contract",
+    "counterparty": "Initech Design (synthetic)",
+    "value_band": "<50k",
+    "personal_data": false,
+    "non_eea_transfer": false,
+    "urgency": "low",
+    "requested_by": "sales"
+  },
+  {
+    "id": "REQ-1004",
+    "title": "AI feature governance review — agent autonomy (synthetic)",
+    "type": "ai_governance",
+    "value_band": "none",
+    "personal_data": true,
+    "non_eea_transfer": true,
+    "urgency": "high",
+    "requested_by": "product"
+  },
+  {
+    "id": "REQ-1005",
+    "title": "Series B financing — term sheet (synthetic)",
+    "type": "fundraising",
+    "value_band": ">1m",
+    "personal_data": false,
+    "non_eea_transfer": false,
+    "urgency": "standard",
+    "requested_by": "exec"
+  },
+  {
+    "id": "REQ-1006",
+    "title": "Vendor security questionnaire — analytics tool (synthetic)",
+    "type": "vendor_review",
+    "value_band": "50k-250k",
+    "personal_data": true,
+    "non_eea_transfer": false,
+    "urgency": "standard",
+    "requested_by": "finance",
+    "sla_breached": true
+  },
+  {
+    "id": "REQ-1007",
+    "title": "Customer dispute — SLA credits claim (synthetic)",
+    "type": "dispute",
+    "counterparty": "Hooli GmbH (synthetic)",
+    "value_band": "250k-1m",
+    "personal_data": false,
+    "non_eea_transfer": false,
+    "urgency": "blocker",
+    "requested_by": "exec"
+  },
+  {
+    "id": "REQ-1008",
+    "title": "Employment offer — senior engineer (synthetic)",
+    "type": "employment",
+    "value_band": "none",
+    "personal_data": true,
+    "non_eea_transfer": false,
+    "urgency": "standard",
+    "requested_by": "people"
+  }
+]
