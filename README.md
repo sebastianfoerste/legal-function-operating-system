@@ -4,6 +4,8 @@ See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
 
 ![demo](docs/demo.png)
 
+![Architecture](docs/architecture.svg)
+
 A deterministic **legal function operating system**: it takes incoming legal requests and runs each through **intake → risk → priority → routing → SLA → approval matrix → external-counsel decision tree → escalation**, then rolls them up into a **board-ready operations pack**.
 
 It answers the question a first legal hire or GC actually faces: *how do I run a legal function at scale — consistently, with the right things escalated, and a clear view for the board?*
@@ -92,3 +94,22 @@ This models the **operations** of a legal function over a structured representat
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
+
+## Human-authored legal judgment
+AI tools assisted the implementation, but the parts that carry the value are
+human-authored: the legal answer sets, risk taxonomy, escalation logic, citations,
+and review states. The point of this repository is not code volume — it is showing
+how legal judgment can be made structured, testable, and reviewable.
+
+## GC use case
+This models the operating layer a first GC needs when legal work arrives faster than
+the team can manually triage. It routes requests by risk, priority, SLA, and approval
+level, then produces a board-ready summary of workload and unresolved decisions.
+
+## Known limitations
+A public-safe prototype, not legal advice.
+1. Operates over a structured request representation, not a live intake channel.
+2. Value bands, SLA targets, and approval tiers are illustrative defaults.
+3. Approval tiers are modelled, not enforced against a real IdP.
+Next production step: Slack/Jira intake, real roles/auth for approvals, live SLA
+timers, and pairing with the starter-kit playbooks and DPA checks.

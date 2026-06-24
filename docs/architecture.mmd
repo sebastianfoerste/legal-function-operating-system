@@ -1,0 +1,10 @@
+%% legal-function-operating-system
+flowchart TD
+    A[Intake: structured legal request] --> B[Risk: HIGH / MEDIUM / LOW]
+    B --> C[Priority: P1..P4]
+    C --> D[Routing: owning queue]
+    D --> E[SLA: response & resolution]
+    E --> F[Approval matrix: Reviewer -> Lead -> GC -> Board]
+    F --> G[External-counsel decision tree]
+    G --> H[Escalation: breach / blocker / >1m EUR]
+    H --> I[(Board operations pack)]
