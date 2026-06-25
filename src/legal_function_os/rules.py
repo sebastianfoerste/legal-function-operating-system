@@ -155,10 +155,13 @@ def external_counsel(req: dict, risk: str) -> str:
     rtype = req.get("type", "")
     value_idx = _value_index(req.get("value_band", "none"))
     if rtype == "dispute" and value_idx >= VALUE_BANDS.index("250k-1m"):
+        # Material disputes need litigation capacity and procedural expertise.
         return "External: litigation counsel"
     if rtype in {"corporate", "fundraising"}:
+        # Corporate events are episodic and specialist-heavy for a lean legal function.
         return "External: corporate counsel"
     if rtype == "ai_governance" and req.get("non_eea_transfer"):
+        # Cross-border AI governance needs combined AI, privacy and transfer analysis.
         return "External: cross-border AI/privacy specialist"
     return "in-house"
 
