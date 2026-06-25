@@ -15,7 +15,7 @@ A personal, public-safe prototype. Issues and corrections welcome — especially
 ```bash
 make install   # standard library only
 make test      # must pass before any PR
-make demo      # regenerate examples/board-pack.* if rule output changed, and commit it
+make demo      # regenerate examples/board-pack.md and examples/board-pack.json if rule output changed, and commit them
 ```
 
 ## Adding or changing a rule
