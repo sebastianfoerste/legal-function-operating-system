@@ -97,8 +97,8 @@ MIT. See [`LICENSE`](LICENSE).
 
 ## Human-authored legal judgment
 AI tools assisted the implementation, but the parts that carry the value are
-human-authored: the legal answer sets, risk taxonomy, escalation logic, citations,
-and review states. The point of this repository is not code volume — it is showing
+human-authored: the risk bands, routing rules, SLA targets, the approval matrix, and
+the external-counsel decision tree. The point of this repository is not code volume; it is showing
 how legal judgment can be made structured, testable, and reviewable.
 
 ## GC use case
