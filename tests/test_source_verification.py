@@ -16,7 +16,7 @@ def test_verify_source_ref_accepts_public_regulatory_domain():
     "source_ref",
     [
         "client:customer-dpa",
-        "candidate:recruiting-note",
+        "candidate:evaluation-note",
         "privileged:board-advice",
         "confidential:commercial-model",
     ],
