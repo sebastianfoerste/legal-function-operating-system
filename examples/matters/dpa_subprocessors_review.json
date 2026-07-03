@@ -1,0 +1,22 @@
+{
+  "title": "DPA and subprocessors review",
+  "requester": "Privacy Operations",
+  "business_unit": "Customer Success",
+  "matter_type": "privacy",
+  "jurisdiction": "EU and United Kingdom",
+  "summary": "A customer requests confirmation of subprocessors, regional hosting, transfer safeguards and deletion mechanics before approving the DPA.",
+  "urgency": "medium",
+  "data_categories": [
+    "account administrator data",
+    "support ticket text",
+    "workspace file metadata"
+  ],
+  "customer_commitments": [
+    "subprocessor list refresh",
+    "SCC transfer package",
+    "deletion evidence after termination"
+  ],
+  "source_refs": [
+    "synthetic:dpa-subprocessors-review-example"
+  ]
+}

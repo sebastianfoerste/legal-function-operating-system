@@ -1,0 +1,35 @@
+{
+  "description": "Synthetic redacted DPA clause fixtures for local workflow evaluation only.",
+  "clauses": [
+    {
+      "clause_id": "dpa-hosting-001",
+      "source_ref": "synthetic:redacted-dpa-clause",
+      "text": "[Customer] requests that production customer data is hosted in the EU and that any transfer outside the EU is supported by an approved transfer mechanism.",
+      "review_focus": [
+        "hosting commitment",
+        "international transfer basis",
+        "subprocessor register alignment"
+      ]
+    },
+    {
+      "clause_id": "dpa-training-002",
+      "source_ref": "synthetic:redacted-dpa-clause",
+      "text": "[Customer] requests confirmation that workspace prompts and support tickets are not used to train general-purpose models without prior written approval.",
+      "review_focus": [
+        "model training restriction",
+        "product configuration",
+        "customer-facing commitment register"
+      ]
+    },
+    {
+      "clause_id": "dpa-audit-003",
+      "source_ref": "synthetic:redacted-dpa-clause",
+      "text": "[Customer] requests annual evidence of security controls, including an independently prepared assurance report or equivalent documentation.",
+      "review_focus": [
+        "audit evidence",
+        "security assurance",
+        "commercial approval"
+      ]
+    }
+  ]
+}

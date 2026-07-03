@@ -1,0 +1,20 @@
+{
+  "title": "AI feature launch review",
+  "requester": "Product",
+  "business_unit": "Core Product",
+  "matter_type": "product_launch",
+  "jurisdiction": "EU",
+  "summary": "Product asks for legal review before launching an AI assistant feature that processes customer workspace prompts and generates suggested workflow actions.",
+  "urgency": "high",
+  "data_categories": [
+    "workspace prompts",
+    "generated workflow actions"
+  ],
+  "customer_commitments": [
+    "human approval before external action",
+    "no model training on customer workspace prompts"
+  ],
+  "source_refs": [
+    "synthetic:product-launch-example"
+  ]
+}

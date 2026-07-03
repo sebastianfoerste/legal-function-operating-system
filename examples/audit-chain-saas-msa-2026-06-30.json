@@ -1,0 +1,7 @@
+{
+  "verified": true,
+  "event_count": 2,
+  "chain_root_hash": "807023ea448815ed9b642c82f37e461a50dcfba7b16f3198520c4156066a8a11",
+  "broken_at_seq": null,
+  "reason": "chain intact"
+}

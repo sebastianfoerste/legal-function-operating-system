@@ -1,0 +1,22 @@
+{
+  "title": "Enterprise customer DPA review",
+  "requester": "Sales Ops",
+  "business_unit": "Enterprise Sales",
+  "matter_type": "privacy",
+  "jurisdiction": "EU and California",
+  "summary": "A prospective enterprise customer asks for DPA changes, regional data hosting, model training restrictions and a bespoke audit commitment before signature.",
+  "urgency": "high",
+  "data_categories": [
+    "customer account data",
+    "support tickets",
+    "workspace prompts"
+  ],
+  "customer_commitments": [
+    "EU hosting",
+    "no model training",
+    "annual audit evidence"
+  ],
+  "source_refs": [
+    "synthetic:dpa-review-example"
+  ]
+}

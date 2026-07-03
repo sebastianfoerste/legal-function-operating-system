@@ -1,0 +1,10 @@
+%% legal-ops-agent — supervised legal workflow
+flowchart TD
+    A[Typed intake: matter JSON] --> B[Schema validation: Pydantic]
+    B --> C[Deterministic risk triage]
+    C --> D[Reviewer routing]
+    D --> E{Approval gate: human sign-off?}
+    E -- no --> F[Export BLOCKED: approval required]
+    E -- yes --> G[Export approved]
+    F --> H[(Audit packet: who / what / when)]
+    G --> H

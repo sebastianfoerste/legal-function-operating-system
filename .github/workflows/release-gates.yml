@@ -1,0 +1,131 @@
+name: Release Gates
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  release-gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.lock pytest ruff black mypy
+
+      - name: Gate 1 Static analysis
+        run: ruff check .
+      - name: Gate 2 Unit tests
+        run: pytest -q
+      - name: Gate 3 Formatting (black)
+        run: black --check .
+      - name: Gate 4 Byte-compile sources
+        run: python -m compileall . runtime_agent
+      - name: Gate 6 Production health canary
+        run: |
+          PORT=18085 PYTHONPATH=. python runtime_agent/app.py > /tmp/legal-agent-runtime.log 2>&1 &
+          echo $! > /tmp/legal-agent-runtime.pid
+          for i in {1..60}; do
+            if curl -fsS http://127.0.0.1:18085/health > /tmp/legal-agent-health.json; then
+              break
+            fi
+            sleep 2
+          done
+          cat /tmp/legal-agent-health.json
+      - name: Stop runtime canary
+        if: always()
+        run: |
+          if [ -f /tmp/legal-agent-runtime.pid ]; then
+            kill "$(cat /tmp/legal-agent-runtime.pid)" || true
+          fi
+
+      - name: Compute reliability snapshot
+        run: |
+          python3 - <<'PY'
+          import json
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          EVENT_PATH = Path(".telemetry/events.ndjson")
+          OUT_PATH = Path("/tmp/reliability_snapshot.json")
+          events = []
+          if EVENT_PATH.exists():
+              for line in EVENT_PATH.read_text(encoding="utf-8").splitlines():
+                  line = line.strip()
+                  if not line:
+                      continue
+                  try:
+                      payload = json.loads(line)
+                  except json.JSONDecodeError:
+                      continue
+                  if isinstance(payload, dict):
+                      events.append(payload)
+          started = len({event.get("session_id") for event in events if event.get("event_name") == "session_started"})
+          crashed = len({event.get("session_id") for event in events if event.get("event_name") == "error_shown"})
+          crash_free = 100.0 if started == 0 else round((max(started - crashed, 0) / started) * 100, 2)
+          snapshot = [{
+              "workspace_name": "legal_agent",
+              "release_version": "ci",
+              "sessions_started": started,
+              "sessions_with_error": crashed,
+              "crash_free_sessions_percent": crash_free,
+              "captured_at_utc": datetime.now(tz=timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "source_log_path": str(EVENT_PATH.resolve()),
+          }]
+          OUT_PATH.write_text(json.dumps(snapshot, indent=2) + "\n", encoding="utf-8")
+          print(json.dumps(snapshot, indent=2))
+          PY
+
+      - name: Evaluate rollback gate
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          threshold = float(os.getenv("ROLLBACK_CRASH_FREE_THRESHOLD_PERCENT", "99.0"))
+          reliability = json.loads(Path("/tmp/reliability_snapshot.json").read_text(encoding="utf-8"))
+          affected = []
+          for item in reliability:
+              if float(item.get("crash_free_sessions_percent", 100.0)) < threshold:
+                  affected.append(item.get("workspace_name", "legal_agent"))
+          decision = {
+              "rollback_required": bool(affected),
+              "reason_codes": ["crash_free_sessions_below_threshold"] if affected else [],
+              "affected_workspaces": sorted(set(affected)),
+              "decision_at_utc": datetime.now(tz=timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z"),
+              "thresholds": {
+                  "crash_free_threshold_percent": threshold,
+                  "critical_path_drop_percent": float(os.getenv("ROLLBACK_CRITICAL_PATH_DROP_PERCENT", "15.0")),
+                  "quality_gate_failure_count": 0,
+              },
+          }
+          Path("/tmp/rollback_decision.json").write_text(
+              json.dumps(decision, indent=2) + "\n", encoding="utf-8"
+          )
+          print(json.dumps(decision, indent=2))
+          if decision["rollback_required"]:
+              raise SystemExit("Rollback required by gate decision")
+          PY
+
+      - name: Upload rollback decision artifact
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: legal-agent-rollback-decision
+          path: /tmp/rollback_decision.json
+          if-no-files-found: ignore
+
+      - name: Ensure repository is clean
+        run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"
+          git diff --exit-code

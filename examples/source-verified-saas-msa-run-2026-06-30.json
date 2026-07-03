@@ -1,0 +1,80 @@
+{
+  "schema": "legal-ops-agent.source-verified-review-packet-run.v1",
+  "assessment_id": "loa_0b5d728ed132582a",
+  "generated_at_utc": "2026-06-30T10:54:07Z",
+  "status": "review_required",
+  "matter_intake": {
+    "title": "SaaS MSA deviation review",
+    "requester": "Revenue Operations",
+    "business_unit": "Enterprise Sales",
+    "matter_type": "contract",
+    "jurisdiction": "EU and United States",
+    "summary": "A prospective enterprise customer asks for a nonstandard SaaS MSA package with a higher liability cap, direct audit rights and a roadmap commitment before signature.",
+    "urgency": "high",
+    "data_categories": [
+      "business contact data",
+      "customer workspace metadata"
+    ],
+    "customer_commitments": [
+      "higher liability cap for security incidents",
+      "controlled annual audit right",
+      "non-binding roadmap review"
+    ],
+    "source_refs": [
+      "synthetic:saas-msa-deviation-example"
+    ]
+  },
+  "risk_triage": {
+    "highest_severity": "high",
+    "finding_count": 2,
+    "blocker_count": 0,
+    "categories": [
+      "customer_commitments",
+      "privacy"
+    ],
+    "control_status": {
+      "source-boundary": "pass",
+      "human-review-gate": "pass",
+      "commitment-register": "warning",
+      "data-map": "warning"
+    },
+    "recommended_next_actions": [
+      "Confirm DPA roles, transfer basis, subprocessors and deletion mechanics.",
+      "Record each commitment in the customer obligations register before approval."
+    ]
+  },
+  "source_manifest": {
+    "pass_count": 1,
+    "warning_count": 0,
+    "blocker_count": 0,
+    "entries": [
+      {
+        "source_ref": "synthetic:saas-msa-deviation-example",
+        "category": "synthetic",
+        "status": "pass",
+        "reason": "Synthetic source reference is permitted for local demo evaluation.",
+        "public_authority": null,
+        "requires_human_review": false,
+        "redacted": false
+      }
+    ]
+  },
+  "policy_envelope": {
+    "review_state": "needs_review",
+    "export_allowed": false,
+    "human_review_required": true,
+    "external_actions_allowed": false,
+    "delivery_mode": "local_review_only",
+    "blocked_actions": [
+      "external_delivery",
+      "publication",
+      "filing",
+      "outreach"
+    ],
+    "source_boundary": "verified_demo_or_public_regulatory_sources",
+    "legal_advice_status": "draft_for_human_review"
+  },
+  "review_state": "needs_review",
+  "export_allowed": false,
+  "markdown_packet": "# LegalOps Review Packet: SaaS MSA deviation review\n\n- Assessment ID: `loa_0b5d728ed132582a`\n- Created: `2026-06-30T10:54:07Z`\n- Matter type: `contract`\n- Jurisdiction: `EU and United States`\n- Urgency: `high`\n- Review state: `needs_review`\n- Export: `blocked`\n\n## Summary\n\nA prospective enterprise customer asks for a nonstandard SaaS MSA package with a higher liability cap, direct audit rights and a roadmap commitment before signature.\n\n## Routing\n\n- Owner role: Privacy Counsel\n- Reviewers: Legal Ops, Privacy Counsel, Commercial Counsel, General Counsel\n- SLA: 24 hours\n- Rationale: Routing is based on matter type, deterministic risk categories and urgency. Export remains blocked until human approval.\n\n## Findings\n\n- MEDIUM: privacy\n  Summary: Personal or customer data categories are in scope.\n  Evidence: business contact data, customer workspace metadata\n  Action: Confirm DPA roles, transfer basis, subprocessors and deletion mechanics.\n- HIGH: customer_commitments\n  Summary: The matter includes bespoke customer commitments.\n  Evidence: higher liability cap for security incidents, controlled annual audit right, non-binding roadmap review\n  Action: Record each commitment in the customer obligations register before approval.\n\n## Controls\n\n- source-boundary: pass\n  Summary: Matter source boundary is explicit.\n  Evidence: synthetic:saas-msa-deviation-example\n  Owner: Legal Operations\n- human-review-gate: pass\n  Summary: Export is blocked until a human review decision is recorded.\n  Evidence: review_state starts as needs_review\n  Owner: General Counsel\n- commitment-register: warning\n  Summary: Customer commitments must be recorded before final signature.\n  Evidence: higher liability cap for security incidents, controlled annual audit right, non-binding roadmap review\n  Owner: Commercial Counsel\n- data-map: warning\n  Summary: Data categories require privacy mapping and retention checks.\n  Evidence: business contact data, customer workspace metadata\n  Owner: Privacy Counsel\n\n## Source Verification\n\n- pass: synthetic:saas-msa-deviation-example | category: synthetic | human review: False\n  Reason: Synthetic source reference is permitted for local demo evaluation.\n\n## Customer Commitment Register\n\n- higher liability cap for security incidents | owner: Commercial Counsel | source: synthetic:saas-msa-deviation-example | review required: True\n- controlled annual audit right | owner: Commercial Counsel | source: synthetic:saas-msa-deviation-example | review required: True\n- non-binding roadmap review | owner: Commercial Counsel | source: synthetic:saas-msa-deviation-example | review required: True\n\n## Audit Trail\n\n- 2026-06-30T10:54:07Z | assessment_created | LegalOps Agent: Assessment created from typed matter intake.\n- 2026-06-30T10:54:07Z | review_packet_generated | LegalOps Agent: Review packet generated for human legal review.\n"
+}
