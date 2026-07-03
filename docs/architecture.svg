@@ -1,0 +1,62 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="560" height="720" viewBox="0 0 560 720" font-family="-apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif">
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L8,3 L0,6 Z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="560" height="720" fill="#ffffff"/>
+  <text x="280" y="32" text-anchor="middle" font-size="18" font-weight="700" fill="#0f172a">legal-function-operating-system</text>
+  <text x="280" y="52" text-anchor="middle" font-size="12" fill="#64748b">Each legal request runs the same deterministic pipeline, then rolls up to the board</text>
+
+  <g font-size="13" fill="#0f172a">
+    <rect x="130" y="72"  width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="280" y="97"  text-anchor="middle">Intake — structured legal request</text>
+
+    <rect x="130" y="130" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="280" y="155" text-anchor="middle">Risk — HIGH / MEDIUM / LOW</text>
+
+    <rect x="130" y="188" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="280" y="213" text-anchor="middle">Priority — P1 … P4</text>
+
+    <rect x="130" y="246" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="280" y="271" text-anchor="middle">Routing — owning queue</text>
+
+    <rect x="130" y="304" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="280" y="329" text-anchor="middle">SLA — response &amp; resolution targets</text>
+
+    <rect x="130" y="362" width="300" height="40" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
+    <text x="280" y="387" text-anchor="middle">Approval matrix — Reviewer → Lead → GC → Board</text>
+
+    <rect x="130" y="420" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="280" y="445" text-anchor="middle">External-counsel decision tree</text>
+
+    <rect x="130" y="478" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
+    <text x="280" y="503" text-anchor="middle">Escalation — breach · blocker · &gt;€1m</text>
+  </g>
+
+  <!-- Board pack (emphasized) -->
+  <rect x="96" y="544" width="368" height="56" rx="10" fill="#e0e7ff" stroke="#4f46e5" stroke-width="1.6"/>
+  <text x="280" y="569" text-anchor="middle" font-size="14" font-weight="700" fill="#3730a3">Board operations pack</text>
+  <text x="280" y="588" text-anchor="middle" font-size="11" fill="#4338ca">board-attention · SLA breaches · referrals · risk mix</text>
+
+  <!-- Arrows -->
+  <g stroke="#475569" stroke-width="1.6" fill="none">
+    <line x1="280" y1="112" x2="280" y2="128" marker-end="url(#arrow)"/>
+    <line x1="280" y1="170" x2="280" y2="186" marker-end="url(#arrow)"/>
+    <line x1="280" y1="228" x2="280" y2="244" marker-end="url(#arrow)"/>
+    <line x1="280" y1="286" x2="280" y2="302" marker-end="url(#arrow)"/>
+    <line x1="280" y1="344" x2="280" y2="360" marker-end="url(#arrow)"/>
+    <line x1="280" y1="402" x2="280" y2="418" marker-end="url(#arrow)"/>
+    <line x1="280" y1="460" x2="280" y2="476" marker-end="url(#arrow)"/>
+    <line x1="280" y1="518" x2="280" y2="542" marker-end="url(#arrow)"/>
+  </g>
+
+  <!-- Legend -->
+  <rect x="96" y="630" width="14" height="14" rx="3" fill="#fef9c3" stroke="#ca8a04"/>
+  <text x="118" y="642" font-size="11" fill="#64748b">human approval tier</text>
+  <rect x="250" y="630" width="14" height="14" rx="3" fill="#e0e7ff" stroke="#4f46e5"/>
+  <text x="272" y="642" font-size="11" fill="#64748b">executive output</text>
+
+  <text x="280" y="700" text-anchor="middle" font-size="10.5" fill="#94a3b8">Public-safe prototype · synthetic data only · not legal advice</text>
+</svg>
