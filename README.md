@@ -11,6 +11,7 @@ A deterministic **legal function operating system**: it takes incoming legal req
 It answers the question a legal function lead or GC actually faces: *how do I run a legal function at scale, consistently, with the right things escalated, and a clear view for the board?*
 
 This is a management and triage artifact, **not legal advice**. All bundled data is **synthetic**.
+Portfolio proof contract: [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
 
 > **If you don't code:** scroll to [What the demo produces](#what-the-demo-produces). The repo ships a board pack you can read in the browser. The point isn't the code; it's whether the legal function is structured, prioritised, and governed — not run from an inbox.
 

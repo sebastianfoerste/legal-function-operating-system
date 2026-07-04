@@ -1,0 +1,32 @@
+{
+  "schema_version": "portfolio-proof.v1",
+  "repository": "legal-function-operating-system",
+  "github_url": "https://github.com/sebastianfoerste/legal-function-operating-system",
+  "pinned_on_github": true,
+  "reviewer_path": [
+    "README.md",
+    "examples/board-pack.md",
+    "CASE_STUDY.md"
+  ],
+  "proof_surfaces": [
+    { "path": "README.md", "label": "Repository front door" },
+    { "path": "docs/demo.png", "label": "Demo screenshot" },
+    { "path": "docs/architecture.svg", "label": "Architecture flow" },
+    { "path": "examples/board-pack.md", "label": "Board pack output" }
+  ],
+  "validation_gates": [
+    "make test"
+  ],
+  "safety_controls": [
+    "synthetic request data",
+    "deterministic rules",
+    "human approval tier",
+    "audit-ready board pack output"
+  ],
+  "blocked_actions": [
+    "no legal advice",
+    "no external communication",
+    "no self-approval",
+    "no client data"
+  ]
+}
