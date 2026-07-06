@@ -1,6 +1,7 @@
 # legal-function-operating-system
 
 See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
+Portfolio proof contract: [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
 
 ![demo](docs/demo.png)
 
