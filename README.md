@@ -5,6 +5,7 @@
 CI: passing. Deterministic test suite: 46 checks.
 
 See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
+Portfolio proof contract: [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
 
 Supervised legal-operations workflow: typed intake, deterministic risk triage, reviewer routing, human-approved export, audit trail. Legal advice is outside this prototype; data is synthetic.
 
@@ -16,19 +17,21 @@ Supervised legal-operations workflow: typed intake, deterministic risk triage, r
 
 ![Architecture](docs/architecture.svg)
 
-## Run it
+## Run it (90 seconds)
 
 ```bash
-git clone https://github.com/sebastianfoerste/legal-ops-agent
-cd legal-ops-agent
-python3.13 -m venv .venv
-source .venv/bin/activate
+python3.13 -m venv .venv && source .venv/bin/activate
 make install
+# 1) assess a synthetic matter — returns needs_review / export_allowed:false
 python -m src.cli --input examples/matters/saas_msa_deviation.json
+# 2) approve it with a documented human decision
+python -m src.cli --input examples/matters/saas_msa_deviation.json \
+  --approve-note "Approved after commercial counsel review of the synthetic MSA deviation." \
+  --packet-output demo_output/saas-msa-review-packet.md
 ```
 
-Runs the canonical evaluator path end to end, offline and deterministically, over a
-synthetic SaaS MSA deviation fixture.
+Export stays blocked until approval is recorded — and stays blocked after approval if a
+blocker finding remains. Run the proof gate with `make check`.
 
 ## Architecture flow
 
@@ -82,37 +85,7 @@ In the sample run, export stays blocked until a reviewer approves; the audit tra
 
 ![Supervised review: a SaaS MSA matter triaged to high risk, routed to four reviewers, export blocked until human approval is recorded](docs/review-gate.svg)
 
-## 90-second evaluator path
 
-```bash
-python3.13 -m venv .venv
-source .venv/bin/activate
-make install
-python -m src.cli --input examples/matters/saas_msa_deviation.json
-```
-
-The first run returns `review_state: "needs_review"` and
-`export_allowed: false`. Inspect the risk decision, reviewer routing, source
-verification records and audit trail in the JSON output.
-
-Approve the same synthetic matter with a documented human decision:
-
-```bash
-python -m src.cli \
-  --input examples/matters/saas_msa_deviation.json \
-  --approve-note "Approved after commercial counsel review of the synthetic MSA deviation." \
-  --packet-output demo_output/saas-msa-review-packet.md \
-  --manifest-output demo_output/saas-msa-artifact-manifest.json
-```
-
-Export remains blocked until approval is recorded, and it remains blocked after
-approval if a blocker finding is still present.
-
-Run the public proof gate:
-
-```bash
-make check
-```
 
 ## Committed source-verified proof
 
@@ -203,27 +176,7 @@ flowchart TD
 - [`mcp.json`](mcp.json): Explicit local MCP server configuration.
 - [`tests/`](tests): Unit tests for validation, risk logic, review gates, MCP manifest and runtime behavior.
 
-## Generate review artifacts
 
-To assess a synthetic fixture and write the reviewer-ready artifacts:
-
-```bash
-python -m src.cli \
-  --input examples/matters/saas_msa_deviation.json \
-  --json-output demo_output/assessment.json \
-  --packet-output demo_output/review-packet.md \
-  --commitments-output demo_output/customer-commitments.json \
-  --sources-output demo_output/source-verification.json \
-  --review-runner-output demo_output/source-verified-review-runner.json \
-  --manifest-output demo_output/artifact-manifest.json \
-  --audit-chain-output demo_output/audit-chain.json \
-  --trust-cockpit-output demo_output/trust-cockpit.md \
-  --trust-cockpit-json-output demo_output/trust-cockpit.json
-```
-
-The manifest records SHA-256 digests for each generated review artifact and a
-local integrity signature over the digest set. It is designed for reviewer
-traceability. It is not an eIDAS signature.
 
 ## Checks
 
@@ -269,8 +222,7 @@ Built by Sebastian Förste: [github.com/sebastianfoerste](https://github.com/seb
 
 ## Human-authored legal judgment
 AI tools assisted the implementation, but the parts that carry the value are
-human-authored: the legal answer sets, risk taxonomy, escalation logic, citations,
-and review states. The point of this repository is not code volume; it is showing
+human-authored: the matter schema, the deterministic risk rules, the reviewer-routing logic, and the approval gates. The point of this repository is not code volume; it is showing
 how legal judgment can be made structured, testable, and reviewable.
 
 ## Why lawyers should care
