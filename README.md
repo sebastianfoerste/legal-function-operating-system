@@ -2,14 +2,14 @@
 
 [![Python CI](https://github.com/sebastianfoerste/legal-ops-agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sebastianfoerste/legal-ops-agent/actions/workflows/ci.yml)
 
-CI: passing. Deterministic test suite: 46 checks.
+CI workflow and deterministic test suite are included.
 
 See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
 
 Supervised legal-operations workflow: typed intake, deterministic risk triage, reviewer routing, human-approved export, audit trail. Legal advice is outside this prototype; data is synthetic.
 
 **Public-safety posture:** synthetic matters only, explicit source provenance checks, an audit trail, a human review gate before export, and no legal advice.
-Portfolio proof contract: [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
+Verification manifest: [`docs/verification-manifest.json`](docs/verification-manifest.json).
 
 > **If you don't code:** scroll to [What the demo produces](#what-the-demo-produces). This repo ships a sample output you can read in the browser. The point isn't the code; it's whether the legal work is structured, cited, reviewable, and testable.
 
@@ -28,7 +28,7 @@ make install
 python -m src.cli --input examples/matters/saas_msa_deviation.json
 ```
 
-Runs the canonical evaluator path end to end, offline and deterministically, over a
+Runs the canonical local verification path end to end, offline and deterministically, over a
 synthetic SaaS MSA deviation fixture.
 
 ## Architecture flow
@@ -39,13 +39,13 @@ synthetic SaaS MSA deviation fixture.
 4. `src/mcp_tools.py` exposes seven local MCP-style tools behind a controlled dispatcher.
 5. `src/trust_cockpit.py` renders the reviewer-facing trust cockpit.
 6. `src/review_packet.py` renders the lawyer-facing Markdown packet.
-7. `src/cli.py` runs fixture-to-packet flows for evaluator review.
+7. `src/cli.py` runs fixture-to-packet flows for local verification.
 8. `runtime_agent/app.py` provides a small HTTP canary for local workflow checks.
 9. Export stays blocked until a documented human approval clears the review gate.
 
 ## What the demo produces
 
-The workflow runs triage over a matter intake, generates deterministic findings, and routes to reviewers. Export remains blocked until a human reviewer records an approval decision. You can read the committed sample output: [`examples/matter-run.md`](examples/matter-run.md). The current source-verified proof snapshot is [`examples/source-verified-saas-msa-run-2026-06-30.md`](examples/source-verified-saas-msa-run-2026-06-30.md). The reviewer-facing trust cockpit snapshot is [`examples/trust-cockpit-saas-msa-2026-06-30.md`](examples/trust-cockpit-saas-msa-2026-06-30.md).
+The workflow runs triage over a matter intake, generates deterministic findings, and routes to reviewers. Export remains blocked until a human reviewer records an approval decision. You can read the committed sample output: [`examples/matter-run.md`](examples/matter-run.md). The current source-verified verification snapshot is [`examples/source-verified-saas-msa-run-2026-06-30.md`](examples/source-verified-saas-msa-run-2026-06-30.md). The reviewer-facing trust cockpit snapshot is [`examples/trust-cockpit-saas-msa-2026-06-30.md`](examples/trust-cockpit-saas-msa-2026-06-30.md).
 
 ```markdown
 # LegalOps Review Packet: Enterprise customer DPA review
@@ -83,7 +83,7 @@ In the sample run, export stays blocked until a reviewer approves; the audit tra
 
 ![Supervised review: a SaaS MSA matter triaged to high risk, routed to four reviewers, export blocked until human approval is recorded](docs/review-gate.svg)
 
-## 90-second evaluator path
+## 90-second verification path
 
 ```bash
 python3.13 -m venv .venv
@@ -109,15 +109,15 @@ python -m src.cli \
 Export remains blocked until approval is recorded, and it remains blocked after
 approval if a blocker finding is still present.
 
-Run the public proof gate:
+Run the verification gate:
 
 ```bash
 make check
 ```
 
-## Committed source-verified proof
+## Committed source-verified run
 
-A dated proof run for the same synthetic SaaS MSA deviation fixture is committed
+A dated verification run for the same synthetic SaaS MSA deviation fixture is committed
 here:
 
 - [`examples/source-verified-saas-msa-run-2026-06-30.md`](examples/source-verified-saas-msa-run-2026-06-30.md)
@@ -128,9 +128,9 @@ The snapshot records `review_state: "needs_review"`, `export_allowed: false`,
 `local_review_only` policy envelope. Generated review artifacts are locally
 manifestable with SHA-256 digests.
 
-## Committed trust cockpit proof
+## Committed trust-cockpit run
 
-The Trust Cockpit is the reviewer-grade proof surface added after competitive
+The Trust Cockpit is a reviewer-facing evidence surface added after comparative
 research across GitHub, mobile app stores and relevant app marketplaces. The
 research note is here: [`docs/competitive-research-2026-06-30.md`](docs/competitive-research-2026-06-30.md).
 
@@ -247,12 +247,12 @@ This runs Ruff, Black, MyPy and Pytest.
 - `legal.sources.list`: show the public or synthetic source boundary for the demo.
 - `legal.sources.verify`: verify source-reference boundaries without fetching external content.
 
-These tools are designed for local evaluation. They do not send client, candidate, matter or account data to an external system.
+These tools are designed for local verification. They do not send client, candidate, matter or account data to an external system.
 
 See [docs/API.md](docs/API.md) for input schemas, output schemas, safety limits
 and example calls.
 
-## What this proves
+## Verified behavior
 
 This repository demonstrates supervised legal operations as software. It shows
 typed intake, deterministic triage, source-boundary controls, reviewer routing,
