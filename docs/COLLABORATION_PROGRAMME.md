@@ -1,4 +1,4 @@
-# Legora-inspired programme
+# Review-workspace programme
 
 The legal function workspace renders deterministic Lists for requests, contracts, obligations, entities and facts. Items include source references, evidence, owners, deadlines, dependencies and resolution gates.
 

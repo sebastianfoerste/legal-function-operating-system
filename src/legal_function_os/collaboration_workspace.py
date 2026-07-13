@@ -19,7 +19,28 @@ def build_operational_list(requests: list[dict[str, Any]], period: str) -> dict[
     rows = []
     for decision in pack.decisions:
         source = by_id.get(decision.request_id, {})
-        rows.append({"id": f"list:{decision.request_id}", "request_id": decision.request_id, "kind": "legal_request", "title": decision.title, "facts": list(source.get("facts", [])) or [str(source.get("description", "Synthetic request"))], "owner": decision.queue, "priority": decision.priority, "risk": decision.risk, "sla_response_hours": decision.sla_response_hours, "sla_resolution_days": decision.sla_resolution_days, "deadline": source.get("deadline"), "dependencies": list(source.get("dependencies", [])), "source_refs": [f"synthetic-request:{decision.request_id}"], "status": "blocked" if decision.priority == "P1_blocker" or source.get("sla_breached") else "review_required", "evidence_refs": []})
+        rows.append({
+            "id": f"list:{decision.request_id}",
+            "request_id": decision.request_id,
+            "kind": "legal_request",
+            "title": decision.title,
+            "facts": list(source.get("facts") or [])
+            or [str(source.get("description") or "Synthetic request")],
+            "owner": decision.queue,
+            "priority": decision.priority,
+            "risk": decision.risk,
+            "sla_response_hours": decision.sla_response_hours,
+            "sla_resolution_days": decision.sla_resolution_days,
+            "deadline": source.get("deadline"),
+            "dependencies": list(source.get("dependencies") or []),
+            "source_refs": [f"synthetic-request:{decision.request_id}"],
+            "status": (
+                "blocked"
+                if decision.priority == "P1_blocker" or source.get("sla_breached")
+                else "review_required"
+            ),
+            "evidence_refs": [],
+        })
     rows.sort(key=lambda row: ({"blocked": 0, "review_required": 1}[row["status"]], {"P1_blocker": 0, "P2_high": 1, "P3_standard": 2, "P4_low": 3}.get(row["priority"], 4), row["request_id"]))
     return {"schema": "legal-function-os.operational-list.v1", "period": period, "rows": rows, "filters": {"blocked": sum(row["status"] == "blocked" for row in rows), "overdue": sum(bool(by_id.get(row["request_id"], {}).get("sla_breached")) for row in rows), "awaiting_business_input": sum(bool(by_id.get(row["request_id"], {}).get("awaiting_business_input")) for row in rows), "ready_for_approval": sum(row["status"] == "review_required" for row in rows)}, "external_action_allowed": False}
 
@@ -57,11 +78,13 @@ def compare_workflow_versions(left: dict[str, Any], right: dict[str, Any]) -> di
     }
 
 
-def activate_workflow(definition: dict[str, Any], *, reviewer: str, approved: bool) -> dict[str, Any]:
+def activate_workflow(
+    definition: dict[str, Any], *, reviewer: str | None, approved: bool
+) -> dict[str, Any]:
     definition = validate_workflow_definition(definition)
     if definition["status"] != "draft":
         raise ValueError("only draft workflow versions can be activated")
-    if not approved or not reviewer.strip():
+    if not approved or not isinstance(reviewer, str) or not reviewer.strip():
         raise ValueError("workflow activation requires a named reviewer approval")
     return {
         **definition,
@@ -77,7 +100,20 @@ def dry_run_workflow(definition: dict[str, Any], operational_list: dict[str, Any
 
 
 def build_knowledge_portal(requests: list[dict[str, Any]], workflows: list[dict[str, Any]]) -> dict[str, Any]:
-    resources = [{"id": f"resource:{item.get('id', index)}", "title": str(item.get("title", "Synthetic request precedent")), "passage": str(item.get("description") or item.get("summary") or "Synthetic legal request precedent for local review."), "source_ref": f"synthetic-request:{item.get('id', index)}", "approved": True} for index, item in enumerate(requests, start=1)]
+    resources = [
+        {
+            "id": f"resource:{item.get('id') if item.get('id') is not None else index}",
+            "title": str(item.get("title") or "Synthetic request precedent"),
+            "passage": str(
+                item.get("description")
+                or item.get("summary")
+                or "Synthetic legal request precedent for local review."
+            ),
+            "source_ref": f"synthetic-request:{item.get('id') if item.get('id') is not None else index}",
+            "approved": True,
+        }
+        for index, item in enumerate(requests, start=1)
+    ]
     resources.extend({"id": f"resource:{workflow['id']}", "title": workflow["name"], "passage": "The workflow validates intake, applies deterministic risk triage, collects evidence and requires human approval.", "source_ref": f"workflow:{workflow['id']}:v{workflow['version']}", "approved": True} for workflow in workflows)
     digest = hashlib.sha256(json.dumps(resources, sort_keys=True).encode()).hexdigest()
     return {"schema": "portal.share.v1", "local_only": True, "approved": True, "resource_digest": digest, "resources": resources, "internal_prompts_exposed": False, "external_action_allowed": False}
@@ -92,15 +128,59 @@ def answer_portal(portal: dict[str, Any], query: str) -> dict[str, Any]:
 
 
 def render_portal(portal: dict[str, Any], output: Path) -> Path:
-    cards = "".join(f"<article><h2>{html.escape(item['title'])}</h2><p>{html.escape(item['passage'])}</p><code>{html.escape(item['source_ref'])}</code></article>" for item in portal["resources"])
-    document = f"<!doctype html><html><head><meta charset='utf-8'><title>Legal Function Knowledge Portal</title><style>body{{font:15px system-ui;max-width:1000px;margin:40px auto;color:#172033}}article{{border:1px solid #d9dee8;border-radius:10px;padding:16px;margin:12px 0}}code{{font-size:12px}}input{{width:100%;padding:10px;box-sizing:border-box}}</style></head><body><h1>Legal Function Knowledge Portal</h1><p>Local approved knowledge only. Human review remains required.</p><label for='search'>Search approved passages</label><input id='search' type='search' autocomplete='off'><p id='status' aria-live='polite'></p><main>{cards}</main><script>const q=document.getElementById('search');const cards=[...document.querySelectorAll('article')];q.addEventListener('input',()=>{{const term=q.value.trim().toLowerCase();let shown=0;for(const card of cards){{const hit=!term||card.textContent.toLowerCase().includes(term);card.hidden=!hit;if(hit)shown++;}}document.getElementById('status').textContent=shown?shown+' approved resource(s)':'Insufficient evidence in approved resources';}});</script></body></html>"
+    cards = "".join(
+        "<article>"
+        f"<h2>{html.escape(item['title'])}</h2>"
+        f"<p>{html.escape(item['passage'])}</p>"
+        f"<code>{html.escape(item['source_ref'])}</code>"
+        "</article>"
+        for item in portal["resources"]
+    )
+    document = f"""<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Legal Function Knowledge Portal</title>
+  <style>
+    body {{ font: 15px system-ui; max-width: 1000px; margin: 40px auto; color: #172033; }}
+    article {{ border: 1px solid #d9dee8; border-radius: 10px; padding: 16px; margin: 12px 0; }}
+    code {{ font-size: 12px; }}
+    input {{ width: 100%; padding: 10px; box-sizing: border-box; }}
+  </style>
+</head>
+<body>
+  <h1>Legal Function Knowledge Portal</h1>
+  <p>Local approved knowledge only. Human review remains required.</p>
+  <label for="search">Search approved passages</label>
+  <input id="search" type="search" autocomplete="off">
+  <p id="status" aria-live="polite"></p>
+  <main>{cards}</main>
+  <script>
+    const query = document.getElementById("search");
+    const cards = [...document.querySelectorAll("article")];
+    query.addEventListener("input", () => {{
+      const term = query.value.trim().toLowerCase();
+      let shown = 0;
+      for (const card of cards) {{
+        const hit = !term || card.textContent.toLowerCase().includes(term);
+        card.hidden = !hit;
+        if (hit) shown += 1;
+      }}
+      document.getElementById("status").textContent = shown
+        ? shown + " approved resource(s)"
+        : "Insufficient evidence in approved resources";
+    }});
+  </script>
+</body>
+</html>
+"""
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8")
     return output
 
 
-def build_legora_workspace(requests: list[dict[str, Any]], period: str) -> dict[str, Any]:
+def build_collaboration_workspace(requests: list[dict[str, Any]], period: str) -> dict[str, Any]:
     operational_list = build_operational_list(requests, period)
     workflows = build_workflow_library()
     portal = build_knowledge_portal(requests, workflows)
-    return {"schema": "legal-function-os.legora-workspace.v1", "operational_list": operational_list, "workflow_definitions": workflows, "workflow_runs": [dry_run_workflow(workflows[0], operational_list)], "knowledge_portal": portal, "portal_answer": answer_portal(portal, "Which workflow requires human approval?"), "external_action_allowed": False}
+    return {"schema": "legal-function-os.collaboration-workspace.v1", "operational_list": operational_list, "workflow_definitions": workflows, "workflow_runs": [dry_run_workflow(workflows[0], operational_list)], "knowledge_portal": portal, "portal_answer": answer_portal(portal, "Which workflow requires human approval?"), "external_action_allowed": False}

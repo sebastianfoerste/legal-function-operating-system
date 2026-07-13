@@ -135,6 +135,7 @@ def _triage_workflow(decision, request: dict[str, Any]) -> TriageWorkflow:
 
 
 def _command_center(pack: BoardPack, workflows: list[TriageWorkflow]) -> dict[str, Any]:
+    status_by_request_id = {workflow.request_id: workflow.status for workflow in workflows}
     rows = [
         {
             "request_id": decision.request_id,
@@ -144,7 +145,7 @@ def _command_center(pack: BoardPack, workflows: list[TriageWorkflow]) -> dict[st
             "queue": decision.queue,
             "approval_tier": decision.approval_chain[-1],
             "external_counsel": decision.external_counsel,
-            "status": next(workflow.status for workflow in workflows if workflow.request_id == decision.request_id),
+            "status": status_by_request_id.get(decision.request_id, "review_required"),
         }
         for decision in pack.decisions
     ]
