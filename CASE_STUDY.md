@@ -3,10 +3,10 @@
 > Running a legal function at scale is an operations problem: consistent triage, enforced approvals, deliberate escalation, and a true board view. Synthetic data only; not legal advice.
 
 ## Problem
-A legal function lead or GC at a scaling company usually feels the operational strain before the legal analysis breaks. Requests arrive from every team, get handled inconsistently, approvals are improvised, external counsel is used reactively, and the board has no reliable picture of legal load and risk. The function runs out of an inbox until it breaks.
+A first legal hire or GC at a scaling company does not fail on legal knowledge — they fail on operations. Requests arrive from every team, get handled inconsistently, approvals are improvised, external counsel is used reactively, and the board has no reliable picture of legal load and risk. The function runs out of an inbox until it breaks.
 
 ## Users
-A legal function lead, GC, or legal ops lead building the function, and the leadership or board who need a clear, recurring view of legal risk and load.
+A first legal hire, GC, or legal ops lead building the function — and the leadership/board who need a clear, recurring view of legal risk and load.
 
 ## Workflow
 Each legal request runs through a deterministic pipeline:
