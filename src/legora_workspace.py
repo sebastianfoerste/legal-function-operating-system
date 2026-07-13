@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import os
 import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -46,6 +47,7 @@ class MatterListItem(BaseModel):
     source_refs: list[str]
     dependencies: list[str]
     evidence_refs: list[str] = Field(default_factory=list)
+    comments: list[dict[str, str]] = Field(default_factory=list)
     status: str = "review_required"
 
 
@@ -95,7 +97,17 @@ PLAYBOOKS: dict[str, Playbook] = {
 }
 
 
-def build_change_set(assessment: LegalOpsAssessment) -> DocumentChangeSet:
+def _reproducible_now() -> datetime:
+    raw_epoch = os.environ.get("SOURCE_DATE_EPOCH", "0")
+    try:
+        return datetime.fromtimestamp(int(raw_epoch), UTC)
+    except ValueError as error:
+        raise ValueError("SOURCE_DATE_EPOCH must be an integer Unix timestamp") from error
+
+
+def build_change_set(
+    assessment: LegalOpsAssessment, source_document: Path | None = None
+) -> DocumentChangeSet:
     blocked = [
         source.source_ref
         for source in assessment.source_verifications
@@ -106,7 +118,11 @@ def build_change_set(assessment: LegalOpsAssessment) -> DocumentChangeSet:
             f"blocked source references prevent document processing: {', '.join(blocked)}"
         )
     playbook = PLAYBOOKS.get(assessment.matter.matter_type, PLAYBOOKS["contract"])
-    source = json.dumps(assessment.matter.model_dump(mode="json"), sort_keys=True)
+    source = (
+        source_document.read_bytes()
+        if source_document
+        else json.dumps(assessment.matter.model_dump(mode="json"), sort_keys=True).encode()
+    )
     changes = [
         DocumentChange(
             id=f"change-{index}",
@@ -120,7 +136,7 @@ def build_change_set(assessment: LegalOpsAssessment) -> DocumentChangeSet:
     ]
     return DocumentChangeSet(
         schema="document.change-set.v1",
-        source_digest=hashlib.sha256(source.encode()).hexdigest(),
+        source_digest=hashlib.sha256(source).hexdigest(),
         playbook_version=playbook["version"],
         changes=changes,
         sourcePreserved=True,
@@ -139,13 +155,13 @@ def decide_change(
         raise ValueError(f"unknown change: {change_id}")
     change.decision = decision
     updated.export_allowed = bool(updated.changes) and all(
-        item.decision == "accepted" for item in updated.changes
+        item.decision in {"accepted", "rejected"} for item in updated.changes
     )
     return updated
 
 
 def build_matter_list(assessment: LegalOpsAssessment) -> MatterList:
-    created = datetime.fromisoformat(assessment.created_at_utc.replace("Z", "+00:00"))
+    created = _reproducible_now()
     items: list[MatterListItem] = []
     for index, commitment in enumerate(assessment.customer_commitments, start=1):
         items.append(
@@ -196,6 +212,26 @@ def resolve_list_item(
     return updated
 
 
+def comment_on_list_item(
+    matter_list: MatterList, item_id: str, author: str, body: str
+) -> MatterList:
+    if not body.strip():
+        raise ValueError("comment body is required")
+    updated = matter_list.model_copy(deep=True)
+    item = next((candidate for candidate in updated.items if candidate.id == item_id), None)
+    if item is None:
+        raise ValueError(f"unknown matter List item: {item_id}")
+    item.comments.append(
+        {
+            "id": f"comment-{len(item.comments) + 1}",
+            "author": author,
+            "body": body.strip(),
+            "createdAt": _reproducible_now().isoformat(),
+        }
+    )
+    return updated
+
+
 def build_timeline(matter_list: MatterList, actor: str = "Legal reviewer") -> list[TimelineEvent]:
     events: list[TimelineEvent] = []
     previous = None
@@ -216,6 +252,40 @@ def build_timeline(matter_list: MatterList, actor: str = "Legal reviewer") -> li
             )
         )
         previous = event_hash
+        if item.status == "resolved":
+            seq = len(events)
+            event_hash = compute_audit_event_hash(
+                seq, previous, "matter_list_item_resolved", actor, item.id, occurred_at
+            )
+            events.append(
+                TimelineEvent(
+                    seq=seq,
+                    event_type="matter_list_item_resolved",
+                    actor=actor,
+                    target_id=item.id,
+                    occurred_at=occurred_at,
+                    previous_hash=previous,
+                    event_hash=event_hash,
+                )
+            )
+            previous = event_hash
+        for comment in item.comments:
+            seq = len(events)
+            event_hash = compute_audit_event_hash(
+                seq, previous, "matter_list_item_commented", comment["author"], item.id, occurred_at
+            )
+            events.append(
+                TimelineEvent(
+                    seq=seq,
+                    event_type="matter_list_item_commented",
+                    actor=comment["author"],
+                    target_id=item.id,
+                    occurred_at=occurred_at,
+                    previous_hash=previous,
+                    event_hash=event_hash,
+                )
+            )
+            previous = event_hash
     return events
 
 
@@ -230,33 +300,47 @@ def render_review_room(
         for source in assessment.source_verifications
     )
     changes = "".join(
-        f"<tr><td>{html.escape(change.locator)}</td><td>{html.escape(change.proposed_text)}</td><td>{change.decision}</td></tr>"
+        f"<tr data-change='{html.escape(change.id)}'><td>{html.escape(change.locator)}</td><td>{html.escape(change.proposed_text)}</td><td class='decision'>{change.decision}</td><td><button type='button' data-decision='accepted'>Accept</button> <button type='button' data-decision='rejected'>Reject</button></td></tr>"
         for change in change_set.changes
     )
     tasks = "".join(
         f"<li><strong>{html.escape(item.title)}</strong>, {html.escape(item.owner)}, {item.status}</li>"
         for item in matter_list.items
     )
-    document = f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(assessment.matter.title)}</title><style>body{{font:15px system-ui;max-width:1100px;margin:40px auto;color:#172033}}section{{border:1px solid #d9dee8;border-radius:10px;padding:18px;margin:16px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #d9dee8;padding:8px;text-align:left}}.gate{{color:#9a3412}}</style></head><body><h1>{html.escape(assessment.matter.title)}</h1><p class='gate'>Local review only. External access and delivery are disabled.</p><section><h2>Source verification</h2><ul>{sources}</ul></section><section><h2>Document changes</h2><table><tr><th>Locator</th><th>Proposed text</th><th>Decision</th></tr>{changes}</table></section><section><h2>Matter List</h2><ul>{tasks}</ul></section></body></html>"""
+    document = f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(assessment.matter.title)}</title><style>body{{font:15px system-ui;max-width:1100px;margin:40px auto;color:#172033}}section{{border:1px solid #d9dee8;border-radius:10px;padding:18px;margin:16px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #d9dee8;padding:8px;text-align:left}}.gate{{color:#9a3412}}</style></head><body><h1>{html.escape(assessment.matter.title)}</h1><p class='gate'>Local review only. External access and delivery are disabled.</p><section><h2>Source verification</h2><ul>{sources}</ul></section><section><h2>Document changes</h2><table><tr><th>Locator</th><th>Proposed text</th><th>Decision</th><th>Review control</th></tr>{changes}</table><p><label>Reviewer comment <input id='review-comment' /></label> <button type='button' id='save-comment'>Add local comment</button></p><ul id='comments'></ul></section><section><h2>Matter List</h2><ul>{tasks}</ul></section><script>document.querySelectorAll('[data-decision]').forEach((button)=>button.addEventListener('click',()=>{{button.closest('tr').querySelector('.decision').textContent=button.dataset.decision;}}));document.getElementById('save-comment').addEventListener('click',()=>{{const input=document.getElementById('review-comment');if(!input.value.trim())return;const item=document.createElement('li');item.textContent=input.value.trim();document.getElementById('comments').appendChild(item);input.value='';}});</script></body></html>"""
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8")
     return output
 
 
-def render_annotated_docx(change_set: DocumentChangeSet, output: Path) -> Path:
+def render_annotated_docx(change_set: DocumentChangeSet, source: Path, output: Path) -> Path:
+    if source.resolve() == output.resolve():
+        raise ValueError("reviewed DOCX output must not overwrite the source document")
     if not change_set.export_allowed:
-        raise ValueError("DOCX export requires every proposed change to be accepted")
+        raise ValueError("DOCX export requires every proposed change to be decided")
+    if not zipfile.is_zipfile(source):
+        raise ValueError("source document must be a DOCX package")
+    if hashlib.sha256(source.read_bytes()).hexdigest() != change_set.source_digest:
+        raise ValueError("source DOCX digest does not match the reviewed change set")
     paragraphs = "".join(
-        f"<w:p><w:r><w:t>{escape(change.proposed_text)}</w:t></w:r></w:p>"
+        f"<w:p><w:ins w:author='Legal reviewer' w:date='2026-07-13T00:00:00Z'><w:r><w:t>{escape(change.proposed_text)}</w:t></w:r></w:ins></w:p>"
         for change in change_set.changes
         if change.decision == "accepted"
     )
-    content_types = "<?xml version='1.0' encoding='UTF-8'?><Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'><Default Extension='rels' ContentType='application/vnd.openxmlformats-package.relationships+xml'/><Default Extension='xml' ContentType='application/xml'/><Override PartName='/word/document.xml' ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'/></Types>"
-    rels = "<?xml version='1.0' encoding='UTF-8'?><Relationships xmlns='http://schemas.openxmlformats.org/package/2006/relationships'><Relationship Id='rId1' Type='http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument' Target='word/document.xml'/></Relationships>"
-    document = f"<?xml version='1.0' encoding='UTF-8'?><w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'><w:body>{paragraphs}<w:sectPr/></w:body></w:document>"
     output.parent.mkdir(parents=True, exist_ok=True)
-    with zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as package:
-        package.writestr("[Content_Types].xml", content_types)
-        package.writestr("_rels/.rels", rels)
-        package.writestr("word/document.xml", document)
+    with (
+        zipfile.ZipFile(source) as source_package,
+        zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target_package,
+    ):
+        for member in source_package.infolist():
+            payload = source_package.read(member.filename)
+            if member.filename == "word/document.xml":
+                document = payload.decode("utf-8")
+                marker = "<w:sectPr"
+                position = document.find(marker)
+                if position < 0:
+                    position = document.rfind("</w:body>")
+                document = document[:position] + paragraphs + document[position:]
+                payload = document.encode("utf-8")
+            target_package.writestr(member, payload)
     return output
