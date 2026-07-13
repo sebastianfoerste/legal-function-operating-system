@@ -2,10 +2,10 @@ import json
 import unittest
 from pathlib import Path
 
-from legal_function_os.legora_workspace import (
+from legal_function_os.collaboration_workspace import (
     activate_workflow,
     answer_portal,
-    build_legora_workspace,
+    build_collaboration_workspace,
     compare_workflow_versions,
     render_portal,
     validate_workflow_definition,
@@ -15,10 +15,10 @@ from legal_function_os.legora_workspace import (
 REQUESTS = json.loads(Path("data/sample_requests.json").read_text())
 
 
-class LegoraWorkspaceTests(unittest.TestCase):
+class CollaborationWorkspaceTests(unittest.TestCase):
     def test_operational_list_is_deterministic_and_prioritises_blockers(self):
-        first = build_legora_workspace(REQUESTS, "Q3 2026 synthetic")
-        second = build_legora_workspace(REQUESTS, "Q3 2026 synthetic")
+        first = build_collaboration_workspace(REQUESTS, "Q3 2026 synthetic")
+        second = build_collaboration_workspace(REQUESTS, "Q3 2026 synthetic")
         self.assertEqual(first, second)
         rows = first["operational_list"]["rows"]
         if any(row["status"] == "blocked" for row in rows):
@@ -26,7 +26,7 @@ class LegoraWorkspaceTests(unittest.TestCase):
         self.assertTrue(all(row["facts"] for row in rows))
 
     def test_workflows_are_allowlisted_and_require_human_approval(self):
-        definition = build_legora_workspace(REQUESTS, "Q3 2026")[
+        definition = build_collaboration_workspace(REQUESTS, "Q3 2026")[
             "workflow_definitions"
         ][0]
         without_approval = {
@@ -39,7 +39,7 @@ class LegoraWorkspaceTests(unittest.TestCase):
             validate_workflow_definition(without_approval)
 
     def test_workflow_comparison_and_activation_require_review(self):
-        active = build_legora_workspace(REQUESTS, "Q3 2026")["workflow_definitions"][0]
+        active = build_collaboration_workspace(REQUESTS, "Q3 2026")["workflow_definitions"][0]
         draft = {**active, "version": 2, "status": "draft", "steps": [*active["steps"], {"id": "evidence-2", "type": "collect_evidence"}]}
         comparison = compare_workflow_versions(active, draft)
         self.assertEqual(comparison["to_version"], 2)
@@ -51,7 +51,7 @@ class LegoraWorkspaceTests(unittest.TestCase):
         self.assertEqual(activate_workflow(draft, reviewer="General Counsel", approved=True)["status"], "active")
 
     def test_missing_request_values_use_stable_fallbacks(self):
-        workspace = build_legora_workspace(
+        workspace = build_collaboration_workspace(
             [
                 {
                     **REQUESTS[0],
@@ -71,7 +71,7 @@ class LegoraWorkspaceTests(unittest.TestCase):
         )
 
     def test_zero_request_id_is_preserved(self):
-        workspace = build_legora_workspace(
+        workspace = build_collaboration_workspace(
             [{**REQUESTS[0], "id": 0}],
             "Q3 2026",
         )
@@ -80,7 +80,7 @@ class LegoraWorkspaceTests(unittest.TestCase):
         self.assertEqual(resource["source_ref"], "synthetic-request:0")
 
     def test_portal_answers_are_cited_or_abstain(self):
-        portal = build_legora_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
+        portal = build_collaboration_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
         grounded = answer_portal(portal, "human approval workflow")
         self.assertEqual(grounded["status"], "grounded")
         self.assertTrue(grounded["citations"])
@@ -91,7 +91,7 @@ class LegoraWorkspaceTests(unittest.TestCase):
         self.assertFalse(portal["external_action_allowed"])
 
     def test_rendered_portal_has_local_search_and_abstention_message(self):
-        portal = build_legora_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
+        portal = build_collaboration_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
         output = render_portal(portal, Path(self.id().replace(".", "-") + ".html"))
         try:
             content = output.read_text(encoding="utf-8")

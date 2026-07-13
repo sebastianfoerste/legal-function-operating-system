@@ -15,7 +15,7 @@ from pathlib import Path
 
 from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.workspace import build_legal_function_workspace
-from legal_function_os.legora_workspace import build_legora_workspace, render_portal
+from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -29,7 +29,7 @@ def main(argv: list[str] | None = None) -> int:
         help="Optional path for the request vault, triage workflows and GC command center JSON.",
     )
     parser.add_argument(
-        "--legora-output-dir",
+        "--collaboration-output-dir",
         default=None,
         help="Optional directory for operational Lists, workflow runs and local knowledge portal.",
     )
@@ -73,14 +73,14 @@ def main(argv: list[str] | None = None) -> int:
             encoding="utf-8",
         )
 
-    if args.legora_output_dir:
-        output_dir = Path(args.legora_output_dir)
+    if args.collaboration_output_dir:
+        output_dir = Path(args.collaboration_output_dir)
         output_dir.mkdir(parents=True, exist_ok=True)
-        legora = build_legora_workspace(requests, args.period)
-        (output_dir / "legora-workspace.json").write_text(
-            json.dumps(legora, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        collaboration = build_collaboration_workspace(requests, args.period)
+        (output_dir / "collaboration-workspace.json").write_text(
+            json.dumps(collaboration, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
-        render_portal(legora["knowledge_portal"], output_dir / "knowledge-portal.html")
+        render_portal(collaboration["knowledge_portal"], output_dir / "knowledge-portal.html")
 
     # Board-attention items are normal management signal, not a failure. Only an
     # explicit --fail-on-breach gates the pipeline on missed SLAs.

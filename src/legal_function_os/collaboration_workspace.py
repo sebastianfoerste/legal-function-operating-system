@@ -179,8 +179,8 @@ def render_portal(portal: dict[str, Any], output: Path) -> Path:
     return output
 
 
-def build_legora_workspace(requests: list[dict[str, Any]], period: str) -> dict[str, Any]:
+def build_collaboration_workspace(requests: list[dict[str, Any]], period: str) -> dict[str, Any]:
     operational_list = build_operational_list(requests, period)
     workflows = build_workflow_library()
     portal = build_knowledge_portal(requests, workflows)
-    return {"schema": "legal-function-os.legora-workspace.v1", "operational_list": operational_list, "workflow_definitions": workflows, "workflow_runs": [dry_run_workflow(workflows[0], operational_list)], "knowledge_portal": portal, "portal_answer": answer_portal(portal, "Which workflow requires human approval?"), "external_action_allowed": False}
+    return {"schema": "legal-function-os.collaboration-workspace.v1", "operational_list": operational_list, "workflow_definitions": workflows, "workflow_runs": [dry_run_workflow(workflows[0], operational_list)], "knowledge_portal": portal, "portal_answer": answer_portal(portal, "Which workflow requires human approval?"), "external_action_allowed": False}

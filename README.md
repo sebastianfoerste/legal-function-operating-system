@@ -119,4 +119,4 @@ timers, and pairing with the starter-kit playbooks and DPA checks.
 
 ## Operational workspace outputs
 
-`--legora-output-dir` produces deterministic operational Lists, an allowlisted versioned approval workflow, and a self-contained local knowledge portal. Portal answers cite approved local resources or return an insufficient-evidence result. The standard-library-only runtime and external-action block remain intact.
+`--collaboration-output-dir` produces deterministic operational Lists, an allowlisted versioned approval workflow, and a self-contained local knowledge portal. Portal answers cite approved local resources or return an insufficient-evidence result. The standard-library-only runtime and external-action block remain intact.
