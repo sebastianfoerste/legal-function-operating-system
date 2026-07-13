@@ -22,7 +22,7 @@ Supervised legal-operations workflow: typed intake, deterministic risk triage, r
 ```bash
 python3.13 -m venv .venv && source .venv/bin/activate
 make install
-# 1) assess a synthetic matter — returns needs_review / export_allowed:false
+# 1) assess a synthetic matter, returns needs_review / export_allowed:false
 python -m src.cli --input examples/matters/saas_msa_deviation.json
 # 2) approve it with a documented human decision
 python -m src.cli --input examples/matters/saas_msa_deviation.json \
@@ -30,7 +30,7 @@ python -m src.cli --input examples/matters/saas_msa_deviation.json \
   --packet-output demo_output/saas-msa-review-packet.md
 ```
 
-Export stays blocked until approval is recorded — and stays blocked after approval if a
+Export stays blocked until approval is recorded. It also stays blocked after approval if a
 blocker finding remains. Run the proof gate with `make check`.
 
 ## Architecture flow
@@ -126,11 +126,11 @@ The snapshot is generated from the same synthetic SaaS MSA fixture after a docum
 human approval, and shows a two-event chain (`assessment_created`,
 `review_decision_applied`) that verifies.
 
-Hash-chained audit logging is not a novel technique — several open-source projects
+Hash-chained audit logging is an established technique used by several open-source projects
 implement it, including at least one MCP-exposed audit tool for general AI agent
 actions. The differentiator here is narrower and specific: pairing that hash chain
-with a legal-matter review workflow — typed intake, deterministic risk triage,
-reviewer routing, and an export gate the chain itself can block — in one
+with a legal-matter review workflow: typed intake, deterministic risk triage,
+reviewer routing, and an export gate the chain itself can block, in one
 reviewer-facing evidence packet. See
 [`docs/competitive-research-2026-06-30.md`](docs/competitive-research-2026-06-30.md#round-2-audit-integrity-chain)
 for the comparison this claim is based on.
@@ -198,6 +198,7 @@ This runs Ruff, Black, MyPy and Pytest.
 - `legal.audit.verify`: verify the tamper-evident hash chain on an assessment's audit trail.
 - `legal.sources.list`: show the public or synthetic source boundary for the demo.
 - `legal.sources.verify`: verify source-reference boundaries without fetching external content.
+- `legal.workspace.build`: build a provenance-backed matter vault, supervised workflow-agent library and shared review room from a synthetic assessment.
 
 These tools are designed for local evaluation. They do not send client, candidate, matter or account data to an external system.
 

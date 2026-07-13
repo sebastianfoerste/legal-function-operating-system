@@ -16,6 +16,7 @@ def test_mcp_manifest_exposes_controlled_tools():
         "legal.audit.verify",
         "legal.sources.list",
         "legal.sources.verify",
+        "legal.workspace.build",
     }
 
 
@@ -81,3 +82,15 @@ def test_mcp_audit_verify_tool_returns_chain_report():
     assert result["verified"] is True
     assert result["event_count"] == 1
     assert result["chain_root_hash"] == assessment["audit_events"][0]["event_hash"]
+
+
+def test_mcp_workspace_build_returns_review_gated_workspace():
+    result = run_tool(
+        "legal.workspace.build",
+        build_sample_matter().model_dump(mode="json"),
+    )
+    assert result["schema"] == "legal-ops-agent.matter-workspace.v1"
+    assert result["vault"]["records"]
+    assert len(result["workflowLibrary"]["agents"]) == 3
+    assert result["sharedReviewRoom"]["externalAccessEnabled"] is False
+    assert result["externalActionAllowed"] is False
