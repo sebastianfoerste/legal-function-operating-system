@@ -24,7 +24,7 @@ def build_operational_list(requests: list[dict[str, Any]], period: str) -> dict[
             "request_id": decision.request_id,
             "kind": "legal_request",
             "title": decision.title,
-            "facts": list(source.get("facts", []))
+            "facts": list(source.get("facts") or [])
             or [str(source.get("description") or "Synthetic request")],
             "owner": decision.queue,
             "priority": decision.priority,
@@ -32,7 +32,7 @@ def build_operational_list(requests: list[dict[str, Any]], period: str) -> dict[
             "sla_response_hours": decision.sla_response_hours,
             "sla_resolution_days": decision.sla_resolution_days,
             "deadline": source.get("deadline"),
-            "dependencies": list(source.get("dependencies", [])),
+            "dependencies": list(source.get("dependencies") or []),
             "source_refs": [f"synthetic-request:{decision.request_id}"],
             "status": (
                 "blocked"
@@ -102,14 +102,14 @@ def dry_run_workflow(definition: dict[str, Any], operational_list: dict[str, Any
 def build_knowledge_portal(requests: list[dict[str, Any]], workflows: list[dict[str, Any]]) -> dict[str, Any]:
     resources = [
         {
-            "id": f"resource:{item.get('id') or index}",
+            "id": f"resource:{item.get('id') if item.get('id') is not None else index}",
             "title": str(item.get("title") or "Synthetic request precedent"),
             "passage": str(
                 item.get("description")
                 or item.get("summary")
                 or "Synthetic legal request precedent for local review."
             ),
-            "source_ref": f"synthetic-request:{item.get('id') or index}",
+            "source_ref": f"synthetic-request:{item.get('id') if item.get('id') is not None else index}",
             "approved": True,
         }
         for index, item in enumerate(requests, start=1)

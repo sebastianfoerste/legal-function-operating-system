@@ -52,7 +52,15 @@ class LegoraWorkspaceTests(unittest.TestCase):
 
     def test_missing_request_values_use_stable_fallbacks(self):
         workspace = build_legora_workspace(
-            [{**REQUESTS[0], "id": None, "description": None, "facts": []}],
+            [
+                {
+                    **REQUESTS[0],
+                    "id": None,
+                    "description": None,
+                    "facts": None,
+                    "dependencies": None,
+                }
+            ],
             "Q3 2026",
         )
         resource = workspace["knowledge_portal"]["resources"][0]
@@ -61,6 +69,15 @@ class LegoraWorkspaceTests(unittest.TestCase):
             resource["passage"],
             "Synthetic legal request precedent for local review.",
         )
+
+    def test_zero_request_id_is_preserved(self):
+        workspace = build_legora_workspace(
+            [{**REQUESTS[0], "id": 0}],
+            "Q3 2026",
+        )
+        resource = workspace["knowledge_portal"]["resources"][0]
+        self.assertEqual(resource["id"], "resource:0")
+        self.assertEqual(resource["source_ref"], "synthetic-request:0")
 
     def test_portal_answers_are_cited_or_abstain(self):
         portal = build_legora_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
