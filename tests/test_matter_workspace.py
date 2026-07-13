@@ -1,4 +1,5 @@
-from src.legal_ops import assess_matter, build_sample_matter
+from models import ReviewDecision
+from src.legal_ops import apply_review_decision, assess_matter, build_sample_matter
 from src.matter_workspace import build_matter_workspace
 
 
@@ -8,6 +9,20 @@ def test_workspace_builds_provenance_bound_matter_vault():
     assert workspace.vault.records
     assert all(record.provenance_ref for record in workspace.vault.records)
     assert workspace.vault.external_action_allowed is False
+
+
+def test_approved_intake_is_promoted_to_verified_state():
+    assessment = assess_matter(build_sample_matter())
+    approved = apply_review_decision(
+        assessment,
+        ReviewDecision(
+            reviewer="Legal reviewer",
+            state="approved",
+            note="Approved after source and control review was completed.",
+        ),
+    )
+    workspace = build_matter_workspace(approved)
+    assert workspace.vault.records[0].status == "verified"
 
 
 def test_workspace_exposes_reusable_supervised_workflow_agents():

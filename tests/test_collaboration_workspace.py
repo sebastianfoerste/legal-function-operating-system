@@ -4,8 +4,7 @@ from xml.etree import ElementTree
 
 import pytest
 
-from src.legal_ops import assess_matter, build_sample_matter
-from src.legora_workspace import (
+from src.collaboration_workspace import (
     build_change_set,
     build_matter_list,
     build_timeline,
@@ -15,11 +14,17 @@ from src.legora_workspace import (
     render_review_room,
     resolve_list_item,
 )
+from src.legal_ops import assess_matter, build_sample_matter
 
 
-def write_source_docx(path) -> None:
+def write_source_docx(path, *, include_nested_section: bool = False) -> None:
     content_types = "<?xml version='1.0'?><Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'><Default Extension='xml' ContentType='application/xml'/><Override PartName='/word/document.xml' ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'/></Types>"
-    document = "<?xml version='1.0'?><w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'><w:body><w:p><w:r><w:t>Original source clause</w:t></w:r></w:p><w:sectPr/></w:body></w:document>"
+    nested_section = (
+        "<w:p><w:pPr><w:sectPr/></w:pPr><w:r><w:t>Second section</w:t></w:r></w:p>"
+        if include_nested_section
+        else ""
+    )
+    document = f"<?xml version='1.0'?><w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'><w:body><w:p><w:r><w:t>Original source clause</w:t></w:r></w:p>{nested_section}<w:sectPr/></w:body></w:document>"
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as package:
         package.writestr("[Content_Types].xml", content_types)
         package.writestr("word/document.xml", document)
@@ -53,6 +58,19 @@ def test_playbook_changes_and_docx_remain_review_gated(tmp_path) -> None:
     assert document.count("<w:ins") == 1
 
 
+def test_docx_changes_are_inserted_before_the_final_section_marker(tmp_path) -> None:
+    assessment = assess_matter(build_sample_matter())
+    source = tmp_path / "multi-section.docx"
+    write_source_docx(source, include_nested_section=True)
+    change_set = build_change_set(assessment, source)
+    for change in list(change_set.changes):
+        change_set = decide_change(change_set, change.id, "accepted")
+    output = render_annotated_docx(change_set, source, tmp_path / "reviewed.docx")
+    with zipfile.ZipFile(output) as package:
+        document = package.read("word/document.xml").decode()
+    assert document.rfind("<w:ins") < document.rfind("<w:sectPr")
+
+
 def test_matter_lists_require_evidence_and_timeline_is_hash_chained() -> None:
     matter_list = build_matter_list(assess_matter(build_sample_matter()))
     assert matter_list == build_matter_list(assess_matter(build_sample_matter()))
@@ -74,6 +92,14 @@ def test_matter_lists_require_evidence_and_timeline_is_hash_chained() -> None:
         "matter_list_item_resolved",
         "matter_list_item_commented",
     }
+    comment_event = next(event for event in timeline if event.event_type.endswith("commented"))
+    assert comment_event.occurred_at == resolved.items[0].comments[0]["createdAt"]
+
+
+def test_source_date_epoch_rejects_out_of_range_values(monkeypatch) -> None:
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "999999999999999999999")
+    with pytest.raises(ValueError, match="valid integer Unix timestamp"):
+        build_matter_list(assess_matter(build_sample_matter()))
 
 
 def test_local_review_room_has_no_external_dependencies(tmp_path) -> None:

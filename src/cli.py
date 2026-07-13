@@ -8,14 +8,14 @@ from typing import Any
 
 from models import MatterIntake, ReviewDecision, verify_audit_chain
 from src.artifact_manifest import build_artifact_manifest
-from src.exports import write_customer_commitment_register, write_source_verification_report
-from src.legal_ops import apply_review_decision, assess_matter, build_sample_matter
-from src.legora_workspace import (
+from src.collaboration_workspace import (
     build_change_set,
     build_matter_list,
     build_timeline,
     render_review_room,
 )
+from src.exports import write_customer_commitment_register, write_source_verification_report
+from src.legal_ops import apply_review_decision, assess_matter, build_sample_matter
 from src.review_packet import write_review_packet
 from src.review_packet_runner import (
     build_source_verified_review_packet_run,
@@ -77,12 +77,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Write the tamper-evident audit chain verification JSON to this path.",
     )
     parser.add_argument(
-        "--legora-output-dir",
+        "--collaboration-output-dir",
         type=Path,
         help="Write local playbook changes, matter Lists, timeline and HTML review room.",
     )
     parser.add_argument(
-        "--legora-source-docx",
+        "--collaboration-source-docx",
         type=Path,
         help="Approved source DOCX whose digest is bound to the local change set.",
     )
@@ -106,8 +106,8 @@ def _trust_cockpit_command(args: argparse.Namespace) -> str:
         ("--audit-chain-output", args.audit_chain_output),
         ("--trust-cockpit-output", args.trust_cockpit_output),
         ("--trust-cockpit-json-output", args.trust_cockpit_json_output),
-        ("--legora-output-dir", args.legora_output_dir),
-        ("--legora-source-docx", args.legora_source_docx),
+        ("--collaboration-output-dir", args.collaboration_output_dir),
+        ("--collaboration-source-docx", args.collaboration_source_docx),
     ]
     for flag, value in optional_paths:
         if value:
@@ -184,10 +184,10 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
             write_trust_cockpit_markdown(cockpit, args.trust_cockpit_output)
         if args.trust_cockpit_json_output:
             write_trust_cockpit_json(cockpit, args.trust_cockpit_json_output)
-    if args.legora_output_dir:
-        output_dir = args.legora_output_dir
+    if args.collaboration_output_dir:
+        output_dir = args.collaboration_output_dir
         output_dir.mkdir(parents=True, exist_ok=True)
-        change_set = build_change_set(assessment, args.legora_source_docx)
+        change_set = build_change_set(assessment, args.collaboration_source_docx)
         matter_list = build_matter_list(assessment)
         (output_dir / "document-change-set.json").write_text(
             change_set.model_dump_json(by_alias=True, indent=2) + "\n", encoding="utf-8"

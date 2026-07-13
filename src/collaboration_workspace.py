@@ -15,7 +15,7 @@ from xml.sax.saxutils import escape
 from pydantic import BaseModel, ConfigDict, Field
 
 from models import LegalOpsAssessment, compute_audit_event_hash
-from src.source_verification import verify_source_ref
+from src.source_verification import verify_source_refs
 
 
 class DocumentChange(BaseModel):
@@ -101,8 +101,8 @@ def _reproducible_now() -> datetime:
     raw_epoch = os.environ.get("SOURCE_DATE_EPOCH", "0")
     try:
         return datetime.fromtimestamp(int(raw_epoch), UTC)
-    except ValueError as error:
-        raise ValueError("SOURCE_DATE_EPOCH must be an integer Unix timestamp") from error
+    except (ValueError, OverflowError, OSError) as error:
+        raise ValueError("SOURCE_DATE_EPOCH must be a valid integer Unix timestamp") from error
 
 
 def build_change_set(
@@ -204,9 +204,8 @@ def resolve_list_item(
     item = next((candidate for candidate in updated.items if candidate.id == item_id), None)
     if item is None:
         raise ValueError(f"unknown matter List item: {item_id}")
-    for source_ref in evidence_refs:
-        if verify_source_ref(source_ref).status == "blocker":
-            raise ValueError("blocked evidence reference cannot resolve a task")
+    if any(record.status == "blocker" for record in verify_source_refs(evidence_refs)):
+        raise ValueError("blocked evidence reference cannot resolve a task")
     item.evidence_refs = evidence_refs
     item.status = "resolved"
     return updated
@@ -235,8 +234,9 @@ def comment_on_list_item(
 def build_timeline(matter_list: MatterList, actor: str = "Legal reviewer") -> list[TimelineEvent]:
     events: list[TimelineEvent] = []
     previous = None
-    for seq, item in enumerate(matter_list.items):
-        occurred_at = datetime(2026, 7, 13, tzinfo=UTC).isoformat()
+    occurred_at = _reproducible_now().isoformat()
+    for item in matter_list.items:
+        seq = len(events)
         event_hash = compute_audit_event_hash(
             seq, previous, "matter_list_item_created", actor, item.id, occurred_at
         )
@@ -271,8 +271,14 @@ def build_timeline(matter_list: MatterList, actor: str = "Legal reviewer") -> li
             previous = event_hash
         for comment in item.comments:
             seq = len(events)
+            comment_occurred_at = comment["createdAt"]
             event_hash = compute_audit_event_hash(
-                seq, previous, "matter_list_item_commented", comment["author"], item.id, occurred_at
+                seq,
+                previous,
+                "matter_list_item_commented",
+                comment["author"],
+                item.id,
+                comment_occurred_at,
             )
             events.append(
                 TimelineEvent(
@@ -280,7 +286,7 @@ def build_timeline(matter_list: MatterList, actor: str = "Legal reviewer") -> li
                     event_type="matter_list_item_commented",
                     actor=comment["author"],
                     target_id=item.id,
-                    occurred_at=occurred_at,
+                    occurred_at=comment_occurred_at,
                     previous_hash=previous,
                     event_hash=event_hash,
                 )
@@ -322,8 +328,9 @@ def render_annotated_docx(change_set: DocumentChangeSet, source: Path, output: P
         raise ValueError("source document must be a DOCX package")
     if hashlib.sha256(source.read_bytes()).hexdigest() != change_set.source_digest:
         raise ValueError("source DOCX digest does not match the reviewed change set")
+    change_timestamp = _reproducible_now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     paragraphs = "".join(
-        f"<w:p><w:ins w:author='Legal reviewer' w:date='2026-07-13T00:00:00Z'><w:r><w:t>{escape(change.proposed_text)}</w:t></w:r></w:ins></w:p>"
+        f"<w:p><w:ins w:author='Legal reviewer' w:date='{change_timestamp}'><w:r><w:t>{escape(change.proposed_text)}</w:t></w:r></w:ins></w:p>"
         for change in change_set.changes
         if change.decision == "accepted"
     )
@@ -337,7 +344,7 @@ def render_annotated_docx(change_set: DocumentChangeSet, source: Path, output: P
             if member.filename == "word/document.xml":
                 document = payload.decode("utf-8")
                 marker = "<w:sectPr"
-                position = document.find(marker)
+                position = document.rfind(marker)
                 if position < 0:
                     position = document.rfind("</w:body>")
                 document = document[:position] + paragraphs + document[position:]
