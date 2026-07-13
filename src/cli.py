@@ -81,6 +81,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Write local playbook changes, matter Lists, timeline and HTML review room.",
     )
+    parser.add_argument(
+        "--legora-source-docx",
+        type=Path,
+        help="Approved source DOCX whose digest is bound to the local change set.",
+    )
     parser.add_argument("--approve-note", help="Apply an approval note after assessment.")
     parser.add_argument(
         "--reviewer", default="General Counsel", help="Reviewer for approval notes."
@@ -102,6 +107,7 @@ def _trust_cockpit_command(args: argparse.Namespace) -> str:
         ("--trust-cockpit-output", args.trust_cockpit_output),
         ("--trust-cockpit-json-output", args.trust_cockpit_json_output),
         ("--legora-output-dir", args.legora_output_dir),
+        ("--legora-source-docx", args.legora_source_docx),
     ]
     for flag, value in optional_paths:
         if value:
@@ -181,7 +187,7 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
     if args.legora_output_dir:
         output_dir = args.legora_output_dir
         output_dir.mkdir(parents=True, exist_ok=True)
-        change_set = build_change_set(assessment)
+        change_set = build_change_set(assessment, args.legora_source_docx)
         matter_list = build_matter_list(assessment)
         (output_dir / "document-change-set.json").write_text(
             change_set.model_dump_json(by_alias=True, indent=2) + "\n", encoding="utf-8"
