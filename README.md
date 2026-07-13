@@ -200,6 +200,8 @@ This runs Ruff, Black, MyPy and Pytest.
 - `legal.sources.verify`: verify source-reference boundaries without fetching external content.
 - `legal.workspace.build`: build a provenance-backed matter vault, supervised workflow-agent library and shared review room from a synthetic assessment.
 
+The local Legora-inspired layer adds versioned matter playbooks, review-gated `document.change-set.v1` DOCX drafts, evidence-gated matter Lists with a hash-chained timeline, and a self-contained HTML review room. Sensitive source prefixes still block processing and no external delivery action is available.
+
 These tools are designed for local evaluation. They do not send client, candidate, matter or account data to an external system.
 
 See [docs/API.md](docs/API.md) for input schemas, output schemas, safety limits
