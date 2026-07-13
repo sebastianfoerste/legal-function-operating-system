@@ -116,3 +116,7 @@ A public-safe prototype, not legal advice.
 3. Approval tiers are modelled, not enforced against a real IdP.
 Next production step: Slack/Jira intake, real roles/auth for approvals, live SLA
 timers, and pairing with the starter-kit playbooks and DPA checks.
+
+## Operational workspace outputs
+
+`--legora-output-dir` produces deterministic operational Lists, an allowlisted versioned approval workflow, and a self-contained local knowledge portal. Portal answers cite approved local resources or return an insufficient-evidence result. The standard-library-only runtime and external-action block remain intact.

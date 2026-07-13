@@ -15,6 +15,7 @@ from pathlib import Path
 
 from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.workspace import build_legal_function_workspace
+from legal_function_os.legora_workspace import build_legora_workspace, render_portal
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -26,6 +27,11 @@ def main(argv: list[str] | None = None) -> int:
         "--workspace-output",
         default=None,
         help="Optional path for the request vault, triage workflows and GC command center JSON.",
+    )
+    parser.add_argument(
+        "--legora-output-dir",
+        default=None,
+        help="Optional directory for operational Lists, workflow runs and local knowledge portal.",
     )
     parser.add_argument("--quiet", action="store_true", help="Do not print the markdown pack.")
     parser.add_argument(
@@ -66,6 +72,15 @@ def main(argv: list[str] | None = None) -> int:
             + "\n",
             encoding="utf-8",
         )
+
+    if args.legora_output_dir:
+        output_dir = Path(args.legora_output_dir)
+        output_dir.mkdir(parents=True, exist_ok=True)
+        legora = build_legora_workspace(requests, args.period)
+        (output_dir / "legora-workspace.json").write_text(
+            json.dumps(legora, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+        )
+        render_portal(legora["knowledge_portal"], output_dir / "knowledge-portal.html")
 
     # Board-attention items are normal management signal, not a failure. Only an
     # explicit --fail-on-breach gates the pipeline on missed SLAs.
