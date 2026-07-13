@@ -19,7 +19,7 @@ def build_operational_list(requests: list[dict[str, Any]], period: str) -> dict[
     rows = []
     for decision in pack.decisions:
         source = by_id.get(decision.request_id, {})
-        rows.append({"id": f"list:{decision.request_id}", "request_id": decision.request_id, "kind": "legal_request", "title": decision.title, "owner": decision.queue, "priority": decision.priority, "risk": decision.risk, "sla_response_hours": decision.sla_response_hours, "sla_resolution_days": decision.sla_resolution_days, "deadline": source.get("deadline"), "dependencies": list(source.get("dependencies", [])), "source_refs": [f"synthetic-request:{decision.request_id}"], "status": "blocked" if decision.priority == "P1_blocker" or source.get("sla_breached") else "review_required", "evidence_refs": []})
+        rows.append({"id": f"list:{decision.request_id}", "request_id": decision.request_id, "kind": "legal_request", "title": decision.title, "facts": list(source.get("facts", [])) or [str(source.get("description", "Synthetic request"))], "owner": decision.queue, "priority": decision.priority, "risk": decision.risk, "sla_response_hours": decision.sla_response_hours, "sla_resolution_days": decision.sla_resolution_days, "deadline": source.get("deadline"), "dependencies": list(source.get("dependencies", [])), "source_refs": [f"synthetic-request:{decision.request_id}"], "status": "blocked" if decision.priority == "P1_blocker" or source.get("sla_breached") else "review_required", "evidence_refs": []})
     rows.sort(key=lambda row: ({"blocked": 0, "review_required": 1}[row["status"]], {"P1_blocker": 0, "P2_high": 1, "P3_standard": 2, "P4_low": 3}.get(row["priority"], 4), row["request_id"]))
     return {"schema": "legal-function-os.operational-list.v1", "period": period, "rows": rows, "filters": {"blocked": sum(row["status"] == "blocked" for row in rows), "overdue": sum(bool(by_id.get(row["request_id"], {}).get("sla_breached")) for row in rows), "awaiting_business_input": sum(bool(by_id.get(row["request_id"], {}).get("awaiting_business_input")) for row in rows), "ready_for_approval": sum(row["status"] == "review_required" for row in rows)}, "external_action_allowed": False}
 
@@ -40,6 +40,34 @@ def validate_workflow_definition(definition: dict[str, Any]) -> dict[str, Any]:
 
 def build_workflow_library() -> list[dict[str, Any]]:
     return [validate_workflow_definition({"id": "workflow:legal-request", "name": "Legal request triage and approval", "version": 1, "status": "active", "steps": [{"id": "intake", "type": "validate_intake"}, {"id": "risk", "type": "risk_triage"}, {"id": "owner", "type": "assign_owner"}, {"id": "sla", "type": "check_sla"}, {"id": "evidence", "type": "collect_evidence"}, {"id": "approval", "type": "human_approval"}, {"id": "report", "type": "board_pack"}]})]
+
+
+def compare_workflow_versions(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    left = validate_workflow_definition(left)
+    right = validate_workflow_definition(right)
+    if left["id"] != right["id"]:
+        raise ValueError("workflow version comparison requires the same workflow id")
+    return {
+        "schema": "workflow.version-comparison.v1",
+        "workflow_id": left["id"],
+        "from_version": left["version"],
+        "to_version": right["version"],
+        "added_steps": [step for step in right["steps"] if step not in left["steps"]],
+        "removed_steps": [step for step in left["steps"] if step not in right["steps"]],
+    }
+
+
+def activate_workflow(definition: dict[str, Any], *, reviewer: str, approved: bool) -> dict[str, Any]:
+    definition = validate_workflow_definition(definition)
+    if definition["status"] != "draft":
+        raise ValueError("only draft workflow versions can be activated")
+    if not approved or not reviewer.strip():
+        raise ValueError("workflow activation requires a named reviewer approval")
+    return {
+        **definition,
+        "status": "active",
+        "activation": {"reviewer": reviewer.strip(), "approved": True},
+    }
 
 
 def dry_run_workflow(definition: dict[str, Any], operational_list: dict[str, Any]) -> dict[str, Any]:
@@ -65,7 +93,7 @@ def answer_portal(portal: dict[str, Any], query: str) -> dict[str, Any]:
 
 def render_portal(portal: dict[str, Any], output: Path) -> Path:
     cards = "".join(f"<article><h2>{html.escape(item['title'])}</h2><p>{html.escape(item['passage'])}</p><code>{html.escape(item['source_ref'])}</code></article>" for item in portal["resources"])
-    document = f"<!doctype html><html><head><meta charset='utf-8'><title>Legal Function Knowledge Portal</title><style>body{{font:15px system-ui;max-width:1000px;margin:40px auto;color:#172033}}article{{border:1px solid #d9dee8;border-radius:10px;padding:16px;margin:12px 0}}code{{font-size:12px}}</style></head><body><h1>Legal Function Knowledge Portal</h1><p>Local approved knowledge only. Human review remains required.</p>{cards}</body></html>"
+    document = f"<!doctype html><html><head><meta charset='utf-8'><title>Legal Function Knowledge Portal</title><style>body{{font:15px system-ui;max-width:1000px;margin:40px auto;color:#172033}}article{{border:1px solid #d9dee8;border-radius:10px;padding:16px;margin:12px 0}}code{{font-size:12px}}input{{width:100%;padding:10px;box-sizing:border-box}}</style></head><body><h1>Legal Function Knowledge Portal</h1><p>Local approved knowledge only. Human review remains required.</p><label for='search'>Search approved passages</label><input id='search' type='search' autocomplete='off'><p id='status' aria-live='polite'></p><main>{cards}</main><script>const q=document.getElementById('search');const cards=[...document.querySelectorAll('article')];q.addEventListener('input',()=>{{const term=q.value.trim().toLowerCase();let shown=0;for(const card of cards){{const hit=!term||card.textContent.toLowerCase().includes(term);card.hidden=!hit;if(hit)shown++;}}document.getElementById('status').textContent=shown?shown+' approved resource(s)':'Insufficient evidence in approved resources';}});</script></body></html>"
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8")
     return output
