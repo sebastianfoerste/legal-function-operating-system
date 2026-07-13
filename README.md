@@ -161,8 +161,8 @@ The snapshot is generated from the same synthetic SaaS MSA fixture after a docum
 human approval, and shows a two-event chain (`assessment_created`,
 `review_decision_applied`) that verifies.
 
-Hash-chained audit logging is an established technique used by several open-source projects
-implement it, including at least one MCP-exposed audit tool for general AI agent
+Hash-chained audit logging is an established technique implemented by several open-source
+projects, including at least one MCP-exposed audit tool for general AI agent
 actions. The differentiator here is narrower and specific: pairing that hash chain
 with a legal-matter review workflow: typed intake, deterministic risk triage,
 reviewer routing, and an export gate the chain itself can block, in one

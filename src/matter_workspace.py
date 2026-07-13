@@ -89,7 +89,7 @@ def build_matter_workspace(assessment: LegalOpsAssessment) -> MatterWorkspace:
             kind="intake",
             label=assessment.matter.title,
             provenance_ref=f"assessment:{assessment.assessment_id}:intake",
-            status="review_required",
+            status="verified" if assessment.review_state == "approved" else "review_required",
         )
     ]
     records.extend(
