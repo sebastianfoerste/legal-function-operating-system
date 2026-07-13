@@ -46,7 +46,21 @@ class LegoraWorkspaceTests(unittest.TestCase):
         self.assertEqual(len(comparison["added_steps"]), 1)
         with self.assertRaisesRegex(ValueError, "named reviewer"):
             activate_workflow(draft, reviewer="", approved=True)
+        with self.assertRaisesRegex(ValueError, "named reviewer"):
+            activate_workflow(draft, reviewer=None, approved=True)
         self.assertEqual(activate_workflow(draft, reviewer="General Counsel", approved=True)["status"], "active")
+
+    def test_missing_request_values_use_stable_fallbacks(self):
+        workspace = build_legora_workspace(
+            [{**REQUESTS[0], "id": None, "description": None, "facts": []}],
+            "Q3 2026",
+        )
+        resource = workspace["knowledge_portal"]["resources"][0]
+        self.assertEqual(resource["id"], "resource:1")
+        self.assertEqual(
+            resource["passage"],
+            "Synthetic legal request precedent for local review.",
+        )
 
     def test_portal_answers_are_cited_or_abstain(self):
         portal = build_legora_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
