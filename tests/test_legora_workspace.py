@@ -3,8 +3,11 @@ import unittest
 from pathlib import Path
 
 from legal_function_os.legora_workspace import (
+    activate_workflow,
     answer_portal,
     build_legora_workspace,
+    compare_workflow_versions,
+    render_portal,
     validate_workflow_definition,
 )
 
@@ -20,6 +23,7 @@ class LegoraWorkspaceTests(unittest.TestCase):
         rows = first["operational_list"]["rows"]
         if any(row["status"] == "blocked" for row in rows):
             self.assertEqual(rows[0]["status"], "blocked")
+        self.assertTrue(all(row["facts"] for row in rows))
 
     def test_workflows_are_allowlisted_and_require_human_approval(self):
         definition = build_legora_workspace(REQUESTS, "Q3 2026")[
@@ -34,6 +38,16 @@ class LegoraWorkspaceTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "human approval"):
             validate_workflow_definition(without_approval)
 
+    def test_workflow_comparison_and_activation_require_review(self):
+        active = build_legora_workspace(REQUESTS, "Q3 2026")["workflow_definitions"][0]
+        draft = {**active, "version": 2, "status": "draft", "steps": [*active["steps"], {"id": "evidence-2", "type": "collect_evidence"}]}
+        comparison = compare_workflow_versions(active, draft)
+        self.assertEqual(comparison["to_version"], 2)
+        self.assertEqual(len(comparison["added_steps"]), 1)
+        with self.assertRaisesRegex(ValueError, "named reviewer"):
+            activate_workflow(draft, reviewer="", approved=True)
+        self.assertEqual(activate_workflow(draft, reviewer="General Counsel", approved=True)["status"], "active")
+
     def test_portal_answers_are_cited_or_abstain(self):
         portal = build_legora_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
         grounded = answer_portal(portal, "human approval workflow")
@@ -44,6 +58,17 @@ class LegoraWorkspaceTests(unittest.TestCase):
             "insufficient_evidence",
         )
         self.assertFalse(portal["external_action_allowed"])
+
+    def test_rendered_portal_has_local_search_and_abstention_message(self):
+        portal = build_legora_workspace(REQUESTS, "Q3 2026")["knowledge_portal"]
+        output = render_portal(portal, Path(self.id().replace(".", "-") + ".html"))
+        try:
+            content = output.read_text(encoding="utf-8")
+            self.assertIn("Search approved passages", content)
+            self.assertIn("Insufficient evidence in approved resources", content)
+            self.assertNotIn("https://", content)
+        finally:
+            output.unlink(missing_ok=True)
 
 
 if __name__ == "__main__":
