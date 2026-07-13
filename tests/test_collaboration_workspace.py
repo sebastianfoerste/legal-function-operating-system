@@ -4,8 +4,7 @@ from xml.etree import ElementTree
 
 import pytest
 
-from src.legal_ops import assess_matter, build_sample_matter
-from src.legora_workspace import (
+from src.collaboration_workspace import (
     build_change_set,
     build_matter_list,
     build_timeline,
@@ -15,6 +14,7 @@ from src.legora_workspace import (
     render_review_room,
     resolve_list_item,
 )
+from src.legal_ops import assess_matter, build_sample_matter
 
 
 def write_source_docx(path, *, include_nested_section: bool = False) -> None:
