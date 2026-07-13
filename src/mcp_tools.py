@@ -11,6 +11,7 @@ from models import (
     verify_audit_chain,
 )
 from src.legal_ops import apply_review_decision, assess_matter
+from src.matter_workspace import build_matter_workspace
 from src.review_packet import build_review_packet
 from src.review_packet_runner import run_source_verified_review_packet
 from src.source_verification import PUBLIC_REGULATORY_DOMAINS, verify_source_refs
@@ -90,6 +91,13 @@ def legal_ops_mcp_manifest() -> dict[str, Any]:
                 "input_schema": LegalOpsAssessment.model_json_schema(),
                 "output_schema": AuditChainVerification.model_json_schema(),
             },
+            {
+                "name": "legal.workspace.build",
+                "description": (
+                    "Build a local matter vault, supervised workflow library and shared review-room contract."
+                ),
+                "input_schema": MatterIntake.model_json_schema(),
+            },
         ],
     }
 
@@ -149,5 +157,10 @@ def run_tool(name: str, arguments: dict[str, Any] | None = None) -> dict[str, An
     if name == "legal.audit.verify":
         assessment = LegalOpsAssessment.model_validate(payload)
         return verify_audit_chain(assessment.audit_events).model_dump(mode="json")
+
+    if name == "legal.workspace.build":
+        matter = MatterIntake.model_validate(payload)
+        assessment = assess_matter(matter)
+        return build_matter_workspace(assessment).model_dump(mode="json", by_alias=True)
 
     raise ValueError(f"unsupported tool: {name}")
