@@ -9,11 +9,11 @@ Portfolio proof contract: [`docs/portfolio-proof.json`](docs/portfolio-proof.jso
 
 A deterministic **legal function operating system**: it takes incoming legal requests and runs each through **intake → risk → priority → routing → SLA → approval matrix → external-counsel decision tree → escalation**, then rolls them up into a **board-ready operations pack**.
 
-It answers the question a first legal hire or GC actually faces: *how do I run a legal function at scale — consistently, with the right things escalated, and a clear view for the board?*
+It answers the question a first legal hire or GC actually faces: *how do I run a legal function at scale, consistently, with the right things escalated, and a clear view for the board?*
 
 This is a management and triage artifact, **not legal advice**. All bundled data is **synthetic**.
 
-> **If you don't code:** scroll to [What the demo produces](#what-the-demo-produces). The repo ships a board pack you can read in the browser. The point isn't the code; it's whether the legal function is structured, prioritised, and governed — not run from an inbox.
+> **If you don't code:** scroll to [What the demo produces](#what-the-demo-produces). The repo ships a board pack you can read in the browser. Its value lies in a legal function that is structured, prioritised, governed, and independent from an inbox.
 
 ## Why this exists
 
@@ -26,7 +26,7 @@ It is the companion to the rest of this portfolio: evaluation (`contract-review-
 ```bash
 git clone https://github.com/sebastianfoerste/legal-function-operating-system
 cd legal-function-operating-system
-make install   # no third-party dependencies — standard library only
+make install   # no third-party dependencies, standard library only
 make test      # deterministic unit tests
 make demo      # writes examples/board-pack.md and .json, prints the pack
 ```
@@ -35,10 +35,10 @@ Runs end to end, offline and deterministically, against the synthetic request se
 
 ## What the demo produces
 
-From eight synthetic requests, the operating system produces a board pack that **surfaces the three items a board should see, the SLA breach, and the external-counsel referrals** — automatically:
+From eight synthetic requests, the operating system automatically produces a board pack that **surfaces the three items a board should see, the SLA breach, and the external-counsel referrals**:
 
 ```
-# Legal Function — Board Operations Pack
+# Legal Function: Board Operations Pack
 
 ## Executive summary
 
@@ -49,9 +49,9 @@ From eight synthetic requests, the operating system produces a board pack that *
 ## Board attention
 | ID | Title | Risk | Type |
 | --- | --- | --- | --- |
-| REQ-1001 | Enterprise MSA — Globex (synthetic) | HIGH | commercial_contract |
-| REQ-1005 | Series B financing — term sheet (synthetic) | HIGH | fundraising |
-| REQ-1007 | Customer dispute — SLA credits claim (synthetic) | HIGH | dispute |
+| REQ-1001 | Enterprise MSA, Globex (synthetic) | HIGH | commercial_contract |
+| REQ-1005 | Series B financing, term sheet (synthetic) | HIGH | fundraising |
+| REQ-1007 | Customer dispute, SLA credits claim (synthetic) | HIGH | dispute |
 ```
 
 The full pack (risk/priority/queue breakdowns, pending approvals, the request register) is committed at [`examples/board-pack.md`](examples/board-pack.md) and [`examples/board-pack.json`](examples/board-pack.json).
@@ -71,7 +71,7 @@ The full pack (risk/priority/queue breakdowns, pending approvals, the request re
 
 ## How it is built
 
-- **Deterministic.** Same requests, same pack — there is a test for it. No model calls, no network.
+- **Deterministic.** Same requests, same pack. A test proves it. No model calls, no network.
 - **Legible.** Every rule is a short, readable function a lawyer can agree or disagree with.
 - **Governed.** Every request ends with a human approval tier; nothing self-approves.
 - **Composable.** Drop this in alongside `ai-saas-legal-ops-starter-kit` as its operating core, or run it standalone.
@@ -87,6 +87,8 @@ tests/test_rules.py         # deterministic tests, standard-library unittest
 ```
 
 Pipeline gating: `--fail-on-breach` makes the CLI exit non-zero when an SLA has been missed, so it can sit in a weekly reporting job.
+
+`--workspace-output <path>` writes a deterministic request vault, guided triage workflow library and GC command center as JSON. The output preserves the same human approval tiers and contains no external-action capability.
 
 ## Scope and disclaimers
 
