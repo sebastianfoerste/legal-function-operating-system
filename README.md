@@ -5,11 +5,13 @@
 CI workflow and deterministic test suite are included.
 
 See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
+Portfolio proof contract: [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
 
 Supervised legal-operations workflow: typed intake, deterministic risk triage, reviewer routing, human-approved export, audit trail. Legal advice is outside this prototype; data is synthetic.
 
 **Public-safety posture:** synthetic matters only, explicit source provenance checks, an audit trail, a human review gate before export, and no legal advice.
 Verification manifest: [`docs/verification-manifest.json`](docs/verification-manifest.json).
+Verification guide: [`docs/verification-guide.md`](docs/verification-guide.md).
 
 > **If you don't code:** scroll to [What the demo produces](#what-the-demo-produces). This repo ships a sample output you can read in the browser. The point isn't the code; it's whether the legal work is structured, cited, reviewable, and testable.
 
@@ -17,19 +19,24 @@ Verification manifest: [`docs/verification-manifest.json`](docs/verification-man
 
 ![Architecture](docs/architecture.svg)
 
-## Run it
+## Run it (90 seconds)
 
 ```bash
-git clone https://github.com/sebastianfoerste/legal-ops-agent
-cd legal-ops-agent
-python3.13 -m venv .venv
-source .venv/bin/activate
+python3.13 -m venv .venv && source .venv/bin/activate
 make install
+# 1) assess a synthetic matter, returns needs_review / export_allowed:false
 python -m src.cli --input examples/matters/saas_msa_deviation.json
+# 2) approve it with a documented human decision
+python -m src.cli --input examples/matters/saas_msa_deviation.json \
+  --approve-note "Approved after commercial counsel review of the synthetic MSA deviation." \
+  --packet-output demo_output/saas-msa-review-packet.md
 ```
 
 Runs the canonical local verification path end to end, offline and deterministically, over a
 synthetic SaaS MSA deviation fixture.
+
+Export stays blocked until approval is recorded. It also stays blocked after approval if a
+blocker finding remains. Run the proof gate with `make check`.
 
 ## Architecture flow
 
@@ -154,11 +161,11 @@ The snapshot is generated from the same synthetic SaaS MSA fixture after a docum
 human approval, and shows a two-event chain (`assessment_created`,
 `review_decision_applied`) that verifies.
 
-Hash-chained audit logging is not a novel technique — several open-source projects
+Hash-chained audit logging is an established technique used by several open-source projects
 implement it, including at least one MCP-exposed audit tool for general AI agent
 actions. The differentiator here is narrower and specific: pairing that hash chain
-with a legal-matter review workflow — typed intake, deterministic risk triage,
-reviewer routing, and an export gate the chain itself can block — in one
+with a legal-matter review workflow: typed intake, deterministic risk triage,
+reviewer routing, and an export gate the chain itself can block, in one
 reviewer-facing evidence packet. See
 [`docs/competitive-research-2026-06-30.md`](docs/competitive-research-2026-06-30.md#round-2-audit-integrity-chain)
 for the comparison this claim is based on.
@@ -204,27 +211,7 @@ flowchart TD
 - [`mcp.json`](mcp.json): Explicit local MCP server configuration.
 - [`tests/`](tests): Unit tests for validation, risk logic, review gates, MCP manifest and runtime behavior.
 
-## Generate review artifacts
 
-To assess a synthetic fixture and write the reviewer-ready artifacts:
-
-```bash
-python -m src.cli \
-  --input examples/matters/saas_msa_deviation.json \
-  --json-output demo_output/assessment.json \
-  --packet-output demo_output/review-packet.md \
-  --commitments-output demo_output/customer-commitments.json \
-  --sources-output demo_output/source-verification.json \
-  --review-runner-output demo_output/source-verified-review-runner.json \
-  --manifest-output demo_output/artifact-manifest.json \
-  --audit-chain-output demo_output/audit-chain.json \
-  --trust-cockpit-output demo_output/trust-cockpit.md \
-  --trust-cockpit-json-output demo_output/trust-cockpit.json
-```
-
-The manifest records SHA-256 digests for each generated review artifact and a
-local integrity signature over the digest set. It is designed for reviewer
-traceability. It is not an eIDAS signature.
 
 ## Checks
 
@@ -246,6 +233,9 @@ This runs Ruff, Black, MyPy and Pytest.
 - `legal.audit.verify`: verify the tamper-evident hash chain on an assessment's audit trail.
 - `legal.sources.list`: show the public or synthetic source boundary for the demo.
 - `legal.sources.verify`: verify source-reference boundaries without fetching external content.
+- `legal.workspace.build`: build a provenance-backed matter vault, supervised workflow-agent library and shared review room from a synthetic assessment.
+
+The local Legora-inspired layer adds versioned matter playbooks, review-gated `document.change-set.v1` DOCX drafts, evidence-gated matter Lists with a hash-chained timeline, and a self-contained HTML review room. Sensitive source prefixes still block processing and no external delivery action is available.
 
 These tools are designed for local verification. They do not send client, candidate, matter or account data to an external system.
 
@@ -270,8 +260,7 @@ Built by Sebastian Förste: [github.com/sebastianfoerste](https://github.com/seb
 
 ## Human-authored legal judgment
 AI tools assisted the implementation, but the parts that carry the value are
-human-authored: the legal answer sets, risk taxonomy, escalation logic, citations,
-and review states. The point of this repository is not code volume; it is showing
+human-authored: the matter schema, the deterministic risk rules, the reviewer-routing logic, and the approval gates. The point of this repository is not code volume; it is showing
 how legal judgment can be made structured, testable, and reviewable.
 
 ## Why lawyers should care
