@@ -13,11 +13,14 @@ import json
 import sys
 from pathlib import Path
 
+from legal_function_os.agent_run import build_agent_runs
 from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.capacity_simulator import (
     build_capacity_simulation,
     render_capacity_markdown,
 )
+from legal_function_os.contract_intelligence import build_dpa_review
+from legal_function_os.shared_space import build_shared_space
 from legal_function_os.workspace import build_legal_function_workspace
 from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
 from legal_function_os.outcome_control_tower import (
@@ -66,6 +69,31 @@ def main(argv: list[str] | None = None) -> int:
         default=None,
         help="Optional directory for outcome control tower JSON, Markdown, and HTML.",
     )
+    parser.add_argument(
+        "--agent-runs-output",
+        default=None,
+        help="Optional path for the supervised matter agent runs JSON.",
+    )
+    parser.add_argument(
+        "--shared-space-output",
+        default=None,
+        help="Optional path for the approval-gated requester shared space JSON.",
+    )
+    parser.add_argument(
+        "--approvals",
+        default=None,
+        help="Optional JSON file mapping a request id to a documented share approval.",
+    )
+    parser.add_argument(
+        "--dpa-input",
+        default=None,
+        help="Optional JSON array of DPA documents for the Art. 28(3) GDPR clause review.",
+    )
+    parser.add_argument(
+        "--dpa-output",
+        default=None,
+        help="Optional path for the DPA clause review JSON.",
+    )
     parser.add_argument("--quiet", action="store_true", help="Do not print the markdown pack.")
     parser.add_argument(
         "--fail-on-breach",
@@ -77,6 +105,10 @@ def main(argv: list[str] | None = None) -> int:
     requests = json.loads(Path(args.input).read_text(encoding="utf-8"))
     if not isinstance(requests, list):
         print("Input must be a JSON array of requests.", file=sys.stderr)
+        return 2
+
+    if args.dpa_output and not args.dpa_input:
+        print("error: --dpa-output requires --dpa-input", file=sys.stderr)
         return 2
 
     pack = build_board_pack(requests, period=args.period)
@@ -157,6 +189,36 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"Invalid outcome control tower input: {exc}", file=sys.stderr)
             return 2
+
+    if args.agent_runs_output:
+        Path(args.agent_runs_output).write_text(
+            json.dumps(
+                build_agent_runs(requests, period=args.period), indent=2, ensure_ascii=False
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    if args.shared_space_output:
+        approvals = {}
+        if args.approvals:
+            approvals = json.loads(Path(args.approvals).read_text(encoding="utf-8"))
+        Path(args.shared_space_output).write_text(
+            json.dumps(
+                build_shared_space(requests, approvals, period=args.period),
+                indent=2,
+                ensure_ascii=False,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+
+    if args.dpa_input and args.dpa_output:
+        documents = json.loads(Path(args.dpa_input).read_text(encoding="utf-8"))
+        Path(args.dpa_output).write_text(
+            json.dumps(build_dpa_review(documents), indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
 
     # Board-attention items are normal management signal, not a failure. Only an
     # explicit --fail-on-breach gates the pipeline on missed SLAs.
