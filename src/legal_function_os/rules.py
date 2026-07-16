@@ -2,7 +2,7 @@
 
 Each function takes a single legal request (a dict) and returns a small, explained
 decision: how it is routed, its SLA, who must approve it, whether it escalates, and
-whether external counsel is indicated. The rules are intentionally legible — a lawyer
+whether external counsel is indicated. The rules are intentionally legible. A lawyer
 should be able to read them and agree or disagree. Nothing here is legal advice;
 all bundled data is synthetic.
 """
@@ -95,7 +95,7 @@ def assess_risk(req: dict) -> tuple[str, list[str]]:
     medium = False
     if value_idx == VALUE_BANDS.index("250k-1m"):
         medium = True
-        reasons.append("Contract value €250k–€1m.")
+        reasons.append("Contract value between EUR 250k and EUR 1m.")
     if personal_data:
         medium = True
         reasons.append("Personal data processed.")
@@ -173,14 +173,14 @@ def escalations(req: dict, risk: str, priority: str) -> tuple[list[str], bool]:
     board_attention = False
 
     if req.get("sla_breached"):
-        items.append("SLA breached — escalate to Legal Ops Lead.")
+        items.append("SLA breached: escalate to Legal Ops Lead.")
     if risk == "HIGH" and priority == "P1_blocker":
-        items.append("High-risk blocker — escalate to General Counsel immediately.")
+        items.append("High-risk blocker: escalate to General Counsel immediately.")
     if _value_index(req.get("value_band", "none")) >= VALUE_BANDS.index(">1m"):
-        items.append("Value above €1m — add to board awareness list.")
+        items.append("Value above EUR 1m: add to board awareness list.")
         board_attention = True
     if req.get("type") == "dispute":
-        items.append("Active dispute — notify General Counsel.")
+        items.append("Active dispute: notify General Counsel.")
         if _value_index(req.get("value_band", "none")) >= VALUE_BANDS.index("250k-1m"):
             board_attention = True
     return items, board_attention

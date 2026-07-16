@@ -11,28 +11,28 @@
 
   <g font-size="13" fill="#0f172a">
     <rect x="130" y="72"  width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
-    <text x="280" y="97"  text-anchor="middle">Intake — structured legal request</text>
+    <text x="280" y="97"  text-anchor="middle">Intake: structured legal request</text>
 
     <rect x="130" y="130" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
-    <text x="280" y="155" text-anchor="middle">Risk — HIGH / MEDIUM / LOW</text>
+    <text x="280" y="155" text-anchor="middle">Risk: HIGH / MEDIUM / LOW</text>
 
     <rect x="130" y="188" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
-    <text x="280" y="213" text-anchor="middle">Priority — P1 … P4</text>
+    <text x="280" y="213" text-anchor="middle">Priority: P1 to P4</text>
 
     <rect x="130" y="246" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
-    <text x="280" y="271" text-anchor="middle">Routing — owning queue</text>
+    <text x="280" y="271" text-anchor="middle">Routing: owning queue</text>
 
     <rect x="130" y="304" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
-    <text x="280" y="329" text-anchor="middle">SLA — response &amp; resolution targets</text>
+    <text x="280" y="329" text-anchor="middle">SLA: response &amp; resolution targets</text>
 
     <rect x="130" y="362" width="300" height="40" rx="8" fill="#fef9c3" stroke="#ca8a04"/>
-    <text x="280" y="387" text-anchor="middle">Approval matrix — Reviewer → Lead → GC → Board</text>
+    <text x="280" y="387" text-anchor="middle">Approval matrix: Reviewer to Lead to GC to Board</text>
 
     <rect x="130" y="420" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
     <text x="280" y="445" text-anchor="middle">External-counsel decision tree</text>
 
     <rect x="130" y="478" width="300" height="40" rx="8" fill="#f1f5f9" stroke="#cbd5e1"/>
-    <text x="280" y="503" text-anchor="middle">Escalation — breach · blocker · &gt;€1m</text>
+    <text x="280" y="503" text-anchor="middle">Escalation: breach, blocker, above EUR 1m</text>
   </g>
 
   <!-- Board pack (emphasized) -->

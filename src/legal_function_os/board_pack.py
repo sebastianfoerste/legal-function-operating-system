@@ -88,7 +88,7 @@ def build_board_pack(requests: list[dict], period: str = "current period") -> Bo
     }
 
     return BoardPack(
-        title="Legal Function — Board Operations Pack",
+        title="Legal Function: Board Operations Pack",
         period=period,
         totals=totals,
         by_type=by_type,
@@ -146,7 +146,7 @@ def render_markdown(pack: BoardPack) -> str:
         lines.append("## SLA breaches")
         lines.append("")
         for item in pack.sla_breaches:
-            lines.append(f"- {item['id']} — {item['title']}")
+            lines.append(f"- {item['id']}: {item['title']}")
         lines.append("")
 
     if pack.external_referrals:

@@ -13,7 +13,13 @@ jobs:
           python-version: "3.11"
       - run: make install
       - run: make test
-      - name: Demo reproducibility
-        run: |
-          make demo
-          test -f examples/board-pack.md
+      - name: Regenerate committed proof artifacts
+        run: make demo
+      - name: Reject generated-artifact drift
+        run: git diff --exit-code
+      - name: Verify deterministic regeneration
+        run: make check-generated
+      - name: Validate portfolio proof contract
+        run: make proof-check
+      - name: Check patch whitespace
+        run: git diff --check

@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Industrial Robotics RaaS Deal Decision Pack</title>
+  <style>
+    :root { color-scheme: light; --ink: #17202b; --muted: #64717d; --line: #d7dee4; --panel: #fff; --bg: #f3f6f7; --teal: #10383b; --danger: #a72e31; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font: 15px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--bg); }
+    header { padding: 36px max(24px, calc((100% - 1120px) / 2)); color: white; background: var(--teal); }
+    header p { max-width: 820px; color: #c9e0e0; }
+    main { max-width: 1120px; margin: 0 auto; padding: 24px; }
+    section { margin: 18px 0; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }
+    .offline { margin: 0; padding: 10px 14px; border-radius: 8px; color: #355; background: #dceeee; }
+    .metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+    .metric { padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: white; }
+    .metric span { display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; }
+    .metric strong { display: block; margin-top: 5px; font-size: 28px; }
+    .blocked strong { color: var(--danger); }
+    .issues { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .issue { padding: 14px; border: 1px solid var(--line); border-radius: 10px; }
+    .issue span { color: var(--danger); font: 12px ui-monospace, monospace; }
+    .issue h3 { margin: 5px 0; font-size: 15px; }
+    .issue p { margin: 0; color: var(--muted); }
+    .delay-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    th { color: var(--muted); font-size: 12px; text-transform: uppercase; }
+    .badge { padding: 3px 7px; border-radius: 999px; background: #edf1f3; font-size: 12px; }
+    .nonstarter { color: var(--danger); background: #f9e1e1; }
+    .note { color: var(--muted); }
+    a { color: #176b72; }
+    @media (max-width: 760px) {
+      header { padding: 26px 18px; }
+      main { padding: 14px; }
+      section { padding: 16px; overflow-x: auto; }
+      .metrics, .issues, .delay-grid { grid-template-columns: 1fr; }
+      table { min-width: 720px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <p class="offline">Offline local reviewer artifact. Open this generated file locally. GitHub reviewers should start with the Markdown decision pack.</p>
+    <h1>Industrial Robotics RaaS Deal Decision Pack</h1>
+    <p>ModuBot Automation GmbH (synthetic) and Atlas Components SE (synthetic). Human review remains required for every consequential decision.</p>
+  </header>
+  <main>
+    <div class="metrics">
+      <div class="metric blocked"><span>Signing decision</span><strong>BLOCKED</strong></div>
+      <div class="metric"><span>Core blockers</span><strong>7</strong></div>
+      <div class="metric"><span>Required approvers</span><strong>16</strong></div>
+      <div class="metric"><span>Regulatory controls</span><strong>7</strong></div>
+    </div>
+    <section>
+      <h2>Can we sign?</h2>
+      <p><strong>Do not sign the current draft.</strong></p>
+      <div class="issues"><article class="issue critical"><span>RAAS-ACCEPTANCE-001</span><h3>acceptance</h3><p>Acceptance depends on the customer&#x27;s subjective satisfaction.</p></article><article class="issue critical"><span>RAAS-DATA-001</span><h3>data and model improvement</h3><p>The proposed data clause permits unrestricted telemetry and model-training use.</p></article><article class="issue critical"><span>RAAS-EXCLUSIVITY-001</span><h3>commercial scope</h3><p>The customer requests broad global industry exclusivity.</p></article><article class="issue critical"><span>RAAS-IP-001</span><h3>IP ownership</h3><p>The customer claims ownership of site-specific and platform improvements.</p></article><article class="issue critical"><span>RAAS-LIABILITY-001</span><h3>liability</h3><p>The customer requests uncapped liability across broad claim categories.</p></article><article class="issue critical"><span>RAAS-SAFETY-001</span><h3>product and site safety</h3><p>Robot, integration, and customer site-safety responsibilities remain undocumented.</p></article><article class="issue critical"><span>FIN-002</span><h3>Acceptance and transfer of control</h3><p>Do objective acceptance criteria, operational use, deemed acceptance, and cure rights support the intended revenue-recognition point?</p></article></div>
+    </section>
+    <section class="delay-grid">
+      <div><h2>What could delay deployment?</h2><ul><li>Objective acceptance and commissioning criteria remain open.</li><li>The site-safety responsibility matrix is unsigned.</li><li>AI safety-component classification is unresolved.</li><li>Connected-product data and remote-access controls require evidence.</li></ul></div>
+      <div><h2>What could delay revenue?</h2><ul><li>Subjective acceptance may delay the transfer-of-control assessment.</li><li>Uncapped service credits create variable-consideration uncertainty.</li><li>Termination rights may reduce the enforceable contract term.</li><li>The lease assessment and contracting-entity model remain open.</li></ul></div>
+    </section>
+    <section>
+      <h2>Negotiation playbook</h2>
+      <table><thead><tr><th>Rule</th><th>Category</th><th>Severity</th><th>Issue</th><th>Approvers</th></tr></thead><tbody><tr><td><code>RAAS-ACCEPTANCE-001</code></td><td>acceptance</td><td><span class="badge nonstarter">nonstarter</span></td><td>Acceptance depends on the customer&#x27;s subjective satisfaction.</td><td>General Counsel, CFO, VP Operations</td></tr><tr><td><code>RAAS-DATA-001</code></td><td>data and model improvement</td><td><span class="badge nonstarter">nonstarter</span></td><td>The proposed data clause permits unrestricted telemetry and model-training use.</td><td>General Counsel, DPO or privacy owner, CTO, Customer data owner</td></tr><tr><td><code>RAAS-EXCLUSIVITY-001</code></td><td>commercial scope</td><td><span class="badge nonstarter">nonstarter</span></td><td>The customer requests broad global industry exclusivity.</td><td>CEO, CRO, General Counsel</td></tr><tr><td><code>RAAS-IP-001</code></td><td>IP ownership</td><td><span class="badge nonstarter">nonstarter</span></td><td>The customer claims ownership of site-specific and platform improvements.</td><td>General Counsel, CTO, Product owner</td></tr><tr><td><code>RAAS-LIABILITY-001</code></td><td>liability</td><td><span class="badge nonstarter">nonstarter</span></td><td>The customer requests uncapped liability across broad claim categories.</td><td>General Counsel, CFO, Insurance owner</td></tr><tr><td><code>RAAS-SAFETY-001</code></td><td>product and site safety</td><td><span class="badge nonstarter">nonstarter</span></td><td>Robot, integration, and customer site-safety responsibilities remain undocumented.</td><td>Product safety lead, VP Operations, General Counsel</td></tr><tr><td><code>RAAS-AI-SAFETY-001</code></td><td>AI and safety classification</td><td><span class="badge requires_approval">requires_approval</span></td><td>The role of AI vision and path planning in safety functions remains open.</td><td>Product safety lead, AI governance owner, General Counsel</td></tr><tr><td><code>RAAS-SECURITY-001</code></td><td>cybersecurity and remote access</td><td><span class="badge requires_approval">requires_approval</span></td><td>The proposed incident-notification period may not support contractual or regulatory escalation.</td><td>Security owner, DPO or privacy owner, General Counsel</td></tr><tr><td><code>RAAS-SLA-001</code></td><td>service levels</td><td><span class="badge requires_approval">requires_approval</span></td><td>Service credits are uncapped and can accumulate outside the liability structure.</td><td>General Counsel, CFO, Service operations owner</td></tr><tr><td><code>RAAS-TERM-001</code></td><td>term and termination</td><td><span class="badge requires_approval">requires_approval</span></td><td>The customer can terminate for convenience without recovery of deployment costs.</td><td>CFO, General Counsel, Commercial owner</td></tr><tr><td><code>RAAS-HARDWARE-001</code></td><td>hardware ownership and risk</td><td><span class="badge negotiable">negotiable</span></td><td>The provider retains title while risk of loss shifts to the customer after delivery.</td><td>Finance owner, Insurance owner, General Counsel</td></tr></tbody></table>
+    </section>
+    <section>
+      <h2>Finance handoff</h2>
+      <p class="note">Questions for Finance under IFRS 15, ASC 606, and the applicable lease framework. No accounting conclusion is automated.</p>
+      <table><thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Question</th></tr></thead><tbody><tr><td><code>FIN-001</code></td><td>Performance obligations</td><td>review_required</td><td>Are robot access, installation, integration, software, support, updates, and optimisation distinct promises or one combined performance obligation?</td></tr><tr><td><code>FIN-002</code></td><td>Acceptance and transfer of control</td><td>blocked</td><td>Do objective acceptance criteria, operational use, deemed acceptance, and cure rights support the intended revenue-recognition point?</td></tr><tr><td><code>FIN-003</code></td><td>Variable consideration</td><td>review_required</td><td>How should uptime credits, implementation remedies, bonuses, and penalties be reflected in transaction price and constraint analysis?</td></tr><tr><td><code>FIN-004</code></td><td>Contract term and termination</td><td>review_required</td><td>What enforceable term remains after termination-for-convenience rights, renewal options, and early-termination payments?</td></tr><tr><td><code>FIN-005</code></td><td>Lease assessment</td><td>review_required</td><td>Does the arrangement contain a lease because the customer controls the use of an identified robot during the contract term?</td></tr><tr><td><code>FIN-006</code></td><td>Options, expansions, and modifications</td><td>review_required</td><td>Do the US rollout option, additional robot orders, price protection, and change orders create material rights or contract modifications?</td></tr><tr><td><code>FIN-007</code></td><td>Letter of intent and side commitments</td><td>review_required</td><td>Are commercial promises outside the signed agreement enforceable or relevant to the accounting contract and transaction price?</td></tr><tr><td><code>FIN-008</code></td><td>Contracting entity and intercompany support</td><td>review_required</td><td>Which entity contracts, invoices, holds inventory, provides support, owns IP, and bears warranty or product-liability exposure for each site?</td></tr></tbody></table>
+    </section>
+    <section>
+      <h2>Regulatory readiness</h2>
+      <table><thead><tr><th>Control</th><th>Regime</th><th>Gate effect</th><th>Owner</th><th>Source</th></tr></thead><tbody><tr><td><code>REG-001</code></td><td>EU machinery framework</td><td>deployment_blocker</td><td>Product safety lead and Legal</td><td><a href="https://eur-lex.europa.eu/eli/dir/2006/42/oj/eng">EU-MACHINERY-DIRECTIVE</a></td></tr><tr><td><code>REG-002</code></td><td>Machinery Regulation transition</td><td>transition_follow_up</td><td>Product safety lead, Engineering, and Legal</td><td><a href="https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng">EU-MACHINERY-REGULATION</a></td></tr><tr><td><code>REG-003</code></td><td>EU Artificial Intelligence Act</td><td>deployment_blocker</td><td>AI governance owner, Product safety lead, and Legal</td><td><a href="https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng">EU-AI-ACT</a></td></tr><tr><td><code>REG-004</code></td><td>EU Data Act</td><td>signing_blocker</td><td>Product counsel, Data owner, and Product</td><td><a href="https://eur-lex.europa.eu/eli/reg/2023/2854/oj/eng">EU-DATA-ACT</a></td></tr><tr><td><code>REG-005</code></td><td>Cyber Resilience Act</td><td>transition_follow_up</td><td>CISO, Product Security, and Legal</td><td><a href="https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng">EU-CRA</a></td></tr><tr><td><code>REG-006</code></td><td>Product Liability Directive transition</td><td>transition_follow_up</td><td>Product counsel, Product Safety, Insurance, and Engineering</td><td><a href="https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng">EU-PRODUCT-LIABILITY</a></td></tr><tr><td><code>REG-007</code></td><td>GDPR and international transfers</td><td>signing_blocker</td><td>DPO or privacy owner, Security, and Legal</td><td><a href="https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng">EU-GDPR</a></td></tr></tbody></table>
+    </section>
+    <section><h2>Review boundary</h2><p>This public-safe demonstration uses synthetic facts and illustrative internal guardrails. It is legal-operations and deal-structuring support. It is not legal or accounting advice. Qualified Legal, Finance, Tax, Security, Product, and Safety reviewers must validate the analysis before any external use.</p></section>
+  </main>
+</body>
+</html>

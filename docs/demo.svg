@@ -29,7 +29,7 @@
   <!-- Terminal Content -->
   <g class="terminal" transform="translate(25, 60)">
     <text x="0" y="0" class="comment">$ make demo</text>
-    <text x="0" y="20" class="blue bold"># Legal Function — Board Operations Pack</text>
+    <text x="0" y="20" class="blue bold"># Legal Function: Board Operations Pack</text>
     <text x="0" y="40" class="comment">_Period: Q2 2026 (synthetic)_</text>
     
     <text x="0" y="70" class="yellow bold">## Executive summary</text>
@@ -40,18 +40,18 @@
     <text x="0" y="160" class="yellow bold">## Board attention</text>
     <text x="0" y="180" class="comment">| ID       | Title                                     | Risk | Type                |</text>
     <text x="0" y="200" class="comment">| -------- | ----------------------------------------- | ---- | ------------------- |</text>
-    <text x="0" y="220">| <tspan class="cyan">REQ-1001</tspan> | Enterprise MSA — Globex (synthetic)       | <tspan class="red bold">HIGH</tspan> | commercial_contract |</text>
-    <text x="0" y="240">| <tspan class="cyan">REQ-1005</tspan> | Series B financing — term sheet (synth)   | <tspan class="red bold">HIGH</tspan> | fundraising         |</text>
-    <text x="0" y="260">| <tspan class="cyan">REQ-1007</tspan> | Customer dispute — SLA credits claim      | <tspan class="red bold">HIGH</tspan> | dispute             |</text>
+    <text x="0" y="220">| <tspan class="cyan">REQ-1001</tspan> | Enterprise MSA: Globex (synthetic)        | <tspan class="red bold">HIGH</tspan> | commercial_contract |</text>
+    <text x="0" y="240">| <tspan class="cyan">REQ-1005</tspan> | Series B financing: term sheet (synth)    | <tspan class="red bold">HIGH</tspan> | fundraising         |</text>
+    <text x="0" y="260">| <tspan class="cyan">REQ-1007</tspan> | Customer dispute: SLA credits claim       | <tspan class="red bold">HIGH</tspan> | dispute             |</text>
     
     <text x="0" y="290" class="yellow bold">## SLA breaches</text>
-    <text x="0" y="310">- <tspan class="red">REQ-1006</tspan> — Vendor security questionnaire — analytics tool (synthetic)</text>
+    <text x="0" y="310">- <tspan class="red">REQ-1006</tspan>: Vendor security questionnaire: analytics tool (synthetic)</text>
     
     <text x="0" y="340" class="yellow bold">## External-counsel referrals</text>
     <text x="0" y="360" class="comment">| ID       | Title                                     | Referral                            |</text>
-    <text x="0" y="380">| <tspan class="cyan">REQ-1004</tspan> | AI feature governance — agent autonomy    | External: AI/privacy specialist     |</text>
-    <text x="0" y="400">| <tspan class="cyan">REQ-1005</tspan> | Series B financing — term sheet (synth)   | External: corporate counsel         |</text>
+    <text x="0" y="380">| <tspan class="cyan">REQ-1004</tspan> | AI feature governance: agent autonomy     | External: AI/privacy specialist     |</text>
+    <text x="0" y="400">| <tspan class="cyan">REQ-1005</tspan> | Series B financing: term sheet (synth)    | External: corporate counsel         |</text>
     
-    <text x="0" y="420" class="green bold">OK - 17 tests passed</text>
+    <text x="0" y="420" class="green bold">OK - deterministic checks passed</text>
   </g>
 </svg>

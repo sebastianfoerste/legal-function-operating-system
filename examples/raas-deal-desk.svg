@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 720" width="1200" height="720" style="max-width:100%;height:auto" role="img" aria-labelledby="title desc">
+  <title id="title">RaaS Deal Decision Pack</title>
+  <desc id="desc">Synthetic industrial robotics deal showing a blocked signing decision, seven core blockers, required approvers, and regulatory controls.</desc>
+  <style>
+    .eyebrow { font: 700 14px system-ui; letter-spacing: 2px; fill: #a9cccc; }
+    .hero { font: 700 44px system-ui; fill: #fff; }
+    .subtitle { font: 600 17px system-ui; fill: #c9dddd; }
+    .label { font: 700 14px system-ui; fill: #64717d; }
+    .metric { font: 700 32px system-ui; fill: #17202b; }
+    .danger { fill: #a72e31; }
+    .section { font: 700 23px system-ui; fill: #17202b; }
+    .row-number { font: 700 15px system-ui; fill: #6c7984; }
+    .row-title { font: 700 16px system-ui; fill: #17202b; }
+    .row-status { font: 700 13px system-ui; fill: #a72e31; }
+    .more { font: 600 14px system-ui; fill: #64717d; }
+    .foot { font: 14px system-ui; fill: #53636d; }
+  </style>
+  <rect width="1200" height="720" fill="#f3f6f7"/>
+  <rect width="1200" height="188" fill="#10383b"/>
+  <text x="60" y="50" class="eyebrow">SYNTHETIC CROSS-BORDER INDUSTRIAL ROBOTICS DEAL</text>
+  <text x="60" y="106" class="hero">RaaS Deal Decision Pack</text>
+  <text x="60" y="146" class="subtitle">Can we sign, who must approve, and what could delay deployment or revenue?</text>
+  <g>
+    <rect x="60" y="150" width="250" height="112" rx="15" fill="#f9e1e1" stroke="#e7a3a5"/>
+    <text x="84" y="184" class="label">SIGNING DECISION</text>
+    <text x="84" y="229" class="metric danger">BLOCKED</text>
+    <rect x="330" y="150" width="250" height="112" rx="15" fill="#fff" stroke="#d7dee4"/>
+    <text x="354" y="184" class="label">CORE BLOCKING ITEMS</text>
+    <text x="354" y="229" class="metric">7</text>
+    <rect x="600" y="150" width="250" height="112" rx="15" fill="#fff" stroke="#d7dee4"/>
+    <text x="624" y="184" class="label">REQUIRED APPROVERS</text>
+    <text x="624" y="229" class="metric">16</text>
+    <rect x="870" y="150" width="270" height="112" rx="15" fill="#fff" stroke="#d7dee4"/>
+    <text x="894" y="184" class="label">REGULATORY CONTROLS</text>
+    <text x="894" y="229" class="metric">7</text>
+  </g>
+  <rect x="60" y="286" width="1080" height="330" rx="16" fill="#fff" stroke="#d7dee4"/>
+  <text x="84" y="326" class="section">Current core signing blockers</text>
+  <line x1="84" y1="348" x2="1116" y2="348" stroke="#d7dee4"/>
+  <text x="84" y="385" class="row-number">01</text><text x="132" y="385" class="row-title">acceptance</text><text x="920" y="385" class="row-status">BLOCKER</text><text x="84" y="427" class="row-number">02</text><text x="132" y="427" class="row-title">data and model improvement</text><text x="920" y="427" class="row-status">BLOCKER</text><text x="84" y="469" class="row-number">03</text><text x="132" y="469" class="row-title">commercial scope</text><text x="920" y="469" class="row-status">BLOCKER</text><text x="84" y="511" class="row-number">04</text><text x="132" y="511" class="row-title">IP ownership</text><text x="920" y="511" class="row-status">BLOCKER</text><text x="84" y="553" class="row-number">05</text><text x="132" y="553" class="row-title">liability</text><text x="920" y="553" class="row-status">BLOCKER</text>
+  <text x="132" y="604" class="more">+ 2 additional blockers in the decision pack</text>
+  <rect x="60" y="640" width="1080" height="58" rx="12" fill="#dceeee"/>
+  <text x="84" y="675" class="foot">Human review gate: General Counsel plus accountable Finance, Product, Safety, Security, and Commercial owners.</text>
+</svg>
