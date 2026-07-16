@@ -1,0 +1,66 @@
+{
+  "schema": "legal-function-os.raas-deal-input.v1",
+  "deal_id": "RAAS-2026-001",
+  "title": "Multi-site modular robotics framework agreement (synthetic)",
+  "provider": "ModuBot Automation GmbH (synthetic)",
+  "provider_affiliate": "ModuBot Inc., Delaware (synthetic)",
+  "customer": "Atlas Components SE (synthetic)",
+  "customer_affiliate": "Atlas Components USA, Inc. (synthetic)",
+  "sites": [
+    "Augsburg, Germany",
+    "Austin, Texas, United States"
+  ],
+  "stage": "customer framework agreement redline",
+  "requested_signing_date": "2026-08-14",
+  "business_owner": "Chief Revenue Officer",
+  "commercial_model": {
+    "model": "Robotics-as-a-Service",
+    "term_months": 36,
+    "annual_contract_value": 1800000,
+    "currency": "EUR",
+    "components": [
+      "modular robots",
+      "site integration and commissioning",
+      "fleet-management software",
+      "AI vision and path planning",
+      "remote monitoring and predictive maintenance",
+      "support and software updates"
+    ]
+  },
+  "product": {
+    "robot_type": "modular industrial robot cell",
+    "connected_product": true,
+    "remote_access": true,
+    "ai_vision": true,
+    "ai_path_planning": true,
+    "ai_safety_component_classification_open": true,
+    "provider_retains_hardware_title": true
+  },
+  "requested_terms": {
+    "governing_law": "Texas law for the global framework",
+    "liability_cap": "uncapped for indemnities, data, confidentiality, delay, and production loss",
+    "acceptance": "customer subjective acceptance after continuous production performance",
+    "ip_ownership": "customer owns all site-specific developments and improvements",
+    "telemetry_and_model_training": "provider may use all data without restriction for any model training",
+    "site_safety_responsibilities": "shared responsibilities to be agreed after signing and currently undocumented",
+    "uptime_commitment_percent": 99.7,
+    "service_credits": "uncapped credits plus all other remedies",
+    "termination_for_convenience": true,
+    "termination_charge_months": 0,
+    "security_incident_notice_hours": 72,
+    "exclusivity": "global industry-wide exclusivity for automotive components",
+    "hardware_title": "provider",
+    "risk_of_loss": "customer after delivery",
+    "removal_cost_owner": "provider",
+    "personal_data": true,
+    "non_eea_transfer": true
+  },
+  "finance": {
+    "non_binding_loi": true,
+    "expansion_option": "Austin rollout at protected pricing after the Augsburg pilot",
+    "contracting_entities": [
+      "German provider for Augsburg deployment and IP",
+      "US affiliate for Austin order form and local support"
+    ]
+  }
+}
