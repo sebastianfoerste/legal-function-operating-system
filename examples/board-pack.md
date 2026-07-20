@@ -1,4 +1,4 @@
-# Legal Function — Board Operations Pack
+# Legal Function: Board Operations Pack
 
 _Period: Q2 2026 (synthetic)_
 
@@ -12,21 +12,21 @@ _Period: Q2 2026 (synthetic)_
 
 | ID | Title | Risk | Type |
 | --- | --- | --- | --- |
-| REQ-1001 | Enterprise MSA — Globex (synthetic) | HIGH | commercial_contract |
-| REQ-1005 | Series B financing — term sheet (synthetic) | HIGH | fundraising |
-| REQ-1007 | Customer dispute — SLA credits claim (synthetic) | HIGH | dispute |
+| REQ-1001 | Enterprise MSA: Globex (synthetic) | HIGH | commercial_contract |
+| REQ-1005 | Series B financing: term sheet (synthetic) | HIGH | fundraising |
+| REQ-1007 | Customer dispute: SLA credits claim (synthetic) | HIGH | dispute |
 
 ## SLA breaches
 
-- REQ-1006 — Vendor security questionnaire — analytics tool (synthetic)
+- REQ-1006: Vendor security questionnaire: analytics tool (synthetic)
 
 ## External-counsel referrals
 
 | ID | Title | Referral |
 | --- | --- | --- |
-| REQ-1004 | AI feature governance review — agent autonomy (synthetic) | External: cross-border AI/privacy specialist |
-| REQ-1005 | Series B financing — term sheet (synthetic) | External: corporate counsel |
-| REQ-1007 | Customer dispute — SLA credits claim (synthetic) | External: litigation counsel |
+| REQ-1004 | AI feature governance review: agent autonomy (synthetic) | External: cross-border AI/privacy specialist |
+| REQ-1005 | Series B financing: term sheet (synthetic) | External: corporate counsel |
+| REQ-1007 | Customer dispute: SLA credits claim (synthetic) | External: litigation counsel |
 
 ### By risk
 
@@ -80,14 +80,14 @@ _Period: Q2 2026 (synthetic)_
 
 | ID | Title | Risk | Priority | Queue | Approver | Counsel |
 | --- | --- | --- | --- | --- | --- | --- |
-| REQ-1001 | Enterprise MSA — Globex (synthetic) | HIGH | P2_high | Commercial | Board note | in-house |
-| REQ-1002 | DPA — US support sub-processor (synthetic) | HIGH | P2_high | Privacy | General Counsel | in-house |
-| REQ-1003 | NDA — design agency (synthetic) | LOW | P4_low | Commercial | Reviewer | in-house |
-| REQ-1004 | AI feature governance review — agent autonomy (synthetic) | HIGH | P2_high | Privacy | General Counsel | External: cross-border AI/privacy specialist |
-| REQ-1005 | Series B financing — term sheet (synthetic) | HIGH | P2_high | Corporate / GC | Board note | External: corporate counsel |
-| REQ-1006 | Vendor security questionnaire — analytics tool (synthetic) | MEDIUM | P3_standard | Commercial | Legal Ops Lead | in-house |
-| REQ-1007 | Customer dispute — SLA credits claim (synthetic) | HIGH | P1_blocker | Litigation | General Counsel | External: litigation counsel |
-| REQ-1008 | Employment offer — senior engineer (synthetic) | MEDIUM | P3_standard | Employment | Reviewer | in-house |
+| REQ-1001 | Enterprise MSA: Globex (synthetic) | HIGH | P2_high | Commercial | Board note | in-house |
+| REQ-1002 | DPA: US support sub-processor (synthetic) | HIGH | P2_high | Privacy | General Counsel | in-house |
+| REQ-1003 | NDA: design agency (synthetic) | LOW | P4_low | Commercial | Reviewer | in-house |
+| REQ-1004 | AI feature governance review: agent autonomy (synthetic) | HIGH | P2_high | Privacy | General Counsel | External: cross-border AI/privacy specialist |
+| REQ-1005 | Series B financing: term sheet (synthetic) | HIGH | P2_high | Corporate / GC | Board note | External: corporate counsel |
+| REQ-1006 | Vendor security questionnaire: analytics tool (synthetic) | MEDIUM | P3_standard | Commercial | Legal Ops Lead | in-house |
+| REQ-1007 | Customer dispute: SLA credits claim (synthetic) | HIGH | P1_blocker | Litigation | General Counsel | External: litigation counsel |
+| REQ-1008 | Employment offer: senior engineer (synthetic) | MEDIUM | P3_standard | Employment | Reviewer | in-house |
 
 ---
 

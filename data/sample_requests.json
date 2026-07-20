@@ -1,7 +1,7 @@
 [
   {
     "id": "REQ-1001",
-    "title": "Enterprise MSA — Globex (synthetic)",
+    "title": "Enterprise MSA: Globex (synthetic)",
     "type": "commercial_contract",
     "counterparty": "Globex Inc. (synthetic)",
     "value_band": ">1m",
@@ -13,7 +13,7 @@
   },
   {
     "id": "REQ-1002",
-    "title": "DPA — US support sub-processor (synthetic)",
+    "title": "DPA: US support sub-processor (synthetic)",
     "type": "dpa",
     "counterparty": "Support Tools LLC (synthetic)",
     "value_band": "50k-250k",
@@ -24,7 +24,7 @@
   },
   {
     "id": "REQ-1003",
-    "title": "NDA — design agency (synthetic)",
+    "title": "NDA: design agency (synthetic)",
     "type": "commercial_contract",
     "counterparty": "Initech Design (synthetic)",
     "value_band": "<50k",
@@ -35,7 +35,7 @@
   },
   {
     "id": "REQ-1004",
-    "title": "AI feature governance review — agent autonomy (synthetic)",
+    "title": "AI feature governance review: agent autonomy (synthetic)",
     "type": "ai_governance",
     "value_band": "none",
     "personal_data": true,
@@ -45,7 +45,7 @@
   },
   {
     "id": "REQ-1005",
-    "title": "Series B financing — term sheet (synthetic)",
+    "title": "Series B financing: term sheet (synthetic)",
     "type": "fundraising",
     "value_band": ">1m",
     "personal_data": false,
@@ -55,7 +55,7 @@
   },
   {
     "id": "REQ-1006",
-    "title": "Vendor security questionnaire — analytics tool (synthetic)",
+    "title": "Vendor security questionnaire: analytics tool (synthetic)",
     "type": "vendor_review",
     "value_band": "50k-250k",
     "personal_data": true,
@@ -66,7 +66,7 @@
   },
   {
     "id": "REQ-1007",
-    "title": "Customer dispute — SLA credits claim (synthetic)",
+    "title": "Customer dispute: SLA credits claim (synthetic)",
     "type": "dispute",
     "counterparty": "Hooli GmbH (synthetic)",
     "value_band": "250k-1m",
@@ -77,7 +77,7 @@
   },
   {
     "id": "REQ-1008",
-    "title": "Employment offer — senior engineer (synthetic)",
+    "title": "Employment offer: senior engineer (synthetic)",
     "type": "employment",
     "value_band": "none",
     "personal_data": true,

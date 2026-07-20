@@ -1,0 +1,789 @@
+{
+  "schema": "legal-function-os.raas-deal-pack.v1",
+  "input_schema": "legal-function-os.raas-deal-input.v1",
+  "generated_from": "synthetic-deal:RAAS-2026-001",
+  "verified_on": "2026-07-20",
+  "title": "Industrial Robotics RaaS Deal Decision Pack",
+  "deal_id": "RAAS-2026-001",
+  "deal_facts": {
+    "provider": "ModuBot Automation GmbH (synthetic)",
+    "provider_affiliate": "ModuBot Inc., Delaware (synthetic)",
+    "customer": "Atlas Components SE (synthetic)",
+    "customer_affiliate": "Atlas Components USA, Inc. (synthetic)",
+    "sites": [
+      "Augsburg, Germany",
+      "Austin, Texas, United States"
+    ],
+    "stage": "customer framework agreement redline",
+    "requested_signing_date": "2026-08-14",
+    "term_months": 36,
+    "annual_contract_value": 1800000,
+    "currency": "EUR",
+    "commercial_model": "Robotics-as-a-Service",
+    "governing_law_request": "Texas law for the global framework",
+    "business_owner": "Chief Revenue Officer"
+  },
+  "signing_gate": {
+    "status": "blocked",
+    "ready_for_human_approval": false,
+    "signature_action_allowed": false,
+    "answer": "Do not sign the current draft.",
+    "blocking_items": [
+      {
+        "rule_id": "RAAS-ACCEPTANCE-001",
+        "category": "acceptance",
+        "issue": "Acceptance depends on the customer's subjective satisfaction."
+      },
+      {
+        "rule_id": "RAAS-DATA-001",
+        "category": "data and model improvement",
+        "issue": "The proposed data clause permits unrestricted telemetry and model-training use."
+      },
+      {
+        "rule_id": "RAAS-EXCLUSIVITY-001",
+        "category": "commercial scope",
+        "issue": "The customer requests broad global industry exclusivity."
+      },
+      {
+        "rule_id": "RAAS-IP-001",
+        "category": "IP ownership",
+        "issue": "The customer claims ownership of site-specific and platform improvements."
+      },
+      {
+        "rule_id": "RAAS-LIABILITY-001",
+        "category": "liability",
+        "issue": "The customer requests uncapped liability across broad claim categories."
+      },
+      {
+        "rule_id": "RAAS-SAFETY-001",
+        "category": "product and site safety",
+        "issue": "Robot, integration, and customer site-safety responsibilities remain undocumented."
+      },
+      {
+        "issue_id": "FIN-002",
+        "topic": "Acceptance and transfer of control",
+        "question": "Do objective acceptance criteria, operational use, deemed acceptance, and cure rights support the intended revenue-recognition point?"
+      }
+    ],
+    "blocking_contract_items": [
+      {
+        "rule_id": "RAAS-ACCEPTANCE-001",
+        "category": "acceptance",
+        "issue": "Acceptance depends on the customer's subjective satisfaction."
+      },
+      {
+        "rule_id": "RAAS-DATA-001",
+        "category": "data and model improvement",
+        "issue": "The proposed data clause permits unrestricted telemetry and model-training use."
+      },
+      {
+        "rule_id": "RAAS-EXCLUSIVITY-001",
+        "category": "commercial scope",
+        "issue": "The customer requests broad global industry exclusivity."
+      },
+      {
+        "rule_id": "RAAS-IP-001",
+        "category": "IP ownership",
+        "issue": "The customer claims ownership of site-specific and platform improvements."
+      },
+      {
+        "rule_id": "RAAS-LIABILITY-001",
+        "category": "liability",
+        "issue": "The customer requests uncapped liability across broad claim categories."
+      },
+      {
+        "rule_id": "RAAS-SAFETY-001",
+        "category": "product and site safety",
+        "issue": "Robot, integration, and customer site-safety responsibilities remain undocumented."
+      }
+    ],
+    "blocking_finance_items": [
+      {
+        "issue_id": "FIN-002",
+        "topic": "Acceptance and transfer of control",
+        "question": "Do objective acceptance criteria, operational use, deemed acceptance, and cure rights support the intended revenue-recognition point?"
+      }
+    ],
+    "blocking_regulatory_items": [
+      {
+        "control_id": "REG-004",
+        "regime": "EU Data Act",
+        "question": "Define product data, user access, permitted use, third-party sharing, trade-secret safeguards, and contract terms for connected-product data.",
+        "owner": "Product counsel, Data owner, and Product",
+        "gate_effect": "signing_blocker"
+      },
+      {
+        "control_id": "REG-007",
+        "regime": "GDPR and international transfers",
+        "question": "Identify personal data in video, access logs, support records, and telemetry, then document roles, purposes, security, retention, transparency, and transfers.",
+        "owner": "DPO or privacy owner, Security, and Legal",
+        "gate_effect": "signing_blocker"
+      }
+    ],
+    "blocking_deployment_items": [
+      {
+        "control_id": "REG-001",
+        "regime": "EU machinery framework",
+        "question": "Confirm the current conformity path, technical file, instructions, declaration, risk assessment, substantial-modification controls, and site integration allocation.",
+        "owner": "Product safety lead and Legal",
+        "gate_effect": "deployment_blocker"
+      },
+      {
+        "control_id": "REG-003",
+        "regime": "EU Artificial Intelligence Act",
+        "question": "Record intended purpose and determine whether vision or path-planning AI is a safety component or otherwise falls within a regulated high-risk use case.",
+        "owner": "AI governance owner, Product safety lead, and Legal",
+        "gate_effect": "deployment_blocker"
+      }
+    ],
+    "transition_follow_up_items": [
+      {
+        "control_id": "REG-002",
+        "regime": "Machinery Regulation transition",
+        "question": "Map the 2027 transition for products, software changes, instructions, technical documentation, and AI-enabled safety components.",
+        "owner": "Product safety lead, Engineering, and Legal",
+        "gate_effect": "transition_follow_up"
+      },
+      {
+        "control_id": "REG-005",
+        "regime": "Cyber Resilience Act",
+        "question": "Confirm product-with-digital-elements scope, vulnerability handling, support period, security updates, reporting workflow, and contractual evidence.",
+        "owner": "CISO, Product Security, and Legal",
+        "gate_effect": "transition_follow_up"
+      },
+      {
+        "control_id": "REG-006",
+        "regime": "Product Liability Directive transition",
+        "question": "Map national implementation and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
+        "owner": "Product counsel, Product Safety, Insurance, and Engineering",
+        "gate_effect": "transition_follow_up"
+      }
+    ],
+    "required_approvals": [
+      "AI governance owner",
+      "CEO",
+      "CFO",
+      "CRO",
+      "CTO",
+      "Commercial owner",
+      "Customer data owner",
+      "DPO or privacy owner",
+      "Finance owner",
+      "General Counsel",
+      "Insurance owner",
+      "Product owner",
+      "Product safety lead",
+      "Security owner",
+      "Service operations owner",
+      "VP Operations"
+    ],
+    "open_regulatory_controls": 7,
+    "deployment_delay_drivers": [
+      "Objective acceptance and commissioning criteria remain open.",
+      "The site-safety responsibility matrix is unsigned.",
+      "AI safety-component classification is unresolved.",
+      "Connected-product data and remote-access controls require evidence."
+    ],
+    "revenue_delay_drivers": [
+      "Subjective acceptance may delay the transfer-of-control assessment.",
+      "Uncapped service credits create variable-consideration uncertainty.",
+      "Termination rights may reduce the enforceable contract term.",
+      "The lease assessment and contracting-entity model remain open."
+    ],
+    "review_gate": "A named General Counsel and accountable Finance, Product, Safety, Security, and Commercial owners must approve consequential positions.",
+    "external_action_allowed": false
+  },
+  "clause_reviews": [
+    {
+      "rule_id": "RAAS-ACCEPTANCE-001",
+      "category": "acceptance",
+      "severity": "nonstarter",
+      "issue": "Acceptance depends on the customer's subjective satisfaction.",
+      "requested_position": "customer subjective acceptance after continuous production performance",
+      "standard_position": "Use objective site acceptance tests, measurable criteria, a fixed test window, a cure process, and deemed acceptance for operational use.",
+      "fallback_position": "Permit one documented retest cycle against agreed criteria before deemed acceptance.",
+      "escalation_trigger": "Acceptance can be delayed without objective failure criteria.",
+      "required_approvals": [
+        "General Counsel",
+        "CFO",
+        "VP Operations"
+      ],
+      "rationale": "Subjective acceptance can delay deployment, billing, and Finance's assessment of transfer of control.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.acceptance"
+    },
+    {
+      "rule_id": "RAAS-DATA-001",
+      "category": "data and model improvement",
+      "severity": "nonstarter",
+      "issue": "The proposed data clause permits unrestricted telemetry and model-training use.",
+      "requested_position": "provider may use all data without restriction for any model training",
+      "standard_position": "Define product-data categories, user access, permitted service purposes, retention, security, trade-secret controls, and separate rules for model improvement.",
+      "fallback_position": "Use aggregated or de-identified operational data for reliability improvement, subject to documented exclusions and customer access rights.",
+      "escalation_trigger": "Training use involving personal data, confidential production data, or undefined purposes.",
+      "required_approvals": [
+        "General Counsel",
+        "DPO or privacy owner",
+        "CTO",
+        "Customer data owner"
+      ],
+      "rationale": "Connected-product data, confidential manufacturing information, privacy, and model improvement require distinct legal and technical treatment.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.telemetry_and_model_training"
+    },
+    {
+      "rule_id": "RAAS-EXCLUSIVITY-001",
+      "category": "commercial scope",
+      "severity": "nonstarter",
+      "issue": "The customer requests broad global industry exclusivity.",
+      "requested_position": "global industry-wide exclusivity for automotive components",
+      "standard_position": "No customer exclusivity over the provider's modular robotics platform or roadmap.",
+      "fallback_position": "Consider a narrow, paid, time-limited site or use-case restriction with named competitors and minimum commercial commitments.",
+      "escalation_trigger": "Any restriction affecting sales outside the named deployment and use case.",
+      "required_approvals": [
+        "CEO",
+        "CRO",
+        "General Counsel"
+      ],
+      "rationale": "Broad exclusivity can constrain a platform business beyond the value of one deal.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.exclusivity"
+    },
+    {
+      "rule_id": "RAAS-IP-001",
+      "category": "IP ownership",
+      "severity": "nonstarter",
+      "issue": "The customer claims ownership of site-specific and platform improvements.",
+      "requested_position": "customer owns all site-specific developments and improvements",
+      "standard_position": "The provider retains platform, robot, software, model, workflow, and generalised improvement IP. The customer retains its pre-existing IP and receives agreed use rights.",
+      "fallback_position": "Grant a site-use licence for customer-funded deliverables while preserving provider ownership of reusable technology and de-identified know-how.",
+      "escalation_trigger": "Any assignment of core technology, model behaviour, or reusable improvements.",
+      "required_approvals": [
+        "General Counsel",
+        "CTO",
+        "Product owner"
+      ],
+      "rationale": "Overbroad ownership language can impair the product roadmap and create conflicting rights across deployments.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.ip_ownership"
+    },
+    {
+      "rule_id": "RAAS-LIABILITY-001",
+      "category": "liability",
+      "severity": "nonstarter",
+      "issue": "The customer requests uncapped liability across broad claim categories.",
+      "requested_position": "uncapped for indemnities, data, confidentiality, delay, and production loss",
+      "standard_position": "Use an aggregate cap linked to fees under the affected order form, with narrow exclusions supported by insurance and applicable law.",
+      "fallback_position": "Offer a separately capped super-cap for defined privacy, security, confidentiality, or IP claims after Finance, Insurance, and General Counsel review.",
+      "escalation_trigger": "Any uncapped exposure or cap above the approved authority matrix.",
+      "required_approvals": [
+        "General Counsel",
+        "CFO",
+        "Insurance owner"
+      ],
+      "rationale": "Hardware, software, remote services, and physical operations can create exposure disproportionate to recurring fees.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.liability_cap"
+    },
+    {
+      "rule_id": "RAAS-SAFETY-001",
+      "category": "product and site safety",
+      "severity": "nonstarter",
+      "issue": "Robot, integration, and customer site-safety responsibilities remain undocumented.",
+      "requested_position": "shared responsibilities to be agreed after signing and currently undocumented",
+      "standard_position": "Allocate machinery conformity, integration, guarding, site preparation, risk assessment, operating instructions, training, change control, and incident duties.",
+      "fallback_position": "Use a signed responsibility matrix and site acceptance protocol before commissioning.",
+      "escalation_trigger": "Deployment or production use before the signed safety responsibility matrix.",
+      "required_approvals": [
+        "Product safety lead",
+        "VP Operations",
+        "General Counsel"
+      ],
+      "rationale": "A modular robot deployment crosses product design, system integration, customer-site controls, and operational change management.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.site_safety_responsibilities"
+    },
+    {
+      "rule_id": "RAAS-AI-SAFETY-001",
+      "category": "AI and safety classification",
+      "severity": "requires_approval",
+      "issue": "The role of AI vision and path planning in safety functions remains open.",
+      "requested_position": "Product classification has not been finalised.",
+      "standard_position": "Document intended purpose, safety functions, failure effects, conformity path, human oversight, validation, change control, and technical-file ownership.",
+      "fallback_position": "Block safety-relevant autonomous behaviour until accountable technical owners approve the classification and evidence set.",
+      "escalation_trigger": "Any safety-relevant AI function is deployed without a recorded classification decision.",
+      "required_approvals": [
+        "Product safety lead",
+        "AI governance owner",
+        "General Counsel"
+      ],
+      "rationale": "The regulatory path depends on intended use, safety-component status, and the applicable conformity-assessment route.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:product.ai_safety_component_classification_open"
+    },
+    {
+      "rule_id": "RAAS-SECURITY-001",
+      "category": "cybersecurity and remote access",
+      "severity": "requires_approval",
+      "issue": "The proposed incident-notification period may not support contractual or regulatory escalation.",
+      "requested_position": "72",
+      "standard_position": "Require prompt internal escalation and a contract notice window aligned with incident severity, legal duties, and verified information.",
+      "fallback_position": "Use an initial material-incident notice followed by staged factual updates.",
+      "escalation_trigger": "Remote access or product incident without an approved response and notification workflow.",
+      "required_approvals": [
+        "Security owner",
+        "DPO or privacy owner",
+        "General Counsel"
+      ],
+      "rationale": "Remote maintenance and products with digital elements require coordinated security, privacy, product, and customer communications.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.security_incident_notice_hours"
+    },
+    {
+      "rule_id": "RAAS-SLA-001",
+      "category": "service levels",
+      "severity": "requires_approval",
+      "issue": "Service credits are uncapped and can accumulate outside the liability structure.",
+      "requested_position": "uncapped credits plus all other remedies",
+      "standard_position": "Use tiered service credits with a monthly cap, defined exclusions, measurement rules, and an agreed relationship to other remedies.",
+      "fallback_position": "Increase the monthly credit cap for repeated failures while preserving an aggregate contractual ceiling.",
+      "escalation_trigger": "Credits exceed the approved percentage of monthly RaaS fees.",
+      "required_approvals": [
+        "General Counsel",
+        "CFO",
+        "Service operations owner"
+      ],
+      "rationale": "Uptime remedies affect variable consideration, margin, operational capacity, and wider liability exposure.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.service_credits"
+    },
+    {
+      "rule_id": "RAAS-TERM-001",
+      "category": "term and termination",
+      "severity": "requires_approval",
+      "issue": "The customer can terminate for convenience without recovery of deployment costs.",
+      "requested_position": "0",
+      "standard_position": "Protect committed hardware, integration, installation, removal, and minimum-term costs.",
+      "fallback_position": "Use a declining early-termination schedule tied to unrecovered deployment costs.",
+      "escalation_trigger": "Termination rights undermine the approved deal margin or contract term.",
+      "required_approvals": [
+        "CFO",
+        "General Counsel",
+        "Commercial owner"
+      ],
+      "rationale": "RaaS economics depend on recovering hardware and deployment investment over time.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.termination_charge_months"
+    },
+    {
+      "rule_id": "RAAS-HARDWARE-001",
+      "category": "hardware ownership and risk",
+      "severity": "negotiable",
+      "issue": "The provider retains title while risk of loss shifts to the customer after delivery.",
+      "requested_position": "customer after delivery",
+      "standard_position": "Align title, custody, insurance, maintenance access, damage responsibility, and removal rights across the RaaS term.",
+      "fallback_position": "Customer bears site-custody risk after installation, subject to provider maintenance obligations and agreed insurance evidence.",
+      "escalation_trigger": "The insurance position does not match the title and custody allocation.",
+      "required_approvals": [
+        "Finance owner",
+        "Insurance owner",
+        "General Counsel"
+      ],
+      "rationale": "Retained-title equipment requires a coherent allocation of custody, insurance, damage, access, and end-of-term recovery.",
+      "evidence_ref": "synthetic-deal:RAAS-2026-001:requested_terms.risk_of_loss"
+    }
+  ],
+  "finance_handoff": [
+    {
+      "issue_id": "FIN-001",
+      "topic": "Performance obligations",
+      "status": "review_required",
+      "question": "Are robot access, installation, integration, software, support, updates, and optimisation distinct promises or one combined performance obligation?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:commercial_model.components",
+      "finance_owner": "Revenue Accounting",
+      "legal_action": "Keep the statement of work, order form, and service description factually aligned.",
+      "framework": "IFRS 15 / ASC 606; Finance must determine the accounting treatment"
+    },
+    {
+      "issue_id": "FIN-002",
+      "topic": "Acceptance and transfer of control",
+      "status": "blocked",
+      "question": "Do objective acceptance criteria, operational use, deemed acceptance, and cure rights support the intended revenue-recognition point?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:requested_terms.acceptance",
+      "finance_owner": "Revenue Accounting",
+      "legal_action": "Replace subjective acceptance with measurable site acceptance tests.",
+      "framework": "IFRS 15 / ASC 606; Finance must determine the accounting treatment"
+    },
+    {
+      "issue_id": "FIN-003",
+      "topic": "Variable consideration",
+      "status": "review_required",
+      "question": "How should uptime credits, implementation remedies, bonuses, and penalties be reflected in transaction price and constraint analysis?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:requested_terms.service_credits",
+      "finance_owner": "Revenue Accounting",
+      "legal_action": "Cap and define credits, measurement periods, exclusions, and remedy interaction.",
+      "framework": "IFRS 15 / ASC 606; Finance must determine the accounting treatment"
+    },
+    {
+      "issue_id": "FIN-004",
+      "topic": "Contract term and termination",
+      "status": "review_required",
+      "question": "What enforceable term remains after termination-for-convenience rights, renewal options, and early-termination payments?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:requested_terms.termination_for_convenience",
+      "finance_owner": "Controllership",
+      "legal_action": "Document enforceable minimum commitments and recovery of deployment costs.",
+      "framework": "IFRS 15 / ASC 606; Finance must determine the accounting treatment"
+    },
+    {
+      "issue_id": "FIN-005",
+      "topic": "Lease assessment",
+      "status": "review_required",
+      "question": "Does the arrangement contain a lease because the customer controls the use of an identified robot during the contract term?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:requested_terms.hardware_title",
+      "finance_owner": "Technical Accounting",
+      "legal_action": "Clarify substitution rights, operating control, identified assets, site access, and deployment flexibility.",
+      "framework": "IFRS 16 / ASC 842 assessment before IFRS 15 / ASC 606 allocation"
+    },
+    {
+      "issue_id": "FIN-006",
+      "topic": "Options, expansions, and modifications",
+      "status": "review_required",
+      "question": "Do the US rollout option, additional robot orders, price protection, and change orders create material rights or contract modifications?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:finance.expansion_option",
+      "finance_owner": "Revenue Accounting",
+      "legal_action": "Use an explicit change-control and pricing mechanism for future sites and modules.",
+      "framework": "IFRS 15 / ASC 606; Finance must determine the accounting treatment"
+    },
+    {
+      "issue_id": "FIN-007",
+      "topic": "Letter of intent and side commitments",
+      "status": "review_required",
+      "question": "Are commercial promises outside the signed agreement enforceable or relevant to the accounting contract and transaction price?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:finance.non_binding_loi",
+      "finance_owner": "CFO and Revenue Accounting",
+      "legal_action": "Inventory side letters, emails, pilots, rebates, and oral commitments before close.",
+      "framework": "IFRS 15 / ASC 606; Finance must determine the accounting treatment"
+    },
+    {
+      "issue_id": "FIN-008",
+      "topic": "Contracting entity and intercompany support",
+      "status": "review_required",
+      "question": "Which entity contracts, invoices, holds inventory, provides support, owns IP, and bears warranty or product-liability exposure for each site?",
+      "contract_evidence": "synthetic-deal:RAAS-2026-001:finance.contracting_entities",
+      "finance_owner": "CFO, Tax, and Controllership",
+      "legal_action": "Align customer contracts with the approved Germany-US intercompany model.",
+      "framework": "Entity, tax, transfer-pricing, and accounting review required"
+    }
+  ],
+  "regulatory_readiness": [
+    {
+      "control_id": "REG-001",
+      "regime": "EU machinery framework",
+      "actor": "Manufacturer, authorised representative, importer, or system integrator as applicable",
+      "obligation_or_question": "Confirm the current conformity path, technical file, instructions, declaration, risk assessment, substantial-modification controls, and site integration allocation.",
+      "deal_relevance": "The agreement covers a modular industrial robot cell and site commissioning.",
+      "status": "evidence_required",
+      "gate_effect": "deployment_blocker",
+      "owner": "Product safety lead and Legal",
+      "target_date": "2026-08-14",
+      "evidence_required": [
+        "Conformity responsibility matrix",
+        "Technical-file index",
+        "Site risk assessment",
+        "Commissioning and change-control protocol"
+      ],
+      "source_id": "EU-MACHINERY-DIRECTIVE",
+      "source_url": "https://eur-lex.europa.eu/eli/dir/2006/42/oj/eng"
+    },
+    {
+      "control_id": "REG-002",
+      "regime": "Machinery Regulation transition",
+      "actor": "Manufacturer and other relevant economic operators",
+      "obligation_or_question": "Map the 2027 transition for products, software changes, instructions, technical documentation, and AI-enabled safety components.",
+      "deal_relevance": "The 36-month framework extends into the Machinery Regulation application period.",
+      "status": "transition_plan_required",
+      "gate_effect": "transition_follow_up",
+      "owner": "Product safety lead, Engineering, and Legal",
+      "target_date": "2026-10-31",
+      "evidence_required": [
+        "Product transition inventory",
+        "Technical-documentation gap assessment",
+        "Change-control impact analysis"
+      ],
+      "source_id": "EU-MACHINERY-REGULATION",
+      "source_url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng"
+    },
+    {
+      "control_id": "REG-003",
+      "regime": "EU Artificial Intelligence Act",
+      "actor": "Provider, product manufacturer, deployer, importer, or distributor as applicable",
+      "obligation_or_question": "Record intended purpose and determine whether vision or path-planning AI is a safety component or otherwise falls within a regulated high-risk use case.",
+      "deal_relevance": "The product description leaves safety-component classification open.",
+      "status": "classification_open",
+      "gate_effect": "deployment_blocker",
+      "owner": "AI governance owner, Product safety lead, and Legal",
+      "target_date": "2026-08-14",
+      "evidence_required": [
+        "Intended-purpose statement",
+        "Safety-function map",
+        "Classification decision",
+        "Validation and human-oversight evidence"
+      ],
+      "source_id": "EU-AI-ACT",
+      "source_url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+    },
+    {
+      "control_id": "REG-004",
+      "regime": "EU Data Act",
+      "actor": "Manufacturer, related-service provider, data holder, and user as applicable",
+      "obligation_or_question": "Define product data, user access, permitted use, third-party sharing, trade-secret safeguards, and contract terms for connected-product data.",
+      "deal_relevance": "The framework covers connected robots, telemetry, remote services, and deployments after 12 September 2026.",
+      "status": "contract_update_required",
+      "gate_effect": "signing_blocker",
+      "owner": "Product counsel, Data owner, and Product",
+      "target_date": "2026-08-14",
+      "evidence_required": [
+        "Product-data inventory",
+        "User-access mechanism",
+        "Data-use schedule",
+        "Trade-secret safeguards"
+      ],
+      "source_id": "EU-DATA-ACT",
+      "source_url": "https://eur-lex.europa.eu/eli/reg/2023/2854/oj/eng"
+    },
+    {
+      "control_id": "REG-005",
+      "regime": "Cyber Resilience Act",
+      "actor": "Manufacturer and other relevant economic operators",
+      "obligation_or_question": "Confirm product-with-digital-elements scope, vulnerability handling, support period, security updates, reporting workflow, and contractual evidence.",
+      "deal_relevance": "Remote access, fleet software, AI components, and field updates create a product cybersecurity lifecycle.",
+      "status": "transition_plan_required",
+      "gate_effect": "transition_follow_up",
+      "owner": "CISO, Product Security, and Legal",
+      "target_date": "2026-08-31",
+      "evidence_required": [
+        "Product security plan",
+        "Vulnerability disclosure process",
+        "Support-period decision",
+        "Incident reporting runbook"
+      ],
+      "source_id": "EU-CRA",
+      "source_url": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng"
+    },
+    {
+      "control_id": "REG-006",
+      "regime": "Product Liability Directive transition",
+      "actor": "Manufacturer, component manufacturer, importer, authorised representative, or fulfilment provider",
+      "obligation_or_question": "Map national implementation and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
+      "deal_relevance": "Later framework deployments may be placed on the market or put into service after 9 December 2026.",
+      "status": "transition_plan_required",
+      "gate_effect": "transition_follow_up",
+      "owner": "Product counsel, Product Safety, Insurance, and Engineering",
+      "target_date": "2026-10-31",
+      "evidence_required": [
+        "National implementation check",
+        "Product and component responsibility map",
+        "Update-control record",
+        "Insurance and evidence-retention review"
+      ],
+      "source_id": "EU-PRODUCT-LIABILITY",
+      "source_url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng"
+    },
+    {
+      "control_id": "REG-007",
+      "regime": "GDPR and international transfers",
+      "actor": "Controller, joint controller, or processor as established by facts",
+      "obligation_or_question": "Identify personal data in video, access logs, support records, and telemetry, then document roles, purposes, security, retention, transparency, and transfers.",
+      "deal_relevance": "EU and US sites use remote support and cross-border operational access.",
+      "status": "evidence_required",
+      "gate_effect": "signing_blocker",
+      "owner": "DPO or privacy owner, Security, and Legal",
+      "target_date": "2026-08-14",
+      "evidence_required": [
+        "Data-flow map",
+        "Role assessment",
+        "DPA and transfer mechanism",
+        "DPIA screening"
+      ],
+      "source_id": "EU-GDPR",
+      "source_url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng"
+    }
+  ],
+  "external_counsel_briefs": [
+    {
+      "brief_id": "EXT-001",
+      "workstream": "EU product safety and AI classification",
+      "jurisdiction": "Germany and European Union",
+      "question": "Confirm the conformity and classification path for the modular robot, AI vision, path planning, system integration, and planned 2027 deployments.",
+      "facts": [
+        "Synthetic framework covers a German site and a later US site.",
+        "AI vision and path planning are included.",
+        "Safety-component classification remains open.",
+        "Customer and provider site responsibilities are undocumented."
+      ],
+      "assumptions": [
+        "No bespoke hazardous-environment use is currently planned.",
+        "The technical file and risk assessment can be made available under NDA."
+      ],
+      "deliverable": "Five-page decision memo, responsibility-matrix comments, and an evidence list required before commissioning.",
+      "deadline": "2026-08-14",
+      "budget_ceiling": "EUR 12,000, approval required for any expansion",
+      "internal_owner": "General Counsel and Product Safety Lead",
+      "approval_required": "General Counsel",
+      "external_action_allowed": false
+    },
+    {
+      "brief_id": "EXT-002",
+      "workstream": "US RaaS commercial and product exposure",
+      "jurisdiction": "United States, with Texas deployment focus",
+      "question": "Review the US order-form structure, governing law, hardware custody, UCC or lease issues, warranties, indemnities, limitation of liability, service credits, product exposure, and removal rights.",
+      "facts": [
+        "The provider retains robot title.",
+        "The customer requests Texas law and uncapped liability.",
+        "The later deployment is planned for Austin.",
+        "Remote support may be provided from the EU."
+      ],
+      "assumptions": [
+        "No consumer deployment is contemplated.",
+        "The US sales affiliate will participate in contracting or support."
+      ],
+      "deliverable": "Annotated issues list and approved US fallback positions for the order form.",
+      "deadline": "2026-08-14",
+      "budget_ceiling": "USD 15,000, fixed-fee proposal requested",
+      "internal_owner": "General Counsel and CFO",
+      "approval_required": "General Counsel",
+      "external_action_allowed": false
+    },
+    {
+      "brief_id": "EXT-003",
+      "workstream": "Germany-US entity, tax, and intercompany model",
+      "jurisdiction": "Germany and United States",
+      "question": "Confirm the contracting, invoicing, inventory, IP licence, warranty, support, and risk allocation between the German parent and US affiliate.",
+      "facts": [
+        "The product IP is held by the German provider in the synthetic scenario.",
+        "The framework contemplates German and US deployments.",
+        "Customer-facing support may be delivered by both entities."
+      ],
+      "assumptions": [
+        "Existing intercompany agreements can be reviewed.",
+        "Finance will provide the intended transfer-pricing policy and revenue flows."
+      ],
+      "deliverable": "Entity-responsibility chart, required intercompany documents, and a list of customer-contract clauses that must match the approved model.",
+      "deadline": "2026-09-15",
+      "budget_ceiling": "EUR 18,000 combined legal and tax scope",
+      "internal_owner": "CFO and General Counsel",
+      "approval_required": "CFO",
+      "external_action_allowed": false
+    },
+    {
+      "brief_id": "EXT-004",
+      "workstream": "IP and trade-secret protection",
+      "jurisdiction": "Germany, European Union, and United States",
+      "question": "Protect reusable robotics, software, model, workflow, and improvement IP while defining customer rights in site-specific deliverables and production data.",
+      "facts": [
+        "The customer requests ownership of all site-specific improvements.",
+        "The product uses telemetry and AI-enabled optimisation.",
+        "The deployment exposes personnel to customer manufacturing information."
+      ],
+      "assumptions": [
+        "Patent, trademark, and invention-assignment records are available.",
+        "Commercial teams can identify customer-funded development."
+      ],
+      "deliverable": "IP clause mark-up, invention and trade-secret control checklist, and filing recommendations.",
+      "deadline": "2026-08-14",
+      "budget_ceiling": "EUR 10,000 for contract and portfolio review",
+      "internal_owner": "General Counsel and CTO",
+      "approval_required": "General Counsel",
+      "external_action_allowed": false
+    }
+  ],
+  "hundred_day_plan": [
+    {
+      "phase": "Days 1 to 30: establish control",
+      "objective": "Create a verified legal baseline and decision authority for the first legal function.",
+      "deliverables": [
+        "Legal request intake, risk tiers, SLAs, and escalation matrix",
+        "Contract, entity, signatory authority, litigation, employment, privacy, and IP inventories",
+        "Top 20 customer and supplier contract review",
+        "External-counsel panel with scopes, rates, conflicts, and instruction template",
+        "Immediate product safety, AI, cybersecurity, and data-law issue register"
+      ],
+      "proof_metric": "All material matters have an owner, deadline, evidence reference, and approval tier."
+    },
+    {
+      "phase": "Days 31 to 60: build the operating model",
+      "objective": "Turn repeat legal work into controlled deal and governance workflows.",
+      "deliverables": [
+        "RaaS MSA, pilot, order form, DPA, NDA, supplier, and employment template set",
+        "Negotiation playbook with fallback positions and authority limits",
+        "Deal-desk cadence with Sales, Finance, Security, Product, and Operations",
+        "IFRS 15 and ASC 606 contract-structuring checklist with Finance",
+        "Board legal-risk pack and corporate-housekeeping calendar"
+      ],
+      "proof_metric": "Standard deals follow the playbook, and deviations reach the correct approver."
+    },
+    {
+      "phase": "Days 61 to 100: scale and evidence",
+      "objective": "Prepare the legal function for cross-border growth and repeatable diligence.",
+      "deliverables": [
+        "Germany-US entity and intercompany responsibility model",
+        "Regulatory readiness programme for machinery, AI, data, cybersecurity, and product liability",
+        "Product and data responsibility matrices embedded in deployment workflows",
+        "IP lifecycle covering inventions, open source, trade secrets, trademarks, and patents",
+        "Legal metrics for cycle time, deviation rate, outside-counsel spend, disputes, and open controls"
+      ],
+      "proof_metric": "Management can see signing blockers, deployment risks, spend, and readiness from one evidence-backed pack."
+    }
+  ],
+  "source_manifest": [
+    {
+      "id": "EU-DATA-ACT",
+      "title": "Regulation (EU) 2023/2854, Data Act",
+      "url": "https://eur-lex.europa.eu/eli/reg/2023/2854/oj/eng",
+      "pinpoint": "Articles 3 to 5, 13, and 50",
+      "legal_effect": "directly_applicable_regulation",
+      "timing": "Generally applies from 12 September 2025. Article 3(1) applies to connected products and related services placed on the market after 12 September 2026."
+    },
+    {
+      "id": "EU-MACHINERY-DIRECTIVE",
+      "title": "Directive 2006/42/EC, Machinery Directive",
+      "url": "https://eur-lex.europa.eu/eli/dir/2006/42/oj/eng",
+      "pinpoint": "Articles 5 and 12, Annex I",
+      "legal_effect": "directive_implemented_in_national_law",
+      "timing": "Current EU machinery framework during the synthetic 2026 review, implemented through national law."
+    },
+    {
+      "id": "EU-MACHINERY-REGULATION",
+      "title": "Regulation (EU) 2023/1230, Machinery Regulation",
+      "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
+      "pinpoint": "Articles 10 to 18 and 54, Annex III",
+      "legal_effect": "directly_applicable_regulation",
+      "timing": "Generally applies from 14 January 2027."
+    },
+    {
+      "id": "EU-AI-ACT",
+      "title": "Regulation (EU) 2024/1689, Artificial Intelligence Act",
+      "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
+      "pinpoint": "Articles 6, 9 to 15, 17, 43, and 113",
+      "legal_effect": "directly_applicable_regulation",
+      "timing": "Generally applies from 2 August 2026. Article 6(1) and the corresponding product-linked high-risk obligations apply from 2 August 2027. Earlier phases under Article 113 must be checked separately."
+    },
+    {
+      "id": "EU-CRA",
+      "title": "Regulation (EU) 2024/2847, Cyber Resilience Act",
+      "url": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
+      "pinpoint": "Articles 13, 14, 32, and 71",
+      "legal_effect": "directly_applicable_regulation",
+      "timing": "Chapter IV applies from 11 June 2026. Article 14 applies from 11 September 2026. The Regulation generally applies from 11 December 2027."
+    },
+    {
+      "id": "EU-PRODUCT-LIABILITY",
+      "title": "Directive (EU) 2024/2853, Product Liability Directive",
+      "url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng",
+      "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
+      "legal_effect": "directive_requires_national_implementation",
+      "timing": "Member States must transpose the Directive by 9 December 2026. The resulting national rules apply to products placed on the market or put into service after 9 December 2026."
+    },
+    {
+      "id": "EU-GDPR",
+      "title": "Regulation (EU) 2016/679, General Data Protection Regulation",
+      "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng",
+      "pinpoint": "Articles 5, 6, 13, 28, 32, 35, and 44 to 49",
+      "legal_effect": "directly_applicable_regulation",
+      "timing": "In force and directly applicable. The concrete obligations depend on the roles, data, purposes, and transfer path."
+    }
+  ],
+  "source_digest": "30c1d57826e3a63a2f5ef9c19c0aa78cd3ab9f88a838449953a9963c5336dbd8",
+  "disclaimer": "This public-safe demonstration uses synthetic facts and illustrative internal guardrails. It is legal-operations and deal-structuring support. It is not legal or accounting advice. Qualified Legal, Finance, Tax, Security, Product, and Safety reviewers must validate the analysis before any external use.",
+  "external_action_allowed": false
+}

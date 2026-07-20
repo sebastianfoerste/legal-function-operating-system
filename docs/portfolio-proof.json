@@ -10,22 +10,34 @@
   ],
   "proof_surfaces": [
     { "path": "README.md", "label": "Repository front door" },
-    { "path": "docs/demo.png", "label": "Demo screenshot" },
-    { "path": "docs/architecture.svg", "label": "Architecture flow" },
-    { "path": "examples/board-pack.md", "label": "Board pack output" }
+    { "path": "docs/demo.svg", "label": "General legal-function decision surface" },
+    { "path": "docs/architecture.svg", "label": "General operating architecture" },
+    { "path": "examples/board-pack.md", "label": "Board operations pack" },
+    { "path": "CASE_STUDY.md", "label": "General legal-function case study" },
+    { "path": "examples/raas-deal-desk.svg", "label": "Generated industrial robotics decision surface" },
+    { "path": "examples/raas-deal-pack.md", "label": "RaaS deal decision pack" },
+    { "path": "RAAS_CASE_STUDY.md", "label": "Industrial robotics case study" },
+    { "path": "examples/raas-source-manifest.json", "label": "Dated primary-source manifest" },
+    { "path": "examples/raas-deal-room.html", "label": "Offline local RaaS reviewer cockpit" }
   ],
   "validation_gates": [
-    "make test"
+    "make test",
+    "make demo",
+    "make check-generated",
+    "make proof-check"
   ],
   "safety_controls": [
-    "synthetic request data",
+    "synthetic request and transaction data",
     "deterministic rules",
-    "human approval tier",
-    "audit-ready board pack output"
+    "named human approval roles",
+    "primary-source provenance and digest",
+    "Finance and external-counsel review gates"
   ],
   "blocked_actions": [
     "no legal advice",
+    "no accounting conclusion",
     "no external communication",
+    "no contract signature",
     "no self-approval",
     "no client data"
   ]

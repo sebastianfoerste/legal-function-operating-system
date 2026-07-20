@@ -1,122 +1,191 @@
 # legal-function-operating-system
 
-See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
-Portfolio proof contract: [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
+A deterministic legal function operating system for consistent intake, risk,
+priority, routing, service levels, approvals, external-counsel decisions,
+escalation, and board reporting.
 
-![demo](docs/demo.png)
+![Legal function operating system](docs/demo.svg)
 
-![Architecture](docs/architecture.svg)
+The system answers the operating questions a first legal hire or General Counsel
+faces as a company scales:
 
-A deterministic **legal function operating system**: it takes incoming legal requests and runs each through **intake → risk → priority → routing → SLA → approval matrix → external-counsel decision tree → escalation**, then rolls them up into a **board-ready operations pack**.
+1. Which matters require attention first?
+2. Who owns the next step?
+3. Which approval tier applies?
+4. When should specialist counsel or the board become involved?
 
-It answers the question a first legal hire or GC actually faces: *how do I run a legal function at scale, consistently, with the right things escalated, and a clear view for the board?*
+All bundled data is synthetic. Every consequential decision requires human review.
+The repository does not provide legal or accounting advice.
 
-This is a management and triage artifact, **not legal advice**. All bundled data is **synthetic**.
+## Two-minute reviewer path
 
-> **If you don't code:** scroll to [What the demo produces](#what-the-demo-produces). The repo ships a board pack you can read in the browser. Its value lies in a legal function that is structured, prioritised, governed, and independent from an inbox.
+1. Read the [general legal-function case study](CASE_STUDY.md).
+2. Open the generated [board operations pack](examples/board-pack.md).
+3. Review the [architecture flow](docs/architecture.svg).
+4. Run `make check`.
 
-## Why this exists
+The machine-readable portfolio proof contract is available at
+[`docs/portfolio-proof.json`](docs/portfolio-proof.json).
 
-Most "legal AI" shows a model drafting text. The harder, more valuable problem in a scaling software business is **operations**: every request triaged the same way, the right approvals enforced, external counsel used deliberately, SLAs tracked, and the board given a true picture. This encodes that operating layer as deterministic rules a lawyer can read and challenge.
+## Operating model
 
-It is the companion to the rest of this portfolio: evaluation (`contract-review-eval-harness`), supervised workflow (`legal-ops-agent`), and source-grounded regulatory checks (`dpa-and-data-transfer-review`). This repo is the layer that **runs the function**.
+Each incoming legal request moves through a deterministic pipeline:
+
+`intake -> risk -> priority -> routing -> SLA -> approval matrix -> external-counsel decision -> escalation -> board reporting`
+
+The synthetic request set produces:
+
+- a risk and priority decision for every matter;
+- an owning legal queue;
+- response and resolution service levels;
+- a binding human approval tier;
+- an external-counsel decision;
+- board-attention and SLA escalation flags;
+- a request vault and guided workflow set; and
+- a board operations pack.
+
+The generated board pack surfaces three board-attention items, one SLA breach, and
+three external-counsel referrals across eight synthetic requests.
+
+## Core capabilities
+
+| Capability | Deterministic output | Implementation |
+| --- | --- | --- |
+| Risk assessment | HIGH, MEDIUM, or LOW based on structured facts | `rules.assess_risk` |
+| Priority | P1 to P4 from urgency and risk | `rules.assess_priority` |
+| Routing | Owning legal queue by request type | `rules.route` |
+| SLA model | Response and resolution targets | `rules.SLA` |
+| Approval matrix | Human sign-off tier by value and risk | `rules.approval_chain` |
+| External counsel | In-house or scoped specialist referral | `rules.external_counsel` |
+| Escalation | SLA, value, dispute, and blocker flags | `rules.escalations` |
+| Board reporting | Executive roll-up and request register | `board_pack.py` |
+
+The workspace outputs add a deterministic request vault, guided workflows, a GC
+command center, operational lists, and a local knowledge portal. Portal answers
+cite approved local resources or return an insufficient-evidence result.
+
+## Specialist deal-desk case studies
+
+### Industrial robotics and Robotics-as-a-Service
+
+The repository includes a specialist deal-desk workflow for a synthetic 36-month,
+multi-site industrial robotics transaction covering Germany and the United States.
+It demonstrates how the general operating model can support a complex combination
+of hardware, software, AI, deployment services, telemetry, maintenance, and
+recurring service fees.
+
+Start with:
+
+1. the [industrial RaaS case study](RAAS_CASE_STUDY.md);
+2. the generated [deal decision pack](examples/raas-deal-pack.md);
+3. the dated [primary-source manifest](examples/raas-source-manifest.json); and
+4. the generated [decision cockpit](examples/raas-deal-desk.svg).
+
+The generated [HTML deal room](examples/raas-deal-room.html) is an offline local
+artifact. Download or clone the repository before opening it. A concise walkthrough
+is available in the [reviewer script](docs/RAAS_REVIEWER_SCRIPT.md).
+
+The specialist workflow preserves:
+
+- clause-level playbook reviews and negotiation guardrails;
+- signing blockers, escalation triggers, and named approvers;
+- Finance review questions for IFRS 15, ASC 606, IFRS 16, and ASC 842;
+- a regulatory readiness matrix with dated primary-source provenance;
+- scoped external-counsel instruction packs; and
+- a first 100-day legal-function implementation plan.
+
+The signing answer for the bundled synthetic draft is explicit: **do not sign**.
+Finance remains accountable for accounting conclusions, qualified external counsel
+owns referred jurisdiction-specific advice, and the business retains every approval.
 
 ## Run it
 
 ```bash
 git clone https://github.com/sebastianfoerste/legal-function-operating-system
 cd legal-function-operating-system
-make install   # no third-party dependencies, standard library only
-make test      # deterministic unit tests
-make demo      # writes examples/board-pack.md and .json, prints the pack
+make install
+make test
+make demo
+make check
 ```
 
-Runs end to end, offline and deterministically, against the synthetic request set in `data/sample_requests.json`.
+The project uses Python 3.10 or later and the standard library only. Execution is
+offline and deterministic.
 
-## What the demo produces
+`make demo` regenerates:
 
-From eight synthetic requests, the operating system automatically produces a board pack that **surfaces the three items a board should see, the SLA breach, and the external-counsel referrals**:
+- [`examples/board-pack.md`](examples/board-pack.md)
+- [`examples/board-pack.json`](examples/board-pack.json)
+- [`examples/raas-deal-pack.md`](examples/raas-deal-pack.md)
+- [`examples/raas-deal-pack.json`](examples/raas-deal-pack.json)
+- [`examples/raas-deal-room.html`](examples/raas-deal-room.html)
+- [`examples/raas-deal-desk.svg`](examples/raas-deal-desk.svg)
+- [`examples/raas-source-manifest.json`](examples/raas-source-manifest.json)
 
+The specialist signing gate can be used in a pipeline:
+
+```bash
+PYTHONPATH=src python -m legal_function_os.raas_cli \
+  --input data/raas_deal.json \
+  --out examples \
+  --fail-on-blocker
 ```
-# Legal Function: Board Operations Pack
 
-## Executive summary
+Ordinary generation exits with status `0`. A blocked signing gate exits with
+status `1`. Invalid input exits with status `2`.
 
-- 8 legal requests handled · 5 high-risk
-- 5 require GC sign-off · 3 flagged for board attention
-- 3 external-counsel referrals · 1 SLA breaches
+## Repository structure
 
-## Board attention
-| ID | Title | Risk | Type |
-| --- | --- | --- | --- |
-| REQ-1001 | Enterprise MSA, Globex (synthetic) | HIGH | commercial_contract |
-| REQ-1005 | Series B financing, term sheet (synthetic) | HIGH | fundraising |
-| REQ-1007 | Customer dispute, SLA credits claim (synthetic) | HIGH | dispute |
-```
-
-The full pack (risk/priority/queue breakdowns, pending approvals, the request register) is committed at [`examples/board-pack.md`](examples/board-pack.md) and [`examples/board-pack.json`](examples/board-pack.json).
-
-## The operating layer
-
-| Capability | What the rules do | Where |
-| --- | --- | --- |
-| **Risk assessment** | HIGH/MEDIUM/LOW from value, personal data, non-EEA transfer, uncapped liability, dispute size | `rules.assess_risk` |
-| **Priority** | P1–P4 from urgency + risk | `rules.assess_priority` |
-| **Routing** | Request type → owning queue (Commercial, Privacy, Corporate/GC, Litigation, Employment, Legal Ops (AI)) | `rules.route` |
-| **SLA model** | Response + resolution targets per priority | `rules.SLA` |
-| **Approval matrix** | Binding sign-off tier by value/risk; always ends with a human | `rules.approval_chain` |
-| **External-counsel decision tree** | In-house vs litigation/corporate/specialist referral | `rules.external_counsel` |
-| **Escalation rules** | SLA breach, high-risk blocker, >€1m, disputes | `rules.escalations` |
-| **Board pack** | Aggregates everything into an executive view | `board_pack.py` |
-
-## How it is built
-
-- **Deterministic.** Same requests, same pack. A test proves it. No model calls, no network.
-- **Legible.** Every rule is a short, readable function a lawyer can agree or disagree with.
-- **Governed.** Every request ends with a human approval tier; nothing self-approves.
-- **Composable.** Drop this in alongside `ai-saas-legal-ops-starter-kit` as its operating core, or run it standalone.
-
-```
+```text
 src/legal_function_os/
-  rules.py        # routing, risk, priority, SLA, approval matrix, escalation, external counsel
-  board_pack.py   # aggregate decisions into a board-ready pack
-  cli.py          # python -m legal_function_os.cli --input data/sample_requests.json --out examples
-data/sample_requests.json   # synthetic request set (incl. a planted SLA breach and board items)
-examples/                   # committed sample board pack (md + json)
-tests/test_rules.py         # deterministic tests, standard-library unittest
+  rules.py                 general request routing and approval rules
+  board_pack.py            board operations pack
+  workspace.py             request vault and GC command center
+  collaboration_workspace.py
+                           approved local knowledge and supervised workflows
+  raas_deal_desk.py        stable specialist deal-desk facade
+  raas_models.py           versioned input contract and validation
+  raas_rules.py            playbook, Finance, regulation, counsel, and plan rules
+  raas_sources.py          dated primary-source registry
+  raas_renderers.py        Markdown, HTML, SVG, and JSON outputs
+  raas_cli.py              artifact generation and blocker gate
+data/
+  sample_requests.json     synthetic general legal requests
+  raas_deal.json           synthetic specialist transaction
+examples/                  committed reviewer and machine-readable outputs
+tests/                     deterministic standard-library tests
+scripts/                   artifact and portfolio-proof verification
 ```
 
-Pipeline gating: `--fail-on-breach` makes the CLI exit non-zero when an SLA has been missed, so it can sit in a weekly reporting job.
+## Controls
 
-`--workspace-output <path>` writes a deterministic request vault, guided triage workflow library and GC command center as JSON. The output preserves the same human approval tiers and contains no external-action capability.
+- Synthetic inputs only.
+- Deterministic offline execution.
+- Human approval for every consequential position.
+- Primary-source provenance for regulatory controls.
+- Explicit Finance and external-counsel review boundaries.
+- No external communication.
+- No contract signature or self-approval.
+- No client or customer data.
+- No automated legal or accounting conclusion.
 
-## Scope and disclaimers
+## Known limitations
 
-This models the **operations** of a legal function over a structured representation of requests. It does not give legal advice, does not draft documents, and does not establish a lawyer-client relationship. The rules and bands are illustrative defaults, meant to be tuned to a specific business. Every bundled example is synthetic.
+1. Thresholds and fallback positions are illustrative internal guardrails.
+2. The system operates over structured JSON instead of a live CLM or CRM.
+3. Approval roles are modelled and are not connected to an identity provider.
+4. US-law issues are routed to qualified US counsel.
+5. Product classification requires verified intended-purpose, architecture,
+   safety, conformity, and deployment facts.
+6. Regulatory dates and requirements require confirmation at the actual review date.
+
+## Human-authored judgment
+
+AI tools assisted implementation. The operating model, issue selection, rule
+structure, escalation logic, approval design, regulatory framing, and review
+boundaries carry the substantive value. The objective is to make legal judgment
+structured, testable, and reviewable.
 
 ## License
 
 MIT. See [`LICENSE`](LICENSE).
-
-## Human-authored legal judgment
-AI tools assisted the implementation, but the parts that carry the value are
-human-authored: the risk bands, routing rules, SLA targets, the approval matrix, and
-the external-counsel decision tree. The point of this repository is not code volume; it is showing
-how legal judgment can be made structured, testable, and reviewable.
-
-## GC use case
-This models the operating layer a first GC needs when legal work arrives faster than
-the team can manually triage. It routes requests by risk, priority, SLA, and approval
-level, then produces a board-ready summary of workload and unresolved decisions.
-
-## Known limitations
-A public-safe prototype, not legal advice.
-1. Operates over a structured request representation, not a live intake channel.
-2. Value bands, SLA targets, and approval tiers are illustrative defaults.
-3. Approval tiers are modelled, not enforced against a real IdP.
-Next production step: Slack/Jira intake, real roles/auth for approvals, live SLA
-timers, and pairing with the starter-kit playbooks and DPA checks.
-
-## Operational workspace outputs
-
-`--collaboration-output-dir` produces deterministic operational Lists, an allowlisted versioned approval workflow, and a self-contained local knowledge portal. Portal answers cite approved local resources or return an insufficient-evidence result. The standard-library-only runtime and external-action block remain intact.
