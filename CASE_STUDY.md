@@ -1,7 +1,7 @@
 # Case study: legal-function-operating-system
 
-For the industrial robotics and Robotics-as-a-Service flagship, read
-[`RAAS_CASE_STUDY.md`](RAAS_CASE_STUDY.md).
+An additional specialist industrial robotics and Robotics-as-a-Service workflow is
+documented in [`RAAS_CASE_STUDY.md`](RAAS_CASE_STUDY.md).
 
 > Running a legal function at scale is an operations problem: consistent triage, enforced approvals, deliberate escalation, and a true board view. Synthetic data only; not legal advice.
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 
-VERIFIED_ON = "2026-07-16"
+VERIFIED_ON = "2026-07-20"
 
 DISCLAIMER = (
     "This public-safe demonstration uses synthetic facts and illustrative internal "
@@ -44,7 +44,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
         "pinpoint": "Articles 10 to 18 and 54, Annex III",
         "legal_effect": "directly_applicable_regulation",
-        "timing": "Generally applies from 20 January 2027.",
+        "timing": "Generally applies from 14 January 2027.",
     },
     {
         "id": "EU-AI-ACT",

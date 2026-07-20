@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "legal-function-os"
 version = "0.2.0"
-description = "Deterministic legal function operating system with a review-gated industrial robotics RaaS deal desk."
+description = "Deterministic legal function operating system with review-gated deal-desk workflows."
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "Sebastian Förste" }]
-keywords = ["legal-ops", "legal-engineering", "governance", "gc", "robotics", "raas"]
+keywords = ["legal-ops", "legal-engineering", "governance", "gc", "deal-desk", "commercial-contracts"]
 dependencies = []
 
 [project.scripts]

@@ -1,7 +1,7 @@
 {
   "schema": "legal-function-os.source-manifest.v1",
-  "verified_on": "2026-07-16",
-  "source_digest": "776adbd1b46a33879ee4cb4f93538d9893e2d171c6f5b27af9f7305c7578c881",
+  "verified_on": "2026-07-20",
+  "source_digest": "30c1d57826e3a63a2f5ef9c19c0aa78cd3ab9f88a838449953a9963c5336dbd8",
   "sources": [
     {
       "id": "EU-DATA-ACT",
@@ -25,7 +25,7 @@
       "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
       "pinpoint": "Articles 10 to 18 and 54, Annex III",
       "legal_effect": "directly_applicable_regulation",
-      "timing": "Generally applies from 20 January 2027."
+      "timing": "Generally applies from 14 January 2027."
     },
     {
       "id": "EU-AI-ACT",

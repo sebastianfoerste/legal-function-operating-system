@@ -5,18 +5,20 @@
   "pinned_on_github": true,
   "reviewer_path": [
     "README.md",
-    "examples/raas-deal-pack.md",
-    "RAAS_CASE_STUDY.md",
-    "examples/raas-source-manifest.json"
+    "examples/board-pack.md",
+    "CASE_STUDY.md"
   ],
   "proof_surfaces": [
     { "path": "README.md", "label": "Repository front door" },
+    { "path": "docs/demo.svg", "label": "General legal-function decision surface" },
+    { "path": "docs/architecture.svg", "label": "General operating architecture" },
+    { "path": "examples/board-pack.md", "label": "Board operations pack" },
+    { "path": "CASE_STUDY.md", "label": "General legal-function case study" },
     { "path": "examples/raas-deal-desk.svg", "label": "Generated industrial robotics decision surface" },
     { "path": "examples/raas-deal-pack.md", "label": "RaaS deal decision pack" },
     { "path": "RAAS_CASE_STUDY.md", "label": "Industrial robotics case study" },
     { "path": "examples/raas-source-manifest.json", "label": "Dated primary-source manifest" },
-    { "path": "examples/raas-deal-room.html", "label": "Offline local RaaS reviewer cockpit" },
-    { "path": "examples/board-pack.md", "label": "Board pack output" }
+    { "path": "examples/raas-deal-room.html", "label": "Offline local RaaS reviewer cockpit" }
   ],
   "validation_gates": [
     "make test",

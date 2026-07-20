@@ -1,126 +1,102 @@
 # legal-function-operating-system
 
-A deterministic legal operating layer for a first General Counsel. The flagship
-case study is a synthetic cross-border industrial robotics and
-Robotics-as-a-Service transaction.
+A deterministic legal function operating system for consistent intake, risk,
+priority, routing, service levels, approvals, external-counsel decisions,
+escalation, and board reporting.
 
-![Industrial robotics RaaS deal decision pack](examples/raas-deal-desk.svg)
+![Legal function operating system](docs/demo.svg)
 
-The first screen answers four management questions:
+The system answers the operating questions a first legal hire or General Counsel
+faces as a company scales:
 
-1. Can we sign?
-2. Which positions remain open?
-3. Who must approve them?
-4. What could delay deployment or revenue?
+1. Which matters require attention first?
+2. Who owns the next step?
+3. Which approval tier applies?
+4. When should specialist counsel or the board become involved?
 
 All bundled data is synthetic. Every consequential decision requires human review.
 The repository does not provide legal or accounting advice.
 
 ## Two-minute reviewer path
 
-1. Open the generated [RaaS deal decision pack](examples/raas-deal-pack.md).
-2. Read the [industrial robotics case study](RAAS_CASE_STUDY.md).
-3. Check the dated [primary-source manifest](examples/raas-source-manifest.json).
-4. Run `make test && make demo && make check`.
+1. Read the [general legal-function case study](CASE_STUDY.md).
+2. Open the generated [board operations pack](examples/board-pack.md).
+3. Review the [architecture flow](docs/architecture.svg).
+4. Run `make check`.
 
-The generated [HTML deal room](examples/raas-deal-room.html) is an offline local
-artifact. Download or clone the repository before opening it.
-
-For a short recording, use the [90-second reviewer script](docs/RAAS_REVIEWER_SCRIPT.md).
-The portfolio proof contract is available at
+The machine-readable portfolio proof contract is available at
 [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
 
-## What the RaaS demo proves
+## Operating model
 
-The synthetic transaction covers a 36-month, multi-site modular robotics framework
-for Germany and the United States. It combines:
+Each incoming legal request moves through a deterministic pipeline:
 
-- robots and retained hardware title;
-- site integration and commissioning;
-- fleet-management software;
-- AI vision and path planning;
-- remote monitoring and predictive maintenance;
-- support and software updates;
-- product telemetry and model improvement; and
-- recurring service fees with uptime commitments.
+`intake -> risk -> priority -> routing -> SLA -> approval matrix -> external-counsel decision -> escalation -> board reporting`
 
-The customer draft contains deliberately difficult positions. The deterministic
-review produces:
+The synthetic request set produces:
 
-- 11 clause-level playbook reviews;
-- six substantive contract non-starters;
-- one linked Finance blocker;
-- eight IFRS 15, ASC 606, IFRS 16, and ASC 842 review questions;
-- seven regulatory readiness controls;
-- four scoped external-counsel instruction packs; and
-- a founding General Counsel 100-day plan.
+- a risk and priority decision for every matter;
+- an owning legal queue;
+- response and resolution service levels;
+- a binding human approval tier;
+- an external-counsel decision;
+- board-attention and SLA escalation flags;
+- a request vault and guided workflow set; and
+- a board operations pack.
 
-The signing answer is explicit: **do not sign the current synthetic draft**.
+The generated board pack surfaces three board-attention items, one SLA breach, and
+three external-counsel referrals across eight synthetic requests.
 
-## Negotiation guardrails
+## Core capabilities
 
-Each rule records the requested position, standard position, fallback, escalation
-trigger, required approvers, commercial rationale, and the precise synthetic input
-used as evidence.
+| Capability | Deterministic output | Implementation |
+| --- | --- | --- |
+| Risk assessment | HIGH, MEDIUM, or LOW based on structured facts | `rules.assess_risk` |
+| Priority | P1 to P4 from urgency and risk | `rules.assess_priority` |
+| Routing | Owning legal queue by request type | `rules.route` |
+| SLA model | Response and resolution targets | `rules.SLA` |
+| Approval matrix | Human sign-off tier by value and risk | `rules.approval_chain` |
+| External counsel | In-house or scoped specialist referral | `rules.external_counsel` |
+| Escalation | SLA, value, dispute, and blocker flags | `rules.escalations` |
+| Board reporting | Executive roll-up and request register | `board_pack.py` |
 
-The playbook covers:
+The workspace outputs add a deterministic request vault, guided workflows, a GC
+command center, operational lists, and a local knowledge portal. Portal answers
+cite approved local resources or return an insufficient-evidence result.
 
-- liability;
-- objective acceptance and commissioning;
-- platform, model, and improvement IP;
-- product data and model training;
-- product and site safety;
-- uptime and service credits;
-- termination and deployment-cost recovery;
-- cybersecurity and remote access;
-- exclusivity;
-- hardware custody, insurance, and removal; and
-- AI safety-component classification.
+## Specialist deal-desk case studies
 
-The stable public facade is
-[`src/legal_function_os/raas_deal_desk.py`](src/legal_function_os/raas_deal_desk.py).
-Validation, legal sources, decision rules, and renderers are kept in separate modules.
-The input is
-[`data/raas_deal.json`](data/raas_deal.json).
+### Industrial robotics and Robotics-as-a-Service
 
-## Finance handoff
+The repository includes a specialist deal-desk workflow for a synthetic 36-month,
+multi-site industrial robotics transaction covering Germany and the United States.
+It demonstrates how the general operating model can support a complex combination
+of hardware, software, AI, deployment services, telemetry, maintenance, and
+recurring service fees.
 
-The pack routes accounting questions to Finance and avoids automated conclusions.
-It covers:
+Start with:
 
-- performance obligations;
-- acceptance and transfer of control;
-- variable consideration and service credits;
-- enforceable contract term;
-- lease assessment;
-- options and contract modifications;
-- letters of intent and side commitments; and
-- the Germany-US contracting and intercompany model.
+1. the [industrial RaaS case study](RAAS_CASE_STUDY.md);
+2. the generated [deal decision pack](examples/raas-deal-pack.md);
+3. the dated [primary-source manifest](examples/raas-source-manifest.json); and
+4. the generated [decision cockpit](examples/raas-deal-desk.svg).
 
-Finance remains the accountable decision-maker. Legal owns the factual consistency
-of the agreement, order form, statement of work, remedies, and side commitments.
+The generated [HTML deal room](examples/raas-deal-room.html) is an offline local
+artifact. Download or clone the repository before opening it. A concise walkthrough
+is available in the [reviewer script](docs/RAAS_REVIEWER_SCRIPT.md).
 
-## Regulatory readiness
+The specialist workflow preserves:
 
-The readiness matrix distinguishes the relevant actor, obligation or classification
-question, deal relevance, signing or deployment effect, owner, target date,
-required evidence, legal effect, and primary source.
+- clause-level playbook reviews and negotiation guardrails;
+- signing blockers, escalation triggers, and named approvers;
+- Finance review questions for IFRS 15, ASC 606, IFRS 16, and ASC 842;
+- a regulatory readiness matrix with dated primary-source provenance;
+- scoped external-counsel instruction packs; and
+- a first 100-day legal-function implementation plan.
 
-It covers:
-
-- the current EU machinery framework;
-- the Machinery Regulation transition;
-- the Artificial Intelligence Act;
-- the Data Act;
-- the Cyber Resilience Act;
-- the revised Product Liability Directive; and
-- GDPR and international transfers.
-
-The legal-source snapshot is dated `2026-07-16` and protected by a deterministic
-SHA-256 digest. The source registry distinguishes directly applicable regulations
-from directives that depend on national implementation. Application and
-classification depend on verified product facts and the law current at the actual
-review date.
+The signing answer for the bundled synthetic draft is explicit: **do not sign**.
+Finance remains accountable for accounting conclusions, qualified external counsel
+owns referred jurisdiction-specific advice, and the business retains every approval.
 
 ## Run it
 
@@ -130,9 +106,11 @@ cd legal-function-operating-system
 make install
 make test
 make demo
+make check
 ```
 
-The project uses Python 3.10 or later and the standard library only.
+The project uses Python 3.10 or later and the standard library only. Execution is
+offline and deterministic.
 
 `make demo` regenerates:
 
@@ -144,7 +122,7 @@ The project uses Python 3.10 or later and the standard library only.
 - [`examples/raas-deal-desk.svg`](examples/raas-deal-desk.svg)
 - [`examples/raas-source-manifest.json`](examples/raas-source-manifest.json)
 
-The RaaS signing gate can also be used in a pipeline:
+The specialist signing gate can be used in a pipeline:
 
 ```bash
 PYTHONPATH=src python -m legal_function_os.raas_cli \
@@ -153,29 +131,8 @@ PYTHONPATH=src python -m legal_function_os.raas_cli \
   --fail-on-blocker
 ```
 
-The command exits with status `1` while the signing gate is blocked.
-Malformed inputs exit with status `2`. Ordinary artifact generation exits with
-status `0`.
-
-## General legal-function operating layer
-
-The repository also runs incoming legal requests through:
-
-`intake -> risk -> priority -> routing -> SLA -> approval matrix -> external-counsel decision -> escalation -> board reporting`
-
-The original synthetic request set produces:
-
-- a risk and priority decision for every matter;
-- an owning legal queue;
-- a response and resolution SLA;
-- a binding human approval tier;
-- an external-counsel decision;
-- board-attention and SLA escalation flags;
-- a request vault and guided workflow set; and
-- a board operations pack.
-
-Read the original [general legal-function case study](CASE_STUDY.md) and
-[board pack](examples/board-pack.md).
+Ordinary generation exits with status `0`. A blocked signing gate exits with
+status `1`. Invalid input exits with status `2`.
 
 ## Repository structure
 
@@ -185,19 +142,19 @@ src/legal_function_os/
   board_pack.py            board operations pack
   workspace.py             request vault and GC command center
   collaboration_workspace.py
-                           local approved knowledge and supervised workflows
-  raas_deal_desk.py        stable public RaaS facade
-  raas_models.py           versioned input contract, validation, and output types
-  raas_rules.py            playbook, Finance, regulation, counsel, and 100-day plan
-  raas_sources.py          dated primary-source registry and legal-effect metadata
-  raas_renderers.py        Markdown, HTML, SVG, and JSON proof artifacts
-  raas_cli.py              RaaS artifact generation and blocker gate
+                           approved local knowledge and supervised workflows
+  raas_deal_desk.py        stable specialist deal-desk facade
+  raas_models.py           versioned input contract and validation
+  raas_rules.py            playbook, Finance, regulation, counsel, and plan rules
+  raas_sources.py          dated primary-source registry
+  raas_renderers.py        Markdown, HTML, SVG, and JSON outputs
+  raas_cli.py              artifact generation and blocker gate
 data/
   sample_requests.json     synthetic general legal requests
-  raas_deal.json           synthetic Germany-US robotics deal
+  raas_deal.json           synthetic specialist transaction
 examples/                  committed reviewer and machine-readable outputs
 tests/                     deterministic standard-library tests
-scripts/                   generated-artifact and portfolio-proof checks
+scripts/                   artifact and portfolio-proof verification
 ```
 
 ## Controls
@@ -206,6 +163,7 @@ scripts/                   generated-artifact and portfolio-proof checks
 - Deterministic offline execution.
 - Human approval for every consequential position.
 - Primary-source provenance for regulatory controls.
+- Explicit Finance and external-counsel review boundaries.
 - No external communication.
 - No contract signature or self-approval.
 - No client or customer data.
@@ -213,13 +171,13 @@ scripts/                   generated-artifact and portfolio-proof checks
 
 ## Known limitations
 
-1. The thresholds and fallback positions are illustrative internal guardrails.
-2. The system operates over structured JSON rather than a live CLM or CRM.
+1. Thresholds and fallback positions are illustrative internal guardrails.
+2. The system operates over structured JSON instead of a live CLM or CRM.
 3. Approval roles are modelled and are not connected to an identity provider.
 4. US-law issues are routed to qualified US counsel.
-5. Product classification requires the actual intended purpose, architecture, risk
-   assessment, conformity path, and deployment facts.
-6. Regulatory dates and requirements require confirmation when the analysis is used.
+5. Product classification requires verified intended-purpose, architecture,
+   safety, conformity, and deployment facts.
+6. Regulatory dates and requirements require confirmation at the actual review date.
 
 ## Human-authored judgment
 

@@ -2,7 +2,7 @@
   "schema": "legal-function-os.raas-deal-pack.v1",
   "input_schema": "legal-function-os.raas-deal-input.v1",
   "generated_from": "synthetic-deal:RAAS-2026-001",
-  "verified_on": "2026-07-16",
+  "verified_on": "2026-07-20",
   "title": "Industrial Robotics RaaS Deal Decision Pack",
   "deal_id": "RAAS-2026-001",
   "deal_facts": {
@@ -748,7 +748,7 @@
       "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
       "pinpoint": "Articles 10 to 18 and 54, Annex III",
       "legal_effect": "directly_applicable_regulation",
-      "timing": "Generally applies from 20 January 2027."
+      "timing": "Generally applies from 14 January 2027."
     },
     {
       "id": "EU-AI-ACT",
@@ -783,7 +783,7 @@
       "timing": "In force and directly applicable. The concrete obligations depend on the roles, data, purposes, and transfer path."
     }
   ],
-  "source_digest": "776adbd1b46a33879ee4cb4f93538d9893e2d171c6f5b27af9f7305c7578c881",
+  "source_digest": "30c1d57826e3a63a2f5ef9c19c0aa78cd3ab9f88a838449953a9963c5336dbd8",
   "disclaimer": "This public-safe demonstration uses synthetic facts and illustrative internal guardrails. It is legal-operations and deal-structuring support. It is not legal or accounting advice. Qualified Legal, Finance, Tax, Security, Product, and Safety reviewers must validate the analysis before any external use.",
   "external_action_allowed": false
 }
