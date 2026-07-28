@@ -12,6 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 EXPECTED = (
     "board-pack.md",
     "board-pack.json",
+    "legal-capacity-simulation.md",
+    "legal-capacity-simulation.json",
     "raas-deal-pack.md",
     "raas-deal-pack.json",
     "raas-deal-room.html",
@@ -31,6 +33,10 @@ def main() -> int:
                 str(output),
                 "--period",
                 "Q2 2026 (synthetic)",
+                "--capacity-scenarios",
+                str(ROOT / "data" / "capacity_scenarios.json"),
+                "--capacity-output",
+                str(output),
                 "--quiet",
             ]
         )

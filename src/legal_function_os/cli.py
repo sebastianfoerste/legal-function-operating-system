@@ -14,6 +14,10 @@ import sys
 from pathlib import Path
 
 from legal_function_os.board_pack import build_board_pack, render_markdown
+from legal_function_os.capacity_simulator import (
+    build_capacity_simulation,
+    render_capacity_markdown,
+)
 from legal_function_os.workspace import build_legal_function_workspace
 from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
 
@@ -32,6 +36,16 @@ def main(argv: list[str] | None = None) -> int:
         "--collaboration-output-dir",
         default=None,
         help="Optional directory for operational Lists, workflow runs and local knowledge portal.",
+    )
+    parser.add_argument(
+        "--capacity-scenarios",
+        default=None,
+        help="Optional JSON file containing at least two illustrative capacity scenarios.",
+    )
+    parser.add_argument(
+        "--capacity-output",
+        default=None,
+        help="Optional directory for the capacity simulation Markdown and JSON.",
     )
     parser.add_argument("--quiet", action="store_true", help="Do not print the markdown pack.")
     parser.add_argument(
@@ -81,6 +95,32 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(collaboration, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         render_portal(collaboration["knowledge_portal"], output_dir / "knowledge-portal.html")
+
+    if args.capacity_scenarios or args.capacity_output:
+        if not args.capacity_scenarios or not args.capacity_output:
+            print(
+                "--capacity-scenarios and --capacity-output must be supplied together.",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            scenario_payloads = json.loads(
+                Path(args.capacity_scenarios).read_text(encoding="utf-8")
+            )
+            simulation = build_capacity_simulation(requests, scenario_payloads)
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            print(f"Invalid capacity simulation input: {exc}", file=sys.stderr)
+            return 2
+        capacity_output = Path(args.capacity_output)
+        capacity_output.mkdir(parents=True, exist_ok=True)
+        (capacity_output / "legal-capacity-simulation.json").write_text(
+            json.dumps(simulation, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        (capacity_output / "legal-capacity-simulation.md").write_text(
+            render_capacity_markdown(simulation),
+            encoding="utf-8",
+        )
 
     # Board-attention items are normal management signal, not a failure. Only an
     # explicit --fail-on-breach gates the pipeline on missed SLAs.

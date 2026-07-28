@@ -1,0 +1,362 @@
+{
+  "schema": "legal-function-os.capacity-simulation.v1",
+  "assumption_notice": "Capacity points and slots are illustrative management assumptions over synthetic requests. They are planning inputs, not time estimates or legal advice.",
+  "scenarios": [
+    {
+      "scenario": {
+        "name": "current_operating_model",
+        "label": "Current operating model",
+        "queue_capacity_points": {
+          "Commercial": 8,
+          "Privacy": 8,
+          "Legal Ops (AI)": 5,
+          "Corporate / GC": 6,
+          "Litigation": 5,
+          "Employment": 4
+        },
+        "gc_approval_slots": 3,
+        "external_counsel_slots": 2
+      },
+      "status": "CONSTRAINED",
+      "summary": {
+        "requests": 8,
+        "demand_points": 57,
+        "capacity_points": 36,
+        "backlog_points": 27,
+        "constrained_queues": 4,
+        "gc_approval_demand": 5,
+        "gc_approval_capacity": 3,
+        "gc_approval_overflow": 2,
+        "external_counsel_demand": 3,
+        "external_counsel_capacity": 2,
+        "external_counsel_overflow": 1
+      },
+      "queue_capacity": [
+        {
+          "queue": "Commercial",
+          "request_count": 3,
+          "demand_points": 14,
+          "capacity_points": 8,
+          "backlog_points": 6,
+          "utilization": 1.75,
+          "status": "constrained"
+        },
+        {
+          "queue": "Corporate / GC",
+          "request_count": 1,
+          "demand_points": 10,
+          "capacity_points": 6,
+          "backlog_points": 4,
+          "utilization": 1.667,
+          "status": "constrained"
+        },
+        {
+          "queue": "Employment",
+          "request_count": 1,
+          "demand_points": 3,
+          "capacity_points": 4,
+          "backlog_points": 0,
+          "utilization": 0.75,
+          "status": "within_assumption"
+        },
+        {
+          "queue": "Legal Ops (AI)",
+          "request_count": 0,
+          "demand_points": 0,
+          "capacity_points": 5,
+          "backlog_points": 0,
+          "utilization": 0.0,
+          "status": "within_assumption"
+        },
+        {
+          "queue": "Litigation",
+          "request_count": 1,
+          "demand_points": 13,
+          "capacity_points": 5,
+          "backlog_points": 8,
+          "utilization": 2.6,
+          "status": "constrained"
+        },
+        {
+          "queue": "Privacy",
+          "request_count": 2,
+          "demand_points": 17,
+          "capacity_points": 8,
+          "backlog_points": 9,
+          "utilization": 2.125,
+          "status": "constrained"
+        }
+      ],
+      "priority_review_queue": [
+        {
+          "request_id": "REQ-1007",
+          "title": "Customer dispute: SLA credits claim (synthetic)",
+          "queue": "Litigation",
+          "priority": "P1_blocker",
+          "risk": "HIGH",
+          "effort_points": 13,
+          "requires_gc_approval": true,
+          "requires_external_counsel": true
+        },
+        {
+          "request_id": "REQ-1005",
+          "title": "Series B financing: term sheet (synthetic)",
+          "queue": "Corporate / GC",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 10,
+          "requires_gc_approval": true,
+          "requires_external_counsel": true
+        },
+        {
+          "request_id": "REQ-1001",
+          "title": "Enterprise MSA: Globex (synthetic)",
+          "queue": "Commercial",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 9,
+          "requires_gc_approval": true,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1004",
+          "title": "AI feature governance review: agent autonomy (synthetic)",
+          "queue": "Privacy",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 9,
+          "requires_gc_approval": true,
+          "requires_external_counsel": true
+        },
+        {
+          "request_id": "REQ-1002",
+          "title": "DPA: US support sub-processor (synthetic)",
+          "queue": "Privacy",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 8,
+          "requires_gc_approval": true,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1006",
+          "title": "Vendor security questionnaire: analytics tool (synthetic)",
+          "queue": "Commercial",
+          "priority": "P3_standard",
+          "risk": "MEDIUM",
+          "effort_points": 4,
+          "requires_gc_approval": false,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1008",
+          "title": "Employment offer: senior engineer (synthetic)",
+          "queue": "Employment",
+          "priority": "P3_standard",
+          "risk": "MEDIUM",
+          "effort_points": 3,
+          "requires_gc_approval": false,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1003",
+          "title": "NDA: design agency (synthetic)",
+          "queue": "Commercial",
+          "priority": "P4_low",
+          "risk": "LOW",
+          "effort_points": 1,
+          "requires_gc_approval": false,
+          "requires_external_counsel": false
+        }
+      ],
+      "external_action_allowed": false
+    },
+    {
+      "scenario": {
+        "name": "protected_focus_model",
+        "label": "Protected focus and specialist model",
+        "queue_capacity_points": {
+          "Commercial": 14,
+          "Privacy": 17,
+          "Legal Ops (AI)": 10,
+          "Corporate / GC": 12,
+          "Litigation": 14,
+          "Employment": 6
+        },
+        "gc_approval_slots": 6,
+        "external_counsel_slots": 4
+      },
+      "status": "WITHIN_ASSUMPTIONS",
+      "summary": {
+        "requests": 8,
+        "demand_points": 57,
+        "capacity_points": 73,
+        "backlog_points": 0,
+        "constrained_queues": 0,
+        "gc_approval_demand": 5,
+        "gc_approval_capacity": 6,
+        "gc_approval_overflow": 0,
+        "external_counsel_demand": 3,
+        "external_counsel_capacity": 4,
+        "external_counsel_overflow": 0
+      },
+      "queue_capacity": [
+        {
+          "queue": "Commercial",
+          "request_count": 3,
+          "demand_points": 14,
+          "capacity_points": 14,
+          "backlog_points": 0,
+          "utilization": 1.0,
+          "status": "within_assumption"
+        },
+        {
+          "queue": "Corporate / GC",
+          "request_count": 1,
+          "demand_points": 10,
+          "capacity_points": 12,
+          "backlog_points": 0,
+          "utilization": 0.833,
+          "status": "within_assumption"
+        },
+        {
+          "queue": "Employment",
+          "request_count": 1,
+          "demand_points": 3,
+          "capacity_points": 6,
+          "backlog_points": 0,
+          "utilization": 0.5,
+          "status": "within_assumption"
+        },
+        {
+          "queue": "Legal Ops (AI)",
+          "request_count": 0,
+          "demand_points": 0,
+          "capacity_points": 10,
+          "backlog_points": 0,
+          "utilization": 0.0,
+          "status": "within_assumption"
+        },
+        {
+          "queue": "Litigation",
+          "request_count": 1,
+          "demand_points": 13,
+          "capacity_points": 14,
+          "backlog_points": 0,
+          "utilization": 0.929,
+          "status": "within_assumption"
+        },
+        {
+          "queue": "Privacy",
+          "request_count": 2,
+          "demand_points": 17,
+          "capacity_points": 17,
+          "backlog_points": 0,
+          "utilization": 1.0,
+          "status": "within_assumption"
+        }
+      ],
+      "priority_review_queue": [
+        {
+          "request_id": "REQ-1007",
+          "title": "Customer dispute: SLA credits claim (synthetic)",
+          "queue": "Litigation",
+          "priority": "P1_blocker",
+          "risk": "HIGH",
+          "effort_points": 13,
+          "requires_gc_approval": true,
+          "requires_external_counsel": true
+        },
+        {
+          "request_id": "REQ-1005",
+          "title": "Series B financing: term sheet (synthetic)",
+          "queue": "Corporate / GC",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 10,
+          "requires_gc_approval": true,
+          "requires_external_counsel": true
+        },
+        {
+          "request_id": "REQ-1001",
+          "title": "Enterprise MSA: Globex (synthetic)",
+          "queue": "Commercial",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 9,
+          "requires_gc_approval": true,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1004",
+          "title": "AI feature governance review: agent autonomy (synthetic)",
+          "queue": "Privacy",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 9,
+          "requires_gc_approval": true,
+          "requires_external_counsel": true
+        },
+        {
+          "request_id": "REQ-1002",
+          "title": "DPA: US support sub-processor (synthetic)",
+          "queue": "Privacy",
+          "priority": "P2_high",
+          "risk": "HIGH",
+          "effort_points": 8,
+          "requires_gc_approval": true,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1006",
+          "title": "Vendor security questionnaire: analytics tool (synthetic)",
+          "queue": "Commercial",
+          "priority": "P3_standard",
+          "risk": "MEDIUM",
+          "effort_points": 4,
+          "requires_gc_approval": false,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1008",
+          "title": "Employment offer: senior engineer (synthetic)",
+          "queue": "Employment",
+          "priority": "P3_standard",
+          "risk": "MEDIUM",
+          "effort_points": 3,
+          "requires_gc_approval": false,
+          "requires_external_counsel": false
+        },
+        {
+          "request_id": "REQ-1003",
+          "title": "NDA: design agency (synthetic)",
+          "queue": "Commercial",
+          "priority": "P4_low",
+          "risk": "LOW",
+          "effort_points": 1,
+          "requires_gc_approval": false,
+          "requires_external_counsel": false
+        }
+      ],
+      "external_action_allowed": false
+    }
+  ],
+  "comparison_to_first_scenario": [
+    {
+      "scenario": "current_operating_model",
+      "backlog_points_delta": 0,
+      "constrained_queues_delta": 0,
+      "gc_approval_overflow_delta": 0,
+      "external_counsel_overflow_delta": 0
+    },
+    {
+      "scenario": "protected_focus_model",
+      "backlog_points_delta": -27,
+      "constrained_queues_delta": -4,
+      "gc_approval_overflow_delta": -2,
+      "external_counsel_overflow_delta": -1
+    }
+  ],
+  "review_gate": "A human owner must validate effort assumptions, staffing availability, approval capacity, and any external-counsel instruction.",
+  "external_action_allowed": false
+}

@@ -13,7 +13,7 @@ test:
 demo: board-demo raas-demo
 
 board-demo:
-	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.cli --input data/sample_requests.json --out examples --period "Q2 2026 (synthetic)"
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.cli --input data/sample_requests.json --out examples --period "Q2 2026 (synthetic)" --capacity-scenarios data/capacity_scenarios.json --capacity-output examples
 
 raas-demo:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.raas_cli --input data/raas_deal.json --out examples --quiet
