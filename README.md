@@ -29,6 +29,11 @@ The supervised legal-operations agent is maintained in `supervised-agent`. Both 
 The machine-readable portfolio proof contract is available at
 [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
 
+The [legal capacity simulation](examples/legal-capacity-simulation.md) replays the
+same synthetic portfolio across alternative queue, GC-approval, and
+external-counsel assumptions. It makes backlog and constraint trade-offs visible
+without executing a staffing decision or external instruction.
+
 ## Operating model
 
 Each incoming legal request moves through a deterministic pipeline:
@@ -61,6 +66,7 @@ three external-counsel referrals across eight synthetic requests.
 | External counsel | In-house or scoped specialist referral | `rules.external_counsel` |
 | Escalation | SLA, value, dispute, and blocker flags | `rules.escalations` |
 | Board reporting | Executive roll-up and request register | `board_pack.py` |
+| Capacity simulation | Queue demand, bottlenecks, approval overflow, and scenario delta | `capacity_simulator.py` |
 
 The workspace outputs add a deterministic request vault, guided workflows, a GC
 command center, operational lists, and a local knowledge portal. Portal answers
@@ -118,6 +124,8 @@ offline and deterministic.
 
 - [`examples/board-pack.md`](examples/board-pack.md)
 - [`examples/board-pack.json`](examples/board-pack.json)
+- [`examples/legal-capacity-simulation.md`](examples/legal-capacity-simulation.md)
+- [`examples/legal-capacity-simulation.json`](examples/legal-capacity-simulation.json)
 - [`examples/raas-deal-pack.md`](examples/raas-deal-pack.md)
 - [`examples/raas-deal-pack.json`](examples/raas-deal-pack.json)
 - [`examples/raas-deal-room.html`](examples/raas-deal-room.html)
