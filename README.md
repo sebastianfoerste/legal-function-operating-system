@@ -23,8 +23,10 @@ The supervised legal-operations agent is maintained in `supervised-agent`. Both 
 
 1. Read the [general legal-function case study](CASE_STUDY.md).
 2. Open the generated [board operations pack](examples/board-pack.md).
-3. Review the [architecture flow](docs/architecture.svg).
-4. Run `make check`.
+3. Inspect the [outcome control tower](examples/legal-outcome-control-tower.md)
+   or its [local HTML view](examples/legal-outcome-control-tower.html).
+4. Review the [architecture flow](docs/architecture.svg).
+5. Run `make check`.
 
 The machine-readable portfolio proof contract is available at
 [`docs/portfolio-proof.json`](docs/portfolio-proof.json).
@@ -35,6 +37,22 @@ external-counsel assumptions. It makes backlog and constraint trade-offs visible
 without executing a staffing decision or external instruction. Its decision brief
 identifies each binding queue, approval, or coordination constraint and the minimum
 illustrative uplift required to clear it.
+
+The [outcome control tower](examples/legal-outcome-control-tower.md) adds observed
+service-delivery evidence to the forecast. A versioned synthetic event ledger
+reconciles gross cycle time, business-wait time, legal-controlled time, approval
+dwell, SLA attainment, queue age, effort, reopenings, and stalled work. It
+calibrates forecast points against observed minutes and keeps every monetary figure
+inside an explicit assumption-based proxy.
+
+This capability responds to a measurable operating gap. The
+[2025 Thomson Reuters Legal Department Operations Index](https://legal.thomsonreuters.com/en/insights/reports/legal-department-operations-index)
+reports under-resourcing, growing in-house workloads, and constrained budgets.
+[Axiom's July 2026 research](https://www.axiomlaw.com/resources/press-releases/legal-ai-is-everywhere-but-only-7-of-legal-teams-have-made-it-work?hs_amp=true)
+reports that most surveyed legal teams could not demonstrate AI return on
+investment. The control tower therefore makes service outcomes and value
+assumptions inspectable before a staffing, technology, or external-counsel
+decision.
 
 ## Operating model
 
@@ -69,6 +87,7 @@ three external-counsel referrals across eight synthetic requests.
 | Escalation | SLA, value, dispute, and blocker flags | `rules.escalations` |
 | Board reporting | Executive roll-up and request register | `board_pack.py` |
 | Capacity simulation | Queue demand, binding constraints, minimum uplift, approval overflow, and scenario delta | `capacity_simulator.py` |
+| Outcome control tower | Business-time SLAs, wait-state reconciliation, effort calibration, stalled-work queue, and value proxies | `outcome_control_tower.py` |
 
 The workspace outputs add a deterministic request vault, guided workflows, a GC
 command center, operational lists, and a local knowledge portal. Portal answers
@@ -128,6 +147,9 @@ offline and deterministic.
 - [`examples/board-pack.json`](examples/board-pack.json)
 - [`examples/legal-capacity-simulation.md`](examples/legal-capacity-simulation.md)
 - [`examples/legal-capacity-simulation.json`](examples/legal-capacity-simulation.json)
+- [`examples/legal-outcome-control-tower.md`](examples/legal-outcome-control-tower.md)
+- [`examples/legal-outcome-control-tower.json`](examples/legal-outcome-control-tower.json)
+- [`examples/legal-outcome-control-tower.html`](examples/legal-outcome-control-tower.html)
 - [`examples/raas-deal-pack.md`](examples/raas-deal-pack.md)
 - [`examples/raas-deal-pack.json`](examples/raas-deal-pack.json)
 - [`examples/raas-deal-room.html`](examples/raas-deal-room.html)
@@ -152,6 +174,7 @@ status `1`. Invalid input exits with status `2`.
 src/legal_function_os/
   rules.py                 general request routing and approval rules
   board_pack.py            board operations pack
+  outcome_control_tower.py observed service outcomes and value proxies
   workspace.py             request vault and GC command center
   collaboration_workspace.py
                            approved local knowledge and supervised workflows
@@ -163,6 +186,8 @@ src/legal_function_os/
   raas_cli.py              artifact generation and blocker gate
 data/
   sample_requests.json     synthetic general legal requests
+  service_events.json      versioned synthetic request lifecycle
+  outcome_config.json      business calendar and value assumptions
   raas_deal.json           synthetic specialist transaction
 examples/                  committed reviewer and machine-readable outputs
 tests/                     deterministic standard-library tests
@@ -190,6 +215,8 @@ scripts/                   artifact and portfolio-proof verification
 5. Product classification requires verified intended-purpose, architecture,
    safety, conformity, and deployment facts.
 6. Regulatory dates and requirements require confirmation at the actual review date.
+7. Event completeness, effort records, working calendars, and value assumptions
+   require validation before management use.
 
 ## Human-authored judgment
 

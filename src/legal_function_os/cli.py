@@ -20,6 +20,10 @@ from legal_function_os.capacity_simulator import (
 )
 from legal_function_os.workspace import build_legal_function_workspace
 from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
+from legal_function_os.outcome_control_tower import (
+    build_outcome_control_tower,
+    write_outcome_artifacts,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -46,6 +50,21 @@ def main(argv: list[str] | None = None) -> int:
         "--capacity-output",
         default=None,
         help="Optional directory for the capacity simulation Markdown and JSON.",
+    )
+    parser.add_argument(
+        "--events-input",
+        default=None,
+        help="Optional versioned legal-service event ledger JSON.",
+    )
+    parser.add_argument(
+        "--outcome-config",
+        default=None,
+        help="Optional business calendar and value-assumption JSON.",
+    )
+    parser.add_argument(
+        "--outcome-output",
+        default=None,
+        help="Optional directory for outcome control tower JSON, Markdown, and HTML.",
     )
     parser.add_argument("--quiet", action="store_true", help="Do not print the markdown pack.")
     parser.add_argument(
@@ -121,6 +140,23 @@ def main(argv: list[str] | None = None) -> int:
             render_capacity_markdown(simulation),
             encoding="utf-8",
         )
+
+    outcome_args = (args.events_input, args.outcome_config, args.outcome_output)
+    if any(outcome_args):
+        if not all(outcome_args):
+            print(
+                "--events-input, --outcome-config, and --outcome-output must be supplied together.",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            event_ledger = json.loads(Path(args.events_input).read_text(encoding="utf-8"))
+            outcome_config = json.loads(Path(args.outcome_config).read_text(encoding="utf-8"))
+            tower = build_outcome_control_tower(requests, event_ledger, outcome_config)
+            write_outcome_artifacts(tower, Path(args.outcome_output))
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            print(f"Invalid outcome control tower input: {exc}", file=sys.stderr)
+            return 2
 
     # Board-attention items are normal management signal, not a failure. Only an
     # explicit --fail-on-breach gates the pipeline on missed SLAs.

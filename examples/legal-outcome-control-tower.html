@@ -1,0 +1,947 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Legal Function Outcome Control Tower</title>
+<style>
+:root { color-scheme: light; --ink:#17202a; --muted:#5c6773; --line:#dfe5ea; --panel:#f7f9fa; --accent:#134e4a; }
+* { box-sizing:border-box; }
+body { margin:0; font:15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; color:var(--ink); background:#eef2f3; }
+main { max-width:1180px; margin:0 auto; padding:42px 24px 64px; }
+h1 { margin:0; font:700 35px/1.15 Georgia, serif; }
+h2 { margin:34px 0 14px; font-size:19px; }
+.eyebrow { color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:12px; }
+.muted { color:var(--muted); }
+.metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0; }
+.metric, section { background:white; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(20,40,50,.05); }
+.metric { padding:18px; }
+.metric strong { display:block; font-size:28px; }
+.metric span { color:var(--muted); }
+section { padding:22px; margin-top:18px; overflow:auto; }
+table { width:100%; border-collapse:collapse; min-width:760px; }
+th, td { padding:10px 9px; border-bottom:1px solid var(--line); text-align:left; }
+th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+ul { padding-left:20px; }
+li { margin:12px 0; }
+code { background:var(--panel); padding:2px 5px; border-radius:4px; }
+details { margin-top:24px; }
+@media (max-width:760px) { .metrics { grid-template-columns:repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<main>
+<p class="eyebrow">Observed legal service delivery · synthetic demonstration</p>
+<h1>Legal Function Outcome Control Tower</h1>
+<p class="muted">Snapshot 2026-07-17T16:00:00+00:00. Local reviewer artifact with no external actions.</p>
+<div class="metrics">
+<div class="metric"><strong>6/8</strong><span>completed requests</span></div>
+<div class="metric"><strong>87.5%</strong><span>response SLA attainment</span></div>
+<div class="metric"><strong>2</strong><span>stalled requests</span></div>
+<div class="metric"><strong>Commercial</strong><span>binding queue</span></div>
+</div>
+<section><h2>Stalled action queue</h2><ul><li><strong>REQ-1002</strong> DPA: US support sub-processor (synthetic)<br><span>Privacy · waiting_on_business · 35.00 business hours inactive</span><br>Confirm the next business input and owner.</li><li><strong>REQ-1001</strong> Enterprise MSA: Globex (synthetic)<br><span>Commercial · work_started · 26.00 business hours inactive</span><br>Review ownership, priority, and the next controlled step.</li></ul></section>
+<section><h2>Queue calibration</h2><table><thead><tr><th>Queue</th><th>Requests</th><th>Open</th><th>Stalled</th><th>Planned points</th><th>Observed minutes</th><th>Minutes / point</th></tr></thead><tbody><tr><td>Commercial</td><td>3</td><td>1</td><td>1</td><td>14</td><td>645</td><td>46.07</td></tr><tr><td>Corporate / GC</td><td>1</td><td>0</td><td>0</td><td>10</td><td>365</td><td>36.5</td></tr><tr><td>Employment</td><td>1</td><td>0</td><td>0</td><td>3</td><td>115</td><td>38.33</td></tr><tr><td>Litigation</td><td>1</td><td>0</td><td>0</td><td>13</td><td>340</td><td>26.15</td></tr><tr><td>Privacy</td><td>2</td><td>1</td><td>1</td><td>17</td><td>465</td><td>27.35</td></tr></tbody></table></section>
+<section><h2>Value proxies</h2><p>All monetary figures are assumption-based management proxies over synthetic effort records. They are not realised savings or accounting conclusions.</p>
+<p><strong>EUR 3673.33</strong> estimated labour-efficiency value · <strong>EUR 5005.00</strong> estimated external-spend avoidance</p></section>
+<section><h2>Request outcomes</h2><table><thead><tr><th>Request</th><th>Queue</th><th>State</th><th>Gross h</th><th>Business wait h</th><th>Controlled h</th><th>Response SLA</th><th>Resolution SLA</th></tr></thead><tbody><tr><td>REQ-1001</td><td>Commercial</td><td>work_started</td><td>81.00</td><td>5.00</td><td>76.00</td><td>met</td><td>open</td></tr><tr><td>REQ-1002</td><td>Privacy</td><td>waiting_on_business</td><td>45.00</td><td>35.00</td><td>10.00</td><td>met</td><td>open</td></tr><tr><td>REQ-1003</td><td>Commercial</td><td>completed</td><td>3.00</td><td>0.00</td><td>3.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1004</td><td>Privacy</td><td>completed</td><td>22.00</td><td>0.00</td><td>22.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1005</td><td>Corporate / GC</td><td>completed</td><td>34.50</td><td>0.00</td><td>34.50</td><td>met</td><td>breached</td></tr><tr><td>REQ-1006</td><td>Commercial</td><td>completed</td><td>5.00</td><td>0.00</td><td>5.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1007</td><td>Litigation</td><td>completed</td><td>36.00</td><td>0.00</td><td>36.00</td><td>breached</td><td>breached</td></tr><tr><td>REQ-1008</td><td>Employment</td><td>completed</td><td>7.00</td><td>0.00</td><td>7.00</td><td>met</td><td>met</td></tr></tbody></table></section>
+<section><h2>Review gate</h2><p>A human legal-operations owner must validate event completeness, calendar settings, effort records, value assumptions, and every staffing or external-counsel decision.</p></section>
+<details><summary>Machine-readable snapshot</summary><pre>{
+  &quot;schema&quot;: &quot;legal-function-os.outcome-control-tower.v1&quot;,
+  &quot;generated_at_utc&quot;: &quot;2026-07-17T16:00:00+00:00&quot;,
+  &quot;source&quot;: {
+    &quot;ledger_schema&quot;: &quot;legal-function-os.service-event-ledger.v1&quot;,
+    &quot;config_schema&quot;: &quot;legal-function-os.outcome-config.v1&quot;,
+    &quot;request_count&quot;: 8,
+    &quot;event_count&quot;: 52
+  },
+  &quot;calendar&quot;: {
+    &quot;timezone&quot;: &quot;Europe/Berlin&quot;,
+    &quot;workday_start&quot;: &quot;09:00&quot;,
+    &quot;workday_end&quot;: &quot;18:00&quot;,
+    &quot;working_weekdays&quot;: [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    &quot;excluded_dates&quot;: [
+      &quot;2026-07-10&quot;
+    ]
+  },
+  &quot;executive_summary&quot;: {
+    &quot;requests&quot;: 8,
+    &quot;completed_requests&quot;: 6,
+    &quot;open_requests&quot;: 2,
+    &quot;stalled_requests&quot;: 2,
+    &quot;throughput_rate&quot;: 0.75,
+    &quot;reopen_count&quot;: 1,
+    &quot;response_sla_attainment&quot;: 0.875,
+    &quot;resolution_sla_attainment&quot;: 0.667,
+    &quot;states&quot;: {
+      &quot;completed&quot;: 6,
+      &quot;waiting_on_business&quot;: 1,
+      &quot;work_started&quot;: 1
+    },
+    &quot;binding_queue&quot;: &quot;Commercial&quot;
+  },
+  &quot;value_proxy&quot;: {
+    &quot;assumption_notice&quot;: &quot;All monetary figures are assumption-based management proxies over synthetic effort records. They are not realised savings or accounting conclusions.&quot;,
+    &quot;assumptions&quot;: {
+      &quot;currency&quot;: &quot;EUR&quot;,
+      &quot;default_internal_role&quot;: &quot;Legal Counsel&quot;,
+      &quot;internal_role_hourly_cost_eur&quot;: {
+        &quot;Legal Counsel&quot;: 145,
+        &quot;Legal Operations&quot;: 105,
+        &quot;General Counsel&quot;: 240,
+        &quot;Privacy Counsel&quot;: 175
+      },
+      &quot;external_reference_hourly_rate_eur&quot;: 475,
+      &quot;baseline_effort_minutes_by_request_type&quot;: {
+        &quot;commercial_contract&quot;: 420,
+        &quot;dpa&quot;: 360,
+        &quot;ai_governance&quot;: 480,
+        &quot;fundraising&quot;: 720,
+        &quot;vendor_review&quot;: 240,
+        &quot;dispute&quot;: 600,
+        &quot;employment&quot;: 210
+      }
+    },
+    &quot;estimated_internal_cost_eur&quot;: 5750.42,
+    &quot;estimated_labour_efficiency_value_eur&quot;: 3673.33,
+    &quot;estimated_external_spend_avoidance_eur&quot;: 5005.0
+  },
+  &quot;queue_calibration&quot;: [
+    {
+      &quot;queue&quot;: &quot;Commercial&quot;,
+      &quot;requests&quot;: 3,
+      &quot;planned_effort_points&quot;: 14,
+      &quot;observed_effort_minutes&quot;: 645,
+      &quot;observed_minutes_per_point&quot;: 46.07,
+      &quot;open_requests&quot;: 1,
+      &quot;stalled_requests&quot;: 1
+    },
+    {
+      &quot;queue&quot;: &quot;Corporate / GC&quot;,
+      &quot;requests&quot;: 1,
+      &quot;planned_effort_points&quot;: 10,
+      &quot;observed_effort_minutes&quot;: 365,
+      &quot;observed_minutes_per_point&quot;: 36.5,
+      &quot;open_requests&quot;: 0,
+      &quot;stalled_requests&quot;: 0
+    },
+    {
+      &quot;queue&quot;: &quot;Employment&quot;,
+      &quot;requests&quot;: 1,
+      &quot;planned_effort_points&quot;: 3,
+      &quot;observed_effort_minutes&quot;: 115,
+      &quot;observed_minutes_per_point&quot;: 38.33,
+      &quot;open_requests&quot;: 0,
+      &quot;stalled_requests&quot;: 0
+    },
+    {
+      &quot;queue&quot;: &quot;Litigation&quot;,
+      &quot;requests&quot;: 1,
+      &quot;planned_effort_points&quot;: 13,
+      &quot;observed_effort_minutes&quot;: 340,
+      &quot;observed_minutes_per_point&quot;: 26.15,
+      &quot;open_requests&quot;: 0,
+      &quot;stalled_requests&quot;: 0
+    },
+    {
+      &quot;queue&quot;: &quot;Privacy&quot;,
+      &quot;requests&quot;: 2,
+      &quot;planned_effort_points&quot;: 17,
+      &quot;observed_effort_minutes&quot;: 465,
+      &quot;observed_minutes_per_point&quot;: 27.35,
+      &quot;open_requests&quot;: 1,
+      &quot;stalled_requests&quot;: 1
+    }
+  ],
+  &quot;bottlenecks&quot;: [
+    {
+      &quot;queue&quot;: &quot;Commercial&quot;,
+      &quot;requests&quot;: 3,
+      &quot;planned_effort_points&quot;: 14,
+      &quot;observed_effort_minutes&quot;: 645,
+      &quot;observed_minutes_per_point&quot;: 46.07,
+      &quot;open_requests&quot;: 1,
+      &quot;stalled_requests&quot;: 1
+    },
+    {
+      &quot;queue&quot;: &quot;Privacy&quot;,
+      &quot;requests&quot;: 2,
+      &quot;planned_effort_points&quot;: 17,
+      &quot;observed_effort_minutes&quot;: 465,
+      &quot;observed_minutes_per_point&quot;: 27.35,
+      &quot;open_requests&quot;: 1,
+      &quot;stalled_requests&quot;: 1
+    },
+    {
+      &quot;queue&quot;: &quot;Corporate / GC&quot;,
+      &quot;requests&quot;: 1,
+      &quot;planned_effort_points&quot;: 10,
+      &quot;observed_effort_minutes&quot;: 365,
+      &quot;observed_minutes_per_point&quot;: 36.5,
+      &quot;open_requests&quot;: 0,
+      &quot;stalled_requests&quot;: 0
+    },
+    {
+      &quot;queue&quot;: &quot;Litigation&quot;,
+      &quot;requests&quot;: 1,
+      &quot;planned_effort_points&quot;: 13,
+      &quot;observed_effort_minutes&quot;: 340,
+      &quot;observed_minutes_per_point&quot;: 26.15,
+      &quot;open_requests&quot;: 0,
+      &quot;stalled_requests&quot;: 0
+    },
+    {
+      &quot;queue&quot;: &quot;Employment&quot;,
+      &quot;requests&quot;: 1,
+      &quot;planned_effort_points&quot;: 3,
+      &quot;observed_effort_minutes&quot;: 115,
+      &quot;observed_minutes_per_point&quot;: 38.33,
+      &quot;open_requests&quot;: 0,
+      &quot;stalled_requests&quot;: 0
+    }
+  ],
+  &quot;action_queue&quot;: [
+    {
+      &quot;request_id&quot;: &quot;REQ-1002&quot;,
+      &quot;title&quot;: &quot;DPA: US support sub-processor (synthetic)&quot;,
+      &quot;queue&quot;: &quot;Privacy&quot;,
+      &quot;state&quot;: &quot;waiting_on_business&quot;,
+      &quot;inactive_business_hours&quot;: 35.0,
+      &quot;recommended_action&quot;: &quot;Confirm the next business input and owner.&quot;
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1001&quot;,
+      &quot;title&quot;: &quot;Enterprise MSA: Globex (synthetic)&quot;,
+      &quot;queue&quot;: &quot;Commercial&quot;,
+      &quot;state&quot;: &quot;work_started&quot;,
+      &quot;inactive_business_hours&quot;: 26.0,
+      &quot;recommended_action&quot;: &quot;Review ownership, priority, and the next controlled step.&quot;
+    }
+  ],
+  &quot;requests&quot;: [
+    {
+      &quot;request_id&quot;: &quot;REQ-1001&quot;,
+      &quot;title&quot;: &quot;Enterprise MSA: Globex (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;commercial_contract&quot;,
+      &quot;queue&quot;: &quot;Commercial&quot;,
+      &quot;priority&quot;: &quot;P2_high&quot;,
+      &quot;risk&quot;: &quot;HIGH&quot;,
+      &quot;state&quot;: &quot;work_started&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-06T07:00:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-15T08:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 1.0,
+      &quot;gross_cycle_business_hours&quot;: 81.0,
+      &quot;business_wait_hours&quot;: 5.0,
+      &quot;legal_controlled_hours&quot;: 76.0,
+      &quot;approval_dwell_hours&quot;: 5.0,
+      &quot;inactive_business_hours&quot;: 26.0,
+      &quot;response_sla&quot;: &quot;met&quot;,
+      &quot;resolution_sla&quot;: &quot;open&quot;,
+      &quot;reopen_count&quot;: 1,
+      &quot;stalled&quot;: true,
+      &quot;planned_effort_points&quot;: 9,
+      &quot;observed_effort_minutes&quot;: 405,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 420,
+        &quot;estimated_minutes_avoided&quot;: 15,
+        &quot;estimated_internal_cost_eur&quot;: 1012.92,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 36.25,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 2193.33
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic enterprise agreement submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T08:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Intake checked and response target confirmed.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T08:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Assigned to Commercial queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T09:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 180,
+          &quot;note&quot;: &quot;First-pass agreement review completed.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;waiting_on_business&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T12:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;note&quot;: &quot;Commercial fallback instructions requested.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-06&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;resumed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T08:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 90,
+          &quot;note&quot;: &quot;Business instructions received and incorporated.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-07&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;approval_requested&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T10:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 20,
+          &quot;note&quot;: &quot;General Counsel approval requested.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-08&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;approved&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T15:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 30,
+          &quot;note&quot;: &quot;Synthetic fallback position approved.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-09&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;completed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T16:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 20,
+          &quot;note&quot;: &quot;Review cycle completed.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-10&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;reopened&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-15T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Counterparty introduced a new liability proposal.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1001-11&quot;,
+          &quot;request_id&quot;: &quot;REQ-1001&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-15T08:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 45,
+          &quot;note&quot;: &quot;Reopened liability proposal under review.&quot;
+        }
+      ]
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1002&quot;,
+      &quot;title&quot;: &quot;DPA: US support sub-processor (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;dpa&quot;,
+      &quot;queue&quot;: &quot;Privacy&quot;,
+      &quot;priority&quot;: &quot;P2_high&quot;,
+      &quot;risk&quot;: &quot;HIGH&quot;,
+      &quot;state&quot;: &quot;waiting_on_business&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-13T07:00:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-14T08:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 2.0,
+      &quot;gross_cycle_business_hours&quot;: 45.0,
+      &quot;business_wait_hours&quot;: 35.0,
+      &quot;legal_controlled_hours&quot;: 10.0,
+      &quot;approval_dwell_hours&quot;: 0.0,
+      &quot;inactive_business_hours&quot;: 35.0,
+      &quot;response_sla&quot;: &quot;met&quot;,
+      &quot;resolution_sla&quot;: &quot;open&quot;,
+      &quot;reopen_count&quot;: 0,
+      &quot;stalled&quot;: true,
+      &quot;planned_effort_points&quot;: 8,
+      &quot;observed_effort_minutes&quot;: 160,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 360,
+        &quot;estimated_minutes_avoided&quot;: 200,
+        &quot;estimated_internal_cost_eur&quot;: 437.5,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 483.33,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 829.17
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1002-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1002&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-13T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic DPA review submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1002-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1002&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-13T09:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 15,
+          &quot;note&quot;: &quot;DPA intake acknowledged.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1002-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1002&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-13T09:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Assigned to Privacy queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1002-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1002&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-13T10:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Privacy Counsel&quot;,
+          &quot;effort_minutes&quot;: 135,
+          &quot;note&quot;: &quot;Transfer and subprocessor review started.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1002-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1002&quot;,
+          &quot;event_type&quot;: &quot;waiting_on_business&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-14T08:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Privacy Counsel&quot;,
+          &quot;note&quot;: &quot;Waiting for hosting and subprocessor evidence.&quot;
+        }
+      ]
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1003&quot;,
+      &quot;title&quot;: &quot;NDA: design agency (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;commercial_contract&quot;,
+      &quot;queue&quot;: &quot;Commercial&quot;,
+      &quot;priority&quot;: &quot;P4_low&quot;,
+      &quot;risk&quot;: &quot;LOW&quot;,
+      &quot;state&quot;: &quot;completed&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-06T08:00:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-06T11:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 1.0,
+      &quot;gross_cycle_business_hours&quot;: 3.0,
+      &quot;business_wait_hours&quot;: 0.0,
+      &quot;legal_controlled_hours&quot;: 3.0,
+      &quot;approval_dwell_hours&quot;: 0.0,
+      &quot;inactive_business_hours&quot;: 0.0,
+      &quot;response_sla&quot;: &quot;met&quot;,
+      &quot;resolution_sla&quot;: &quot;met&quot;,
+      &quot;reopen_count&quot;: 0,
+      &quot;stalled&quot;: false,
+      &quot;planned_effort_points&quot;: 1,
+      &quot;observed_effort_minutes&quot;: 105,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 420,
+        &quot;estimated_minutes_avoided&quot;: 315,
+        &quot;estimated_internal_cost_eur&quot;: 243.75,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 761.25,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 587.5
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1003-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1003&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T08:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic NDA submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1003-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1003&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T09:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;NDA intake acknowledged.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1003-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1003&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T09:15:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 5,
+          &quot;note&quot;: &quot;Assigned to Commercial queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1003-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1003&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T09:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 75,
+          &quot;note&quot;: &quot;NDA reviewed against approved fallback.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1003-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1003&quot;,
+          &quot;event_type&quot;: &quot;completed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T11:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 15,
+          &quot;note&quot;: &quot;NDA review completed.&quot;
+        }
+      ]
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1004&quot;,
+      &quot;title&quot;: &quot;AI feature governance review: agent autonomy (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;ai_governance&quot;,
+      &quot;queue&quot;: &quot;Privacy&quot;,
+      &quot;priority&quot;: &quot;P2_high&quot;,
+      &quot;risk&quot;: &quot;HIGH&quot;,
+      &quot;state&quot;: &quot;completed&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-07T07:00:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-09T11:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 6.0,
+      &quot;gross_cycle_business_hours&quot;: 22.0,
+      &quot;business_wait_hours&quot;: 0.0,
+      &quot;legal_controlled_hours&quot;: 22.0,
+      &quot;approval_dwell_hours&quot;: 7.0,
+      &quot;inactive_business_hours&quot;: 0.0,
+      &quot;response_sla&quot;: &quot;met&quot;,
+      &quot;resolution_sla&quot;: &quot;met&quot;,
+      &quot;reopen_count&quot;: 0,
+      &quot;stalled&quot;: false,
+      &quot;planned_effort_points&quot;: 9,
+      &quot;observed_effort_minutes&quot;: 305,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 480,
+        &quot;estimated_minutes_avoided&quot;: 175,
+        &quot;estimated_internal_cost_eur&quot;: 775.83,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 422.92,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 0.0
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1004-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1004&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic AI governance review submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1004-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1004&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T13:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 15,
+          &quot;note&quot;: &quot;AI governance intake acknowledged.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1004-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1004&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T13:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Assigned to AI governance queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1004-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1004&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 210,
+          &quot;note&quot;: &quot;Control and autonomy review completed.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1004-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1004&quot;,
+          &quot;event_type&quot;: &quot;approval_requested&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T12:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 15,
+          &quot;note&quot;: &quot;General Counsel approval requested.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1004-06&quot;,
+          &quot;request_id&quot;: &quot;REQ-1004&quot;,
+          &quot;event_type&quot;: &quot;approved&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T10:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 35,
+          &quot;note&quot;: &quot;Supervised operating boundary approved.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1004-07&quot;,
+          &quot;request_id&quot;: &quot;REQ-1004&quot;,
+          &quot;event_type&quot;: &quot;completed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T11:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 20,
+          &quot;note&quot;: &quot;Governance review completed.&quot;
+        }
+      ]
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1005&quot;,
+      &quot;title&quot;: &quot;Series B financing: term sheet (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;fundraising&quot;,
+      &quot;queue&quot;: &quot;Corporate / GC&quot;,
+      &quot;priority&quot;: &quot;P2_high&quot;,
+      &quot;risk&quot;: &quot;HIGH&quot;,
+      &quot;state&quot;: &quot;completed&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-06T07:30:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-09T15:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 3.0,
+      &quot;gross_cycle_business_hours&quot;: 34.5,
+      &quot;business_wait_hours&quot;: 0.0,
+      &quot;legal_controlled_hours&quot;: 34.5,
+      &quot;approval_dwell_hours&quot;: 14.0,
+      &quot;inactive_business_hours&quot;: 0.0,
+      &quot;response_sla&quot;: &quot;met&quot;,
+      &quot;resolution_sla&quot;: &quot;breached&quot;,
+      &quot;reopen_count&quot;: 0,
+      &quot;stalled&quot;: false,
+      &quot;planned_effort_points&quot;: 10,
+      &quot;observed_effort_minutes&quot;: 365,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 720,
+        &quot;estimated_minutes_avoided&quot;: 355,
+        &quot;estimated_internal_cost_eur&quot;: 1392.5,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 857.92,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 0.0
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T07:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic financing request submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T10:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 20,
+          &quot;note&quot;: &quot;Financing intake acknowledged.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T11:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Assigned to Corporate and General Counsel queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;external_counsel_referred&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T11:15:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 25,
+          &quot;note&quot;: &quot;Corporate counsel referral prepared for human instruction.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T12:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 240,
+          &quot;note&quot;: &quot;Term sheet review and instruction scope prepared.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-06&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;approval_requested&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T09:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 20,
+          &quot;note&quot;: &quot;Board note approval requested.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-07&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;approved&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T14:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 30,
+          &quot;note&quot;: &quot;Synthetic financing instruction approved.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1005-08&quot;,
+          &quot;request_id&quot;: &quot;REQ-1005&quot;,
+          &quot;event_type&quot;: &quot;completed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T15:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 20,
+          &quot;note&quot;: &quot;Internal financing workstream completed.&quot;
+        }
+      ]
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1006&quot;,
+      &quot;title&quot;: &quot;Vendor security questionnaire: analytics tool (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;vendor_review&quot;,
+      &quot;queue&quot;: &quot;Commercial&quot;,
+      &quot;priority&quot;: &quot;P3_standard&quot;,
+      &quot;risk&quot;: &quot;MEDIUM&quot;,
+      &quot;state&quot;: &quot;completed&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-08T07:00:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-08T12:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 1.0,
+      &quot;gross_cycle_business_hours&quot;: 5.0,
+      &quot;business_wait_hours&quot;: 0.0,
+      &quot;legal_controlled_hours&quot;: 5.0,
+      &quot;approval_dwell_hours&quot;: 0.0,
+      &quot;inactive_business_hours&quot;: 0.0,
+      &quot;response_sla&quot;: &quot;met&quot;,
+      &quot;resolution_sla&quot;: &quot;met&quot;,
+      &quot;reopen_count&quot;: 0,
+      &quot;stalled&quot;: false,
+      &quot;planned_effort_points&quot;: 4,
+      &quot;observed_effort_minutes&quot;: 135,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 240,
+        &quot;estimated_minutes_avoided&quot;: 105,
+        &quot;estimated_internal_cost_eur&quot;: 316.25,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 253.75,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 752.5
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1006-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1006&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic vendor questionnaire submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1006-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1006&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T08:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Vendor questionnaire acknowledged.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1006-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1006&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T08:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 5,
+          &quot;note&quot;: &quot;Assigned to Commercial queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1006-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1006&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T09:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 100,
+          &quot;note&quot;: &quot;Approved questionnaire responses assembled.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1006-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1006&quot;,
+          &quot;event_type&quot;: &quot;completed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-08T12:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 20,
+          &quot;note&quot;: &quot;Questionnaire review completed.&quot;
+        }
+      ]
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1007&quot;,
+      &quot;title&quot;: &quot;Customer dispute: SLA credits claim (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;dispute&quot;,
+      &quot;queue&quot;: &quot;Litigation&quot;,
+      &quot;priority&quot;: &quot;P1_blocker&quot;,
+      &quot;risk&quot;: &quot;HIGH&quot;,
+      &quot;state&quot;: &quot;completed&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-06T07:00:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-09T16:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 7.5,
+      &quot;gross_cycle_business_hours&quot;: 36.0,
+      &quot;business_wait_hours&quot;: 0.0,
+      &quot;legal_controlled_hours&quot;: 36.0,
+      &quot;approval_dwell_hours&quot;: 0.0,
+      &quot;inactive_business_hours&quot;: 0.0,
+      &quot;response_sla&quot;: &quot;breached&quot;,
+      &quot;resolution_sla&quot;: &quot;breached&quot;,
+      &quot;reopen_count&quot;: 0,
+      &quot;stalled&quot;: false,
+      &quot;planned_effort_points&quot;: 13,
+      &quot;observed_effort_minutes&quot;: 340,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 600,
+        &quot;estimated_minutes_avoided&quot;: 260,
+        &quot;estimated_internal_cost_eur&quot;: 1303.75,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 628.33,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 0.0
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1007-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1007&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic SLA dispute submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1007-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1007&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T14:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 15,
+          &quot;note&quot;: &quot;Dispute intake acknowledged.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1007-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1007&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-06T15:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Assigned to Litigation queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1007-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1007&quot;,
+          &quot;event_type&quot;: &quot;external_counsel_referred&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 30,
+          &quot;note&quot;: &quot;Litigation counsel referral scoped for human instruction.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1007-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1007&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-07T08:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 250,
+          &quot;note&quot;: &quot;Claim record and response position reviewed.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1007-06&quot;,
+          &quot;request_id&quot;: &quot;REQ-1007&quot;,
+          &quot;event_type&quot;: &quot;completed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T16:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;General Counsel&quot;,
+          &quot;effort_minutes&quot;: 35,
+          &quot;note&quot;: &quot;Internal dispute assessment completed.&quot;
+        }
+      ]
+    },
+    {
+      &quot;request_id&quot;: &quot;REQ-1008&quot;,
+      &quot;title&quot;: &quot;Employment offer: senior engineer (synthetic)&quot;,
+      &quot;request_type&quot;: &quot;employment&quot;,
+      &quot;queue&quot;: &quot;Employment&quot;,
+      &quot;priority&quot;: &quot;P3_standard&quot;,
+      &quot;risk&quot;: &quot;MEDIUM&quot;,
+      &quot;state&quot;: &quot;completed&quot;,
+      &quot;submitted_at_utc&quot;: &quot;2026-07-09T07:00:00+00:00&quot;,
+      &quot;last_event_at_utc&quot;: &quot;2026-07-09T14:00:00+00:00&quot;,
+      &quot;first_response_business_hours&quot;: 3.0,
+      &quot;gross_cycle_business_hours&quot;: 7.0,
+      &quot;business_wait_hours&quot;: 0.0,
+      &quot;legal_controlled_hours&quot;: 7.0,
+      &quot;approval_dwell_hours&quot;: 0.0,
+      &quot;inactive_business_hours&quot;: 0.0,
+      &quot;response_sla&quot;: &quot;met&quot;,
+      &quot;resolution_sla&quot;: &quot;met&quot;,
+      &quot;reopen_count&quot;: 0,
+      &quot;stalled&quot;: false,
+      &quot;planned_effort_points&quot;: 3,
+      &quot;observed_effort_minutes&quot;: 115,
+      &quot;value_proxy&quot;: {
+        &quot;baseline_effort_minutes&quot;: 210,
+        &quot;estimated_minutes_avoided&quot;: 95,
+        &quot;estimated_internal_cost_eur&quot;: 267.92,
+        &quot;estimated_labour_efficiency_value_eur&quot;: 229.58,
+        &quot;estimated_external_spend_avoidance_eur&quot;: 642.5
+      },
+      &quot;timeline&quot;: [
+        {
+          &quot;event_id&quot;: &quot;EVT-1008-01&quot;,
+          &quot;request_id&quot;: &quot;REQ-1008&quot;,
+          &quot;event_type&quot;: &quot;submitted&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T07:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Business Requester&quot;,
+          &quot;note&quot;: &quot;Synthetic employment offer submitted.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1008-02&quot;,
+          &quot;request_id&quot;: &quot;REQ-1008&quot;,
+          &quot;event_type&quot;: &quot;acknowledged&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T10:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 10,
+          &quot;note&quot;: &quot;Employment offer acknowledged.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1008-03&quot;,
+          &quot;request_id&quot;: &quot;REQ-1008&quot;,
+          &quot;event_type&quot;: &quot;assigned&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T10:30:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Operations&quot;,
+          &quot;effort_minutes&quot;: 5,
+          &quot;note&quot;: &quot;Assigned to Employment queue.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1008-04&quot;,
+          &quot;request_id&quot;: &quot;REQ-1008&quot;,
+          &quot;event_type&quot;: &quot;work_started&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T11:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 85,
+          &quot;note&quot;: &quot;Offer terms reviewed against approved template.&quot;
+        },
+        {
+          &quot;event_id&quot;: &quot;EVT-1008-05&quot;,
+          &quot;request_id&quot;: &quot;REQ-1008&quot;,
+          &quot;event_type&quot;: &quot;completed&quot;,
+          &quot;occurred_at_utc&quot;: &quot;2026-07-09T14:00:00Z&quot;,
+          &quot;actor_role&quot;: &quot;Legal Counsel&quot;,
+          &quot;effort_minutes&quot;: 15,
+          &quot;note&quot;: &quot;Offer review completed.&quot;
+        }
+      ]
+    }
+  ],
+  &quot;review_gate&quot;: &quot;A human legal-operations owner must validate event completeness, calendar settings, effort records, value assumptions, and every staffing or external-counsel decision.&quot;,
+  &quot;external_action_allowed&quot;: false
+}</pre></details>
+</main>
+</body>
+</html>
