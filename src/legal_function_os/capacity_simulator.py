@@ -107,6 +107,49 @@ def _scenario_result(
     gc_overflow = max(0, gc_demand - scenario.gc_approval_slots)
     counsel_overflow = max(0, counsel_demand - scenario.external_counsel_slots)
     constrained = bool(backlog_points or gc_overflow or counsel_overflow)
+    binding_constraints = [
+        {
+            "constraint_id": f"queue:{row['queue']}",
+            "constraint_type": "queue_capacity",
+            "label": row["queue"],
+            "demand": row["demand_points"],
+            "capacity": row["capacity_points"],
+            "minimum_uplift": row["backlog_points"],
+            "review_owner": "Legal Operations",
+        }
+        for row in queue_capacity
+        if row["backlog_points"]
+    ]
+    if gc_overflow:
+        binding_constraints.append(
+            {
+                "constraint_id": "approval:general-counsel",
+                "constraint_type": "approval_capacity",
+                "label": "General Counsel approvals",
+                "demand": gc_demand,
+                "capacity": scenario.gc_approval_slots,
+                "minimum_uplift": gc_overflow,
+                "review_owner": "General Counsel",
+            }
+        )
+    if counsel_overflow:
+        binding_constraints.append(
+            {
+                "constraint_id": "coordination:external-counsel",
+                "constraint_type": "external_counsel_capacity",
+                "label": "External-counsel coordination",
+                "demand": counsel_demand,
+                "capacity": scenario.external_counsel_slots,
+                "minimum_uplift": counsel_overflow,
+                "review_owner": "General Counsel",
+            }
+        )
+    binding_constraints.sort(
+        key=lambda row: (
+            -int(row["minimum_uplift"]),
+            str(row["constraint_id"]),
+        )
+    )
 
     ranked_requests = sorted(
         request_rows,
@@ -131,8 +174,10 @@ def _scenario_result(
             "external_counsel_demand": counsel_demand,
             "external_counsel_capacity": scenario.external_counsel_slots,
             "external_counsel_overflow": counsel_overflow,
+            "binding_constraints": len(binding_constraints),
         },
         "queue_capacity": queue_capacity,
+        "binding_constraints": binding_constraints,
         "priority_review_queue": ranked_requests,
         "external_action_allowed": False,
     }
@@ -181,6 +226,20 @@ def build_capacity_simulation(
         ),
         "scenarios": results,
         "comparison_to_first_scenario": comparisons,
+        "decision_brief": {
+            "baseline_scenario": results[0]["scenario"]["name"],
+            "baseline_binding_constraints": results[0]["binding_constraints"],
+            "scenarios_within_assumptions": [
+                result["scenario"]["name"]
+                for result in results
+                if result["status"] == "WITHIN_ASSUMPTIONS"
+            ],
+            "decision_status": (
+                "HUMAN_REVIEW_REQUIRED"
+                if results[0]["binding_constraints"]
+                else "NO_BINDING_CONSTRAINTS_IN_BASELINE"
+            ),
+        },
         "review_gate": (
             "A human owner must validate effort assumptions, staffing availability, "
             "approval capacity, and any external-counsel instruction."
@@ -226,6 +285,24 @@ def render_capacity_markdown(simulation: dict[str, Any]) -> str:
                 f"- External-counsel coordination demand/capacity: "
                 f"{summary['external_counsel_demand']}/"
                 f"{summary['external_counsel_capacity']}",
+                "",
+                "### Binding constraints",
+                "",
+                "| Constraint | Type | Demand | Capacity | Minimum uplift | Review owner |",
+                "| --- | --- | ---: | ---: | ---: | --- |",
+            ]
+        )
+        if result["binding_constraints"]:
+            for constraint in result["binding_constraints"]:
+                lines.append(
+                    f"| {constraint['label']} | {constraint['constraint_type']} "
+                    f"| {constraint['demand']} | {constraint['capacity']} "
+                    f"| {constraint['minimum_uplift']} | {constraint['review_owner']} |"
+                )
+        else:
+            lines.append("| none | n/a | 0 | 0 | 0 | n/a |")
+        lines.extend(
+            [
                 "",
                 "### Priority review queue",
                 "",

@@ -32,7 +32,9 @@ The machine-readable portfolio proof contract is available at
 The [legal capacity simulation](examples/legal-capacity-simulation.md) replays the
 same synthetic portfolio across alternative queue, GC-approval, and
 external-counsel assumptions. It makes backlog and constraint trade-offs visible
-without executing a staffing decision or external instruction.
+without executing a staffing decision or external instruction. Its decision brief
+identifies each binding queue, approval, or coordination constraint and the minimum
+illustrative uplift required to clear it.
 
 ## Operating model
 
@@ -66,7 +68,7 @@ three external-counsel referrals across eight synthetic requests.
 | External counsel | In-house or scoped specialist referral | `rules.external_counsel` |
 | Escalation | SLA, value, dispute, and blocker flags | `rules.escalations` |
 | Board reporting | Executive roll-up and request register | `board_pack.py` |
-| Capacity simulation | Queue demand, bottlenecks, approval overflow, and scenario delta | `capacity_simulator.py` |
+| Capacity simulation | Queue demand, binding constraints, minimum uplift, approval overflow, and scenario delta | `capacity_simulator.py` |
 
 The workspace outputs add a deterministic request vault, guided workflows, a GC
 command center, operational lists, and a local knowledge portal. Portal answers

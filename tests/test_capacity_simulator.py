@@ -28,6 +28,16 @@ class CapacitySimulationTests(unittest.TestCase):
         self.assertEqual(protected["status"], "WITHIN_ASSUMPTIONS")
         self.assertGreater(current["summary"]["backlog_points"], 0)
         self.assertEqual(protected["summary"]["backlog_points"], 0)
+        self.assertGreater(current["summary"]["binding_constraints"], 0)
+        self.assertEqual(protected["binding_constraints"], [])
+        self.assertEqual(
+            simulation["decision_brief"]["decision_status"],
+            "HUMAN_REVIEW_REQUIRED",
+        )
+        self.assertEqual(
+            simulation["decision_brief"]["scenarios_within_assumptions"],
+            ["protected_focus_model"],
+        )
         self.assertFalse(simulation["external_action_allowed"])
 
     def test_request_queue_is_deterministic_and_p1_first(self):
@@ -46,6 +56,8 @@ class CapacitySimulationTests(unittest.TestCase):
         )
 
         self.assertIn("illustrative management assumptions", markdown)
+        self.assertIn("Binding constraints", markdown)
+        self.assertIn("Minimum uplift", markdown)
         self.assertIn("Review gate", markdown)
         self.assertIn("No staffing change", markdown)
 
