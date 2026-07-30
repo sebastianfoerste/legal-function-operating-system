@@ -18,6 +18,17 @@ Capacity points and slots are illustrative management assumptions over synthetic
 - GC approval demand/capacity: 5/3
 - External-counsel coordination demand/capacity: 3/2
 
+### Binding constraints
+
+| Constraint | Type | Demand | Capacity | Minimum uplift | Review owner |
+| --- | --- | ---: | ---: | ---: | --- |
+| Privacy | queue_capacity | 17 | 8 | 9 | Legal Operations |
+| Litigation | queue_capacity | 13 | 5 | 8 | Legal Operations |
+| Commercial | queue_capacity | 14 | 8 | 6 | Legal Operations |
+| Corporate / GC | queue_capacity | 10 | 6 | 4 | Legal Operations |
+| General Counsel approvals | approval_capacity | 5 | 3 | 2 | General Counsel |
+| External-counsel coordination | external_counsel_capacity | 3 | 2 | 1 | General Counsel |
+
 ### Priority review queue
 
 | ID | Priority | Risk | Queue | Work points |
@@ -46,6 +57,12 @@ Capacity points and slots are illustrative management assumptions over synthetic
 
 - GC approval demand/capacity: 5/6
 - External-counsel coordination demand/capacity: 3/4
+
+### Binding constraints
+
+| Constraint | Type | Demand | Capacity | Minimum uplift | Review owner |
+| --- | --- | ---: | ---: | ---: | --- |
+| none | n/a | 0 | 0 | 0 | n/a |
 
 ### Priority review queue
 

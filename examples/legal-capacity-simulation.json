@@ -29,7 +29,8 @@
         "gc_approval_overflow": 2,
         "external_counsel_demand": 3,
         "external_counsel_capacity": 2,
-        "external_counsel_overflow": 1
+        "external_counsel_overflow": 1,
+        "binding_constraints": 6
       },
       "queue_capacity": [
         {
@@ -85,6 +86,62 @@
           "backlog_points": 9,
           "utilization": 2.125,
           "status": "constrained"
+        }
+      ],
+      "binding_constraints": [
+        {
+          "constraint_id": "queue:Privacy",
+          "constraint_type": "queue_capacity",
+          "label": "Privacy",
+          "demand": 17,
+          "capacity": 8,
+          "minimum_uplift": 9,
+          "review_owner": "Legal Operations"
+        },
+        {
+          "constraint_id": "queue:Litigation",
+          "constraint_type": "queue_capacity",
+          "label": "Litigation",
+          "demand": 13,
+          "capacity": 5,
+          "minimum_uplift": 8,
+          "review_owner": "Legal Operations"
+        },
+        {
+          "constraint_id": "queue:Commercial",
+          "constraint_type": "queue_capacity",
+          "label": "Commercial",
+          "demand": 14,
+          "capacity": 8,
+          "minimum_uplift": 6,
+          "review_owner": "Legal Operations"
+        },
+        {
+          "constraint_id": "queue:Corporate / GC",
+          "constraint_type": "queue_capacity",
+          "label": "Corporate / GC",
+          "demand": 10,
+          "capacity": 6,
+          "minimum_uplift": 4,
+          "review_owner": "Legal Operations"
+        },
+        {
+          "constraint_id": "approval:general-counsel",
+          "constraint_type": "approval_capacity",
+          "label": "General Counsel approvals",
+          "demand": 5,
+          "capacity": 3,
+          "minimum_uplift": 2,
+          "review_owner": "General Counsel"
+        },
+        {
+          "constraint_id": "coordination:external-counsel",
+          "constraint_type": "external_counsel_capacity",
+          "label": "External-counsel coordination",
+          "demand": 3,
+          "capacity": 2,
+          "minimum_uplift": 1,
+          "review_owner": "General Counsel"
         }
       ],
       "priority_review_queue": [
@@ -198,7 +255,8 @@
         "gc_approval_overflow": 0,
         "external_counsel_demand": 3,
         "external_counsel_capacity": 4,
-        "external_counsel_overflow": 0
+        "external_counsel_overflow": 0,
+        "binding_constraints": 0
       },
       "queue_capacity": [
         {
@@ -256,6 +314,7 @@
           "status": "within_assumption"
         }
       ],
+      "binding_constraints": [],
       "priority_review_queue": [
         {
           "request_id": "REQ-1007",
@@ -357,6 +416,69 @@
       "external_counsel_overflow_delta": -1
     }
   ],
+  "decision_brief": {
+    "baseline_scenario": "current_operating_model",
+    "baseline_binding_constraints": [
+      {
+        "constraint_id": "queue:Privacy",
+        "constraint_type": "queue_capacity",
+        "label": "Privacy",
+        "demand": 17,
+        "capacity": 8,
+        "minimum_uplift": 9,
+        "review_owner": "Legal Operations"
+      },
+      {
+        "constraint_id": "queue:Litigation",
+        "constraint_type": "queue_capacity",
+        "label": "Litigation",
+        "demand": 13,
+        "capacity": 5,
+        "minimum_uplift": 8,
+        "review_owner": "Legal Operations"
+      },
+      {
+        "constraint_id": "queue:Commercial",
+        "constraint_type": "queue_capacity",
+        "label": "Commercial",
+        "demand": 14,
+        "capacity": 8,
+        "minimum_uplift": 6,
+        "review_owner": "Legal Operations"
+      },
+      {
+        "constraint_id": "queue:Corporate / GC",
+        "constraint_type": "queue_capacity",
+        "label": "Corporate / GC",
+        "demand": 10,
+        "capacity": 6,
+        "minimum_uplift": 4,
+        "review_owner": "Legal Operations"
+      },
+      {
+        "constraint_id": "approval:general-counsel",
+        "constraint_type": "approval_capacity",
+        "label": "General Counsel approvals",
+        "demand": 5,
+        "capacity": 3,
+        "minimum_uplift": 2,
+        "review_owner": "General Counsel"
+      },
+      {
+        "constraint_id": "coordination:external-counsel",
+        "constraint_type": "external_counsel_capacity",
+        "label": "External-counsel coordination",
+        "demand": 3,
+        "capacity": 2,
+        "minimum_uplift": 1,
+        "review_owner": "General Counsel"
+      }
+    ],
+    "scenarios_within_assumptions": [
+      "protected_focus_model"
+    ],
+    "decision_status": "HUMAN_REVIEW_REQUIRED"
+  },
   "review_gate": "A human owner must validate effort assumptions, staffing availability, approval capacity, and any external-counsel instruction.",
   "external_action_allowed": false
 }
