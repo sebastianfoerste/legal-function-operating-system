@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sebastianfoerste/legal-function-operating-system/contracts/legal-workflow-controls.v1.schema.json",
+  "title": "Legal workflow controls v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "review_state", "approval_gate", "source_boundary", "audit_events"],
+  "properties": {
+    "schema": {"const": "legal-workflow-controls.v1"},
+    "review_state": {
+      "enum": [
+        "pending_review",
+        "approved",
+        "rejected",
+        "revision_requested",
+        "escalated",
+        "blocked"
+      ]
+    },
+    "approval_gate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["human_review_required", "export_allowed", "external_actions_allowed"],
+      "properties": {
+        "human_review_required": {"type": "boolean"},
+        "export_allowed": {"type": "boolean"},
+        "external_actions_allowed": {"const": false},
+        "required_roles": {
+          "type": "array",
+          "items": {"type": "string", "minLength": 1}
+        },
+        "review_note": {"type": ["string", "null"]}
+      }
+    },
+    "source_boundary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mode", "categories", "human_verification_required"],
+      "properties": {
+        "mode": {"enum": ["synthetic_only", "verified_public_or_synthetic"]},
+        "categories": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "synthetic",
+              "public_regulatory",
+              "public_unapproved",
+              "blocked",
+              "missing"
+            ]
+          }
+        },
+        "human_verification_required": {"type": "boolean"}
+      }
+    },
+    "audit_events": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sequence", "event_type", "actor", "timestamp_utc"],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 0},
+          "event_type": {"type": "string", "minLength": 1},
+          "actor": {"type": "string", "minLength": 1},
+          "timestamp_utc": {"type": "string", "format": "date-time"},
+          "note": {"type": "string"},
+          "previous_hash": {"type": ["string", "null"]},
+          "event_hash": {"type": ["string", "null"]}
+        }
+      }
+    }
+  }
+}
