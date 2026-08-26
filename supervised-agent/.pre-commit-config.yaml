@@ -1,0 +1,15 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        args: ["--maxkb=10240"]
+      - id: check-merge-conflict
+      - id: detect-private-key
+  - repo: local
+    hooks:
+      - id: block-generated-artifacts
+        name: block generated artifacts and cache paths
+        entry: bash -c 'if git diff --cached --name-only | grep -E "(^|/)(\\.companion/|\\.telemetry/|__pycache__/|\\.pytest_cache/|\\.ruff_cache/|\\.mypy_cache/|\\.next/|\\.npm_cache/|\\.playwright-mcp/)|\\.eslintcache$|\\.tsbuildinfo$|\\.pyc$"; then echo "Blocked generated artifact in staged files"; exit 1; fi'
+        language: system
+        pass_filenames: false

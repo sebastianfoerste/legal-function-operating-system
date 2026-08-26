@@ -1,0 +1,21 @@
+{
+  "title": "SaaS MSA deviation review",
+  "requester": "Revenue Operations",
+  "business_unit": "Enterprise Sales",
+  "matter_type": "contract",
+  "jurisdiction": "EU and United States",
+  "summary": "A prospective enterprise customer asks for a nonstandard SaaS MSA package with a higher liability cap, direct audit rights and a roadmap commitment before signature.",
+  "urgency": "high",
+  "data_categories": [
+    "business contact data",
+    "customer workspace metadata"
+  ],
+  "customer_commitments": [
+    "higher liability cap for security incidents",
+    "controlled annual audit right",
+    "non-binding roadmap review"
+  ],
+  "source_refs": [
+    "synthetic:saas-msa-deviation-example"
+  ]
+}

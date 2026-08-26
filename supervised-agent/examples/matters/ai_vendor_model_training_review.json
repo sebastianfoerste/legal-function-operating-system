@@ -1,0 +1,22 @@
+{
+  "title": "AI vendor model training review",
+  "requester": "Security Review",
+  "business_unit": "Product Engineering",
+  "matter_type": "ai_governance",
+  "jurisdiction": "EU and California",
+  "summary": "Product wants to onboard an AI vendor for customer support workflows, but the vendor terms allow customer prompts and outputs to be used for model training unless an opt-out is approved.",
+  "urgency": "high",
+  "data_categories": [
+    "customer prompts",
+    "generated support replies",
+    "support ticket attachments"
+  ],
+  "customer_commitments": [
+    "no customer data used for model training",
+    "short retention for prompts and outputs",
+    "vendor subprocessor review before production use"
+  ],
+  "source_refs": [
+    "synthetic:ai-vendor-model-training-review-example"
+  ]
+}

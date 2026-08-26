@@ -1,0 +1,14 @@
+{
+  "title": "Public regulatory monitoring review",
+  "requester": "Legal Operations",
+  "business_unit": "Product Legal",
+  "matter_type": "regulatory_monitoring",
+  "jurisdiction": "EU",
+  "summary": "Legal operations monitors a public regulatory source before deciding whether a product counsel checklist should be updated.",
+  "urgency": "medium",
+  "data_categories": [],
+  "customer_commitments": [],
+  "source_refs": [
+    "public:https://www.esma.europa.eu/"
+  ]
+}
