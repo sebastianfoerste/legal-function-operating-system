@@ -1,0 +1,67 @@
+name: traffic-snapshot
+
+# GitHub's traffic API keeps a rolling 14-day window and forgets everything older.
+# Without a snapshot there is no way to tell whether a change in how the repository
+# is presented moved anything. Results land on the orphan `traffic-stats` branch so
+# they never touch main's history.
+
+on:
+  schedule:
+    - cron: "17 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Append this week's snapshot
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          if git ls-remote --exit-code --heads origin traffic-stats >/dev/null 2>&1; then
+            git fetch origin traffic-stats
+            git checkout traffic-stats
+          else
+            git checkout --orphan traffic-stats
+            git rm -rqf . || true
+          fi
+
+          mkdir -p traffic
+          stamp="$(date -u +%Y-%m-%d)"
+          gh api "repos/$REPO/traffic/views" --jq '{count,uniques}' > /tmp/views.json
+          gh api "repos/$REPO/traffic/clones" --jq '{count,uniques}' > /tmp/clones.json
+          gh api "repos/$REPO/traffic/popular/referrers" > /tmp/referrers.json
+          gh api "repos/$REPO/traffic/popular/paths" > /tmp/paths.json
+          stars="$(gh api "repos/$REPO" --jq .stargazers_count)"
+
+          jq -n \
+            --arg date "$stamp" \
+            --argjson stars "$stars" \
+            --slurpfile views /tmp/views.json \
+            --slurpfile clones /tmp/clones.json \
+            --slurpfile referrers /tmp/referrers.json \
+            --slurpfile paths /tmp/paths.json \
+            '{date:$date, stars:$stars, views:$views[0], clones:$clones[0],
+              referrers:$referrers[0], paths:$paths[0]}' \
+            > "traffic/$stamp.json"
+
+          jq -c '{date,stars,views,clones}' "traffic/$stamp.json" >> traffic/history.jsonl
+          sort -u -o traffic/history.jsonl traffic/history.jsonl
+
+          git add traffic
+          if git diff --cached --quiet; then
+            echo "no change"
+            exit 0
+          fi
+          git commit -m "chore: traffic snapshot $stamp"
+          git push origin traffic-stats
