@@ -4,6 +4,11 @@ name: traffic-snapshot
 # Without a snapshot there is no way to tell whether a change in how the repository
 # is presented moved anything. Results land on the orphan `traffic-stats` branch so
 # they never touch main's history.
+#
+# The traffic endpoints need a token with repository admin rights. The built-in
+# GITHUB_TOKEN does not have them and returns 403, so views and clones are recorded
+# as null until a personal access token with the `repo` scope is stored as the
+# TRAFFIC_TOKEN secret. Stars and the timeline are captured either way.
 
 on:
   schedule:
@@ -12,8 +17,6 @@ on:
 
 permissions:
   contents: write
-  # The traffic endpoints need administration:read; contents:write alone returns 403.
-  administration: read
 
 jobs:
   snapshot:
@@ -23,7 +26,7 @@ jobs:
 
       - name: Append this week's snapshot
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.TRAFFIC_TOKEN || secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
@@ -40,10 +43,15 @@ jobs:
 
           mkdir -p traffic
           stamp="$(date -u +%Y-%m-%d)"
-          gh api "repos/$REPO/traffic/views" --jq '{count,uniques}' > /tmp/views.json
-          gh api "repos/$REPO/traffic/clones" --jq '{count,uniques}' > /tmp/clones.json
-          gh api "repos/$REPO/traffic/popular/referrers" > /tmp/referrers.json
-          gh api "repos/$REPO/traffic/popular/paths" > /tmp/paths.json
+
+          # A 403 here means TRAFFIC_TOKEN is absent; record null rather than failing.
+          fetch() {
+            gh api "repos/$REPO/$1" 2>/dev/null || echo "null"
+          }
+          fetch 'traffic/views'            > /tmp/views.json
+          fetch 'traffic/clones'           > /tmp/clones.json
+          fetch 'traffic/popular/referrers' > /tmp/referrers.json
+          fetch 'traffic/popular/paths'     > /tmp/paths.json
           stars="$(gh api "repos/$REPO" --jq .stargazers_count)"
 
           jq -n \
@@ -53,11 +61,19 @@ jobs:
             --slurpfile clones /tmp/clones.json \
             --slurpfile referrers /tmp/referrers.json \
             --slurpfile paths /tmp/paths.json \
-            '{date:$date, stars:$stars, views:$views[0], clones:$clones[0],
-              referrers:$referrers[0], paths:$paths[0]}' \
+            '{
+               date: $date,
+               stars: $stars,
+               traffic_available: ($views[0] != null),
+               views:  (if $views[0]  == null then null else {count:$views[0].count,   uniques:$views[0].uniques}  end),
+               clones: (if $clones[0] == null then null else {count:$clones[0].count, uniques:$clones[0].uniques} end),
+               referrers: $referrers[0],
+               paths: $paths[0]
+             }' \
             > "traffic/$stamp.json"
 
-          jq -c '{date,stars,views,clones}' "traffic/$stamp.json" >> traffic/history.jsonl
+          jq -c '{date,stars,traffic_available,views,clones}' "traffic/$stamp.json" \
+            >> traffic/history.jsonl
           sort -u -o traffic/history.jsonl traffic/history.jsonl
 
           git add traffic
