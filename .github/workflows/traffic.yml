@@ -12,6 +12,8 @@ on:
 
 permissions:
   contents: write
+  # The traffic endpoints need administration:read; contents:write alone returns 403.
+  administration: read
 
 jobs:
   snapshot:
