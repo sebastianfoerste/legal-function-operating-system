@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" font-family="Helvetica Neue, Helvetica, Arial, sans-serif">
+  <rect width="1280" height="640" fill="#FBF8F5"/>
+  <rect x="0" y="0" width="10" height="640" fill="#8A2D2B"/>
+  <text x="72" y="112" fill="#8A2D2B" font-size="21" font-weight="700" letter-spacing="4.2">LEGAL FUNCTION OPERATING SYSTEM</text>
+  <text x="72" y="205" fill="#211D1C" font-size="62" font-weight="700">The legal function, as a system.</text>
+  <text x="72" y="272" fill="#6E6462" font-size="27">Deterministic intake, risk, priority, routing, service levels,</text>
+  <text x="72" y="311" fill="#6E6462" font-size="27">approvals, external counsel, escalation and board reporting.</text>
+
+  <g>
+    <rect x="72" y="360" width="264" height="118" rx="10" fill="#FFFFFF" stroke="#E2DAD4"/>
+    <text x="100" y="404" fill="#8A2D2B" font-size="16" font-weight="700" letter-spacing="2.2">APPROVALS</text>
+    <text x="100" y="452" fill="#211D1C" font-size="31" font-weight="700">Human tiers</text>
+
+    <rect x="363" y="360" width="264" height="118" rx="10" fill="#FFFFFF" stroke="#E2DAD4"/>
+    <text x="391" y="404" fill="#8A2D2B" font-size="16" font-weight="700" letter-spacing="2.2">DEAL DESK</text>
+    <text x="391" y="452" fill="#211D1C" font-size="31" font-weight="700">Do not sign</text>
+
+    <rect x="654" y="360" width="264" height="118" rx="10" fill="#FFFFFF" stroke="#E2DAD4"/>
+    <text x="682" y="404" fill="#8A2D2B" font-size="16" font-weight="700" letter-spacing="2.2">DPA REVIEW</text>
+    <text x="682" y="452" fill="#211D1C" font-size="31" font-weight="700">Art. 28(3) a–h</text>
+
+    <rect x="945" y="360" width="263" height="118" rx="10" fill="#FFFFFF" stroke="#E2DAD4"/>
+    <text x="973" y="404" fill="#8A2D2B" font-size="16" font-weight="700" letter-spacing="2.2">CONTRACT</text>
+    <text x="973" y="452" fill="#211D1C" font-size="31" font-weight="700">Versioned v1</text>
+  </g>
+
+  <text x="72" y="556" fill="#857977" font-size="21">Runs in one command. Artifacts published, no clone required.</text>
+  <text x="72" y="592" fill="#857977" font-size="21">Synthetic data only. Not legal advice.</text>
+  <text x="1208" y="592" fill="#9C918E" font-size="21" text-anchor="end">github.com/sebastianfoerste</text>
+</svg>
