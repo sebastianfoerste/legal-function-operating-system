@@ -44,9 +44,15 @@ jobs:
           mkdir -p traffic
           stamp="$(date -u +%Y-%m-%d)"
 
-          # A 403 here means TRAFFIC_TOKEN is absent; record null rather than failing.
+          # A 403 here means TRAFFIC_TOKEN is absent. gh prints the error body to
+          # stdout, so discard it on failure and emit null instead.
           fetch() {
-            gh api "repos/$REPO/$1" 2>/dev/null || echo "null"
+            local body
+            if body="$(gh api "repos/$REPO/$1" 2>/dev/null)"; then
+              printf '%s' "$body"
+            else
+              printf 'null'
+            fi
           }
           fetch 'traffic/views'            > /tmp/views.json
           fetch 'traffic/clones'           > /tmp/clones.json
@@ -64,9 +70,9 @@ jobs:
             '{
                date: $date,
                stars: $stars,
-               traffic_available: ($views[0] != null),
-               views:  (if $views[0]  == null then null else {count:$views[0].count,   uniques:$views[0].uniques}  end),
-               clones: (if $clones[0] == null then null else {count:$clones[0].count, uniques:$clones[0].uniques} end),
+               traffic_available: (($views[0] | type) == "object" and ($views[0].count != null)),
+               views:  (if ($views[0]  | type) != "object" or $views[0].count  == null then null else {count:$views[0].count,  uniques:$views[0].uniques}  end),
+               clones: (if ($clones[0] | type) != "object" or $clones[0].count == null then null else {count:$clones[0].count, uniques:$clones[0].uniques} end),
                referrers: $referrers[0],
                paths: $paths[0]
              }' \
