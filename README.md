@@ -21,6 +21,12 @@ The supervised legal-operations agent is maintained in `supervised-agent`. Both 
 
 ## Two-minute reviewer path
 
+**[Read the artifacts in a browser](https://sebastianfoerste.github.io/legal-function-operating-system/)** —
+the deal room, outcome control tower, decision cockpit and architecture flow are
+published from this repository. No clone required.
+
+Locally:
+
 1. Read the [general legal-function case study](CASE_STUDY.md).
 2. Open the generated [board operations pack](examples/board-pack.md).
 3. Inspect the [outcome control tower](examples/legal-outcome-control-tower.md)
@@ -133,9 +139,10 @@ Start with:
 3. the dated [primary-source manifest](examples/raas-source-manifest.json); and
 4. the generated [decision cockpit](examples/raas-deal-desk.svg).
 
-The generated [HTML deal room](examples/raas-deal-room.html) is an offline local
-artifact. Download or clone the repository before opening it. A concise walkthrough
-is available in the [reviewer script](docs/RAAS_REVIEWER_SCRIPT.md).
+The generated HTML deal room is published at
+[sebastianfoerste.github.io/legal-function-operating-system/raas-deal-room.html](https://sebastianfoerste.github.io/legal-function-operating-system/raas-deal-room.html)
+and committed as an offline artifact at [`examples/raas-deal-room.html`](examples/raas-deal-room.html).
+A concise walkthrough is available in the [reviewer script](docs/RAAS_REVIEWER_SCRIPT.md).
 
 The specialist workflow preserves:
 

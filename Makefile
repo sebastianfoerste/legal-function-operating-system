@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PYTHONPATH := src
 
-.PHONY: install test demo board-demo raas-demo check-generated proof-check contract-check agent-check agent-export check clean
+.PHONY: install test demo board-demo raas-demo site check-generated proof-check contract-check agent-check agent-export check clean
 
 install:
 	@echo "No third-party dependencies. Pure standard library."
@@ -18,6 +18,9 @@ board-demo:
 raas-demo:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.raas_cli --input data/raas_deal.json --out examples --quiet
 	@echo "Wrote examples/raas-deal-pack.md, .json, reviewer HTML, visual SVG, and source manifest."
+
+site:
+	@$(PYTHON) scripts/build_site.py
 
 check-generated:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_generated.py
