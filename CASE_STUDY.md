@@ -29,11 +29,17 @@ readable functions that a lawyer can audit and challenge.
 ## Evaluation
 The bundled demo (`examples/board-pack.md`) turns eight synthetic requests into a
 board pack that surfaces three board-attention items, one SLA breach, and three
-external-counsel referrals. The test suite covers the general operating layer and
-the industrial robotics RaaS deal desk.
+external-counsel referrals. The same portfolio drives a capacity simulation that
+names the binding constraint and the minimum uplift that clears it, and an outcome
+control tower that reconciles a versioned service-event ledger against business-time
+SLAs. The test suite covers the general operating layer, the industrial robotics RaaS
+deal desk, and the supervised agent behind the shared control contract.
 
 ## Limitations
 Thresholds (value bands, SLA targets, approval tiers) are illustrative defaults to be tuned per business; it operates over a structured representation of requests, not a live intake channel, and is an operations artifact, not legal advice.
 
 ## Next steps
-Connect intake to Slack/Jira; add real roles/auth for the approval tiers; track SLA timers live; pair with `ai-saas-legal-ops-starter-kit` (playbooks) and `dpa-and-data-transfer-review` (cited DPA checks) as the function's operating core.
+Connect intake to a live channel; bind the approval tiers to real roles in an identity
+provider; track SLA timers against wall-clock rather than a recorded ledger. Pair with
+[`dpa-and-data-transfer-review`](https://github.com/sebastianfoerste/dpa-and-data-transfer-review)
+for cited Article 28 and Chapter V checks as the function's operating core.
