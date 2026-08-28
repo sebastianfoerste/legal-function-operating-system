@@ -1,0 +1,463 @@
+{
+  "schema": "legal-function-os.service-event-ledger.v1",
+  "as_of_utc": "2026-07-17T16:00:00Z",
+  "events": [
+    {
+      "event_id": "EVT-1001-01",
+      "request_id": "REQ-1001",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-06T07:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic enterprise agreement submitted."
+    },
+    {
+      "event_id": "EVT-1001-02",
+      "request_id": "REQ-1001",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-06T08:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Intake checked and response target confirmed."
+    },
+    {
+      "event_id": "EVT-1001-03",
+      "request_id": "REQ-1001",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-06T08:30:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Assigned to Commercial queue."
+    },
+    {
+      "event_id": "EVT-1001-04",
+      "request_id": "REQ-1001",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-06T09:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 180,
+      "note": "First-pass agreement review completed."
+    },
+    {
+      "event_id": "EVT-1001-05",
+      "request_id": "REQ-1001",
+      "event_type": "waiting_on_business",
+      "occurred_at_utc": "2026-07-06T12:00:00Z",
+      "actor_role": "Legal Counsel",
+      "note": "Commercial fallback instructions requested."
+    },
+    {
+      "event_id": "EVT-1001-06",
+      "request_id": "REQ-1001",
+      "event_type": "resumed",
+      "occurred_at_utc": "2026-07-07T08:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 90,
+      "note": "Business instructions received and incorporated."
+    },
+    {
+      "event_id": "EVT-1001-07",
+      "request_id": "REQ-1001",
+      "event_type": "approval_requested",
+      "occurred_at_utc": "2026-07-07T10:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 20,
+      "note": "General Counsel approval requested."
+    },
+    {
+      "event_id": "EVT-1001-08",
+      "request_id": "REQ-1001",
+      "event_type": "approved",
+      "occurred_at_utc": "2026-07-07T15:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 30,
+      "note": "Synthetic fallback position approved."
+    },
+    {
+      "event_id": "EVT-1001-09",
+      "request_id": "REQ-1001",
+      "event_type": "completed",
+      "occurred_at_utc": "2026-07-07T16:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 20,
+      "note": "Review cycle completed."
+    },
+    {
+      "event_id": "EVT-1001-10",
+      "request_id": "REQ-1001",
+      "event_type": "reopened",
+      "occurred_at_utc": "2026-07-15T07:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Counterparty introduced a new liability proposal."
+    },
+    {
+      "event_id": "EVT-1001-11",
+      "request_id": "REQ-1001",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-15T08:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 45,
+      "note": "Reopened liability proposal under review."
+    },
+    {
+      "event_id": "EVT-1002-01",
+      "request_id": "REQ-1002",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-13T07:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic DPA review submitted."
+    },
+    {
+      "event_id": "EVT-1002-02",
+      "request_id": "REQ-1002",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-13T09:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 15,
+      "note": "DPA intake acknowledged."
+    },
+    {
+      "event_id": "EVT-1002-03",
+      "request_id": "REQ-1002",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-13T09:30:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Assigned to Privacy queue."
+    },
+    {
+      "event_id": "EVT-1002-04",
+      "request_id": "REQ-1002",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-13T10:00:00Z",
+      "actor_role": "Privacy Counsel",
+      "effort_minutes": 135,
+      "note": "Transfer and subprocessor review started."
+    },
+    {
+      "event_id": "EVT-1002-05",
+      "request_id": "REQ-1002",
+      "event_type": "waiting_on_business",
+      "occurred_at_utc": "2026-07-14T08:00:00Z",
+      "actor_role": "Privacy Counsel",
+      "note": "Waiting for hosting and subprocessor evidence."
+    },
+    {
+      "event_id": "EVT-1003-01",
+      "request_id": "REQ-1003",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-06T08:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic NDA submitted."
+    },
+    {
+      "event_id": "EVT-1003-02",
+      "request_id": "REQ-1003",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-06T09:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "NDA intake acknowledged."
+    },
+    {
+      "event_id": "EVT-1003-03",
+      "request_id": "REQ-1003",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-06T09:15:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 5,
+      "note": "Assigned to Commercial queue."
+    },
+    {
+      "event_id": "EVT-1003-04",
+      "request_id": "REQ-1003",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-06T09:30:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 75,
+      "note": "NDA reviewed against approved fallback."
+    },
+    {
+      "event_id": "EVT-1003-05",
+      "request_id": "REQ-1003",
+      "event_type": "completed",
+      "occurred_at_utc": "2026-07-06T11:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 15,
+      "note": "NDA review completed."
+    },
+    {
+      "event_id": "EVT-1004-01",
+      "request_id": "REQ-1004",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-07T07:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic AI governance review submitted."
+    },
+    {
+      "event_id": "EVT-1004-02",
+      "request_id": "REQ-1004",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-07T13:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 15,
+      "note": "AI governance intake acknowledged."
+    },
+    {
+      "event_id": "EVT-1004-03",
+      "request_id": "REQ-1004",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-07T13:30:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Assigned to AI governance queue."
+    },
+    {
+      "event_id": "EVT-1004-04",
+      "request_id": "REQ-1004",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-08T07:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 210,
+      "note": "Control and autonomy review completed."
+    },
+    {
+      "event_id": "EVT-1004-05",
+      "request_id": "REQ-1004",
+      "event_type": "approval_requested",
+      "occurred_at_utc": "2026-07-08T12:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 15,
+      "note": "General Counsel approval requested."
+    },
+    {
+      "event_id": "EVT-1004-06",
+      "request_id": "REQ-1004",
+      "event_type": "approved",
+      "occurred_at_utc": "2026-07-09T10:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 35,
+      "note": "Supervised operating boundary approved."
+    },
+    {
+      "event_id": "EVT-1004-07",
+      "request_id": "REQ-1004",
+      "event_type": "completed",
+      "occurred_at_utc": "2026-07-09T11:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 20,
+      "note": "Governance review completed."
+    },
+    {
+      "event_id": "EVT-1005-01",
+      "request_id": "REQ-1005",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-06T07:30:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic financing request submitted."
+    },
+    {
+      "event_id": "EVT-1005-02",
+      "request_id": "REQ-1005",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-06T10:30:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 20,
+      "note": "Financing intake acknowledged."
+    },
+    {
+      "event_id": "EVT-1005-03",
+      "request_id": "REQ-1005",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-06T11:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Assigned to Corporate and General Counsel queue."
+    },
+    {
+      "event_id": "EVT-1005-04",
+      "request_id": "REQ-1005",
+      "event_type": "external_counsel_referred",
+      "occurred_at_utc": "2026-07-06T11:15:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 25,
+      "note": "Corporate counsel referral prepared for human instruction."
+    },
+    {
+      "event_id": "EVT-1005-05",
+      "request_id": "REQ-1005",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-06T12:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 240,
+      "note": "Term sheet review and instruction scope prepared."
+    },
+    {
+      "event_id": "EVT-1005-06",
+      "request_id": "REQ-1005",
+      "event_type": "approval_requested",
+      "occurred_at_utc": "2026-07-08T09:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 20,
+      "note": "Board note approval requested."
+    },
+    {
+      "event_id": "EVT-1005-07",
+      "request_id": "REQ-1005",
+      "event_type": "approved",
+      "occurred_at_utc": "2026-07-09T14:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 30,
+      "note": "Synthetic financing instruction approved."
+    },
+    {
+      "event_id": "EVT-1005-08",
+      "request_id": "REQ-1005",
+      "event_type": "completed",
+      "occurred_at_utc": "2026-07-09T15:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 20,
+      "note": "Internal financing workstream completed."
+    },
+    {
+      "event_id": "EVT-1006-01",
+      "request_id": "REQ-1006",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-08T07:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic vendor questionnaire submitted."
+    },
+    {
+      "event_id": "EVT-1006-02",
+      "request_id": "REQ-1006",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-08T08:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Vendor questionnaire acknowledged."
+    },
+    {
+      "event_id": "EVT-1006-03",
+      "request_id": "REQ-1006",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-08T08:30:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 5,
+      "note": "Assigned to Commercial queue."
+    },
+    {
+      "event_id": "EVT-1006-04",
+      "request_id": "REQ-1006",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-08T09:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 100,
+      "note": "Approved questionnaire responses assembled."
+    },
+    {
+      "event_id": "EVT-1006-05",
+      "request_id": "REQ-1006",
+      "event_type": "completed",
+      "occurred_at_utc": "2026-07-08T12:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 20,
+      "note": "Questionnaire review completed."
+    },
+    {
+      "event_id": "EVT-1007-01",
+      "request_id": "REQ-1007",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-06T07:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic SLA dispute submitted."
+    },
+    {
+      "event_id": "EVT-1007-02",
+      "request_id": "REQ-1007",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-06T14:30:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 15,
+      "note": "Dispute intake acknowledged."
+    },
+    {
+      "event_id": "EVT-1007-03",
+      "request_id": "REQ-1007",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-06T15:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Assigned to Litigation queue."
+    },
+    {
+      "event_id": "EVT-1007-04",
+      "request_id": "REQ-1007",
+      "event_type": "external_counsel_referred",
+      "occurred_at_utc": "2026-07-07T07:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 30,
+      "note": "Litigation counsel referral scoped for human instruction."
+    },
+    {
+      "event_id": "EVT-1007-05",
+      "request_id": "REQ-1007",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-07T08:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 250,
+      "note": "Claim record and response position reviewed."
+    },
+    {
+      "event_id": "EVT-1007-06",
+      "request_id": "REQ-1007",
+      "event_type": "completed",
+      "occurred_at_utc": "2026-07-09T16:00:00Z",
+      "actor_role": "General Counsel",
+      "effort_minutes": 35,
+      "note": "Internal dispute assessment completed."
+    },
+    {
+      "event_id": "EVT-1008-01",
+      "request_id": "REQ-1008",
+      "event_type": "submitted",
+      "occurred_at_utc": "2026-07-09T07:00:00Z",
+      "actor_role": "Business Requester",
+      "note": "Synthetic employment offer submitted."
+    },
+    {
+      "event_id": "EVT-1008-02",
+      "request_id": "REQ-1008",
+      "event_type": "acknowledged",
+      "occurred_at_utc": "2026-07-09T10:00:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 10,
+      "note": "Employment offer acknowledged."
+    },
+    {
+      "event_id": "EVT-1008-03",
+      "request_id": "REQ-1008",
+      "event_type": "assigned",
+      "occurred_at_utc": "2026-07-09T10:30:00Z",
+      "actor_role": "Legal Operations",
+      "effort_minutes": 5,
+      "note": "Assigned to Employment queue."
+    },
+    {
+      "event_id": "EVT-1008-04",
+      "request_id": "REQ-1008",
+      "event_type": "work_started",
+      "occurred_at_utc": "2026-07-09T11:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 85,
+      "note": "Offer terms reviewed against approved template."
+    },
+    {
+      "event_id": "EVT-1008-05",
+      "request_id": "REQ-1008",
+      "event_type": "completed",
+      "occurred_at_utc": "2026-07-09T14:00:00Z",
+      "actor_role": "Legal Counsel",
+      "effort_minutes": 15,
+      "note": "Offer review completed."
+    }
+  ]
+}

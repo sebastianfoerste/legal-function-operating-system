@@ -1,0 +1,30 @@
+[
+  {
+    "name": "current_operating_model",
+    "label": "Current operating model",
+    "queue_capacity_points": {
+      "Commercial": 8,
+      "Privacy": 8,
+      "Legal Ops (AI)": 5,
+      "Corporate / GC": 6,
+      "Litigation": 5,
+      "Employment": 4
+    },
+    "gc_approval_slots": 3,
+    "external_counsel_slots": 2
+  },
+  {
+    "name": "protected_focus_model",
+    "label": "Protected focus and specialist model",
+    "queue_capacity_points": {
+      "Commercial": 14,
+      "Privacy": 17,
+      "Legal Ops (AI)": 10,
+      "Corporate / GC": 12,
+      "Litigation": 14,
+      "Employment": 6
+    },
+    "gc_approval_slots": 6,
+    "external_counsel_slots": 4
+  }
+]

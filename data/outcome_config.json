@@ -1,0 +1,39 @@
+{
+  "schema": "legal-function-os.outcome-config.v1",
+  "calendar": {
+    "timezone": "Europe/Berlin",
+    "workday_start": "09:00",
+    "workday_end": "18:00",
+    "working_weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "excluded_dates": [
+      "2026-07-10"
+    ]
+  },
+  "stalled_after_business_hours": 16,
+  "value_assumptions": {
+    "currency": "EUR",
+    "default_internal_role": "Legal Counsel",
+    "internal_role_hourly_cost_eur": {
+      "Legal Counsel": 145,
+      "Legal Operations": 105,
+      "General Counsel": 240,
+      "Privacy Counsel": 175
+    },
+    "external_reference_hourly_rate_eur": 475,
+    "baseline_effort_minutes_by_request_type": {
+      "commercial_contract": 420,
+      "dpa": 360,
+      "ai_governance": 480,
+      "fundraising": 720,
+      "vendor_review": 240,
+      "dispute": 600,
+      "employment": 210
+    }
+  }
+}

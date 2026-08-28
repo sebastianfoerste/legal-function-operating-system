@@ -14,8 +14,16 @@ import sys
 from pathlib import Path
 
 from legal_function_os.board_pack import build_board_pack, render_markdown
+from legal_function_os.capacity_simulator import (
+    build_capacity_simulation,
+    render_capacity_markdown,
+)
 from legal_function_os.workspace import build_legal_function_workspace
 from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
+from legal_function_os.outcome_control_tower import (
+    build_outcome_control_tower,
+    write_outcome_artifacts,
+)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -32,6 +40,31 @@ def main(argv: list[str] | None = None) -> int:
         "--collaboration-output-dir",
         default=None,
         help="Optional directory for operational Lists, workflow runs and local knowledge portal.",
+    )
+    parser.add_argument(
+        "--capacity-scenarios",
+        default=None,
+        help="Optional JSON file containing at least two illustrative capacity scenarios.",
+    )
+    parser.add_argument(
+        "--capacity-output",
+        default=None,
+        help="Optional directory for the capacity simulation Markdown and JSON.",
+    )
+    parser.add_argument(
+        "--events-input",
+        default=None,
+        help="Optional versioned legal-service event ledger JSON.",
+    )
+    parser.add_argument(
+        "--outcome-config",
+        default=None,
+        help="Optional business calendar and value-assumption JSON.",
+    )
+    parser.add_argument(
+        "--outcome-output",
+        default=None,
+        help="Optional directory for outcome control tower JSON, Markdown, and HTML.",
     )
     parser.add_argument("--quiet", action="store_true", help="Do not print the markdown pack.")
     parser.add_argument(
@@ -81,6 +114,49 @@ def main(argv: list[str] | None = None) -> int:
             json.dumps(collaboration, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
         render_portal(collaboration["knowledge_portal"], output_dir / "knowledge-portal.html")
+
+    if args.capacity_scenarios or args.capacity_output:
+        if not args.capacity_scenarios or not args.capacity_output:
+            print(
+                "--capacity-scenarios and --capacity-output must be supplied together.",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            scenario_payloads = json.loads(
+                Path(args.capacity_scenarios).read_text(encoding="utf-8")
+            )
+            simulation = build_capacity_simulation(requests, scenario_payloads)
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            print(f"Invalid capacity simulation input: {exc}", file=sys.stderr)
+            return 2
+        capacity_output = Path(args.capacity_output)
+        capacity_output.mkdir(parents=True, exist_ok=True)
+        (capacity_output / "legal-capacity-simulation.json").write_text(
+            json.dumps(simulation, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        (capacity_output / "legal-capacity-simulation.md").write_text(
+            render_capacity_markdown(simulation),
+            encoding="utf-8",
+        )
+
+    outcome_args = (args.events_input, args.outcome_config, args.outcome_output)
+    if any(outcome_args):
+        if not all(outcome_args):
+            print(
+                "--events-input, --outcome-config, and --outcome-output must be supplied together.",
+                file=sys.stderr,
+            )
+            return 2
+        try:
+            event_ledger = json.loads(Path(args.events_input).read_text(encoding="utf-8"))
+            outcome_config = json.loads(Path(args.outcome_config).read_text(encoding="utf-8"))
+            tower = build_outcome_control_tower(requests, event_ledger, outcome_config)
+            write_outcome_artifacts(tower, Path(args.outcome_output))
+        except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
+            print(f"Invalid outcome control tower input: {exc}", file=sys.stderr)
+            return 2
 
     # Board-attention items are normal management signal, not a failure. Only an
     # explicit --fail-on-breach gates the pipeline on missed SLAs.
