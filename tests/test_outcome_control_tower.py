@@ -21,13 +21,13 @@ ROOT = Path(__file__).resolve().parents[1]
 class OutcomeControlTowerTests(unittest.TestCase):
     def setUp(self) -> None:
         self.requests = json.loads(
-            (ROOT / "data" / "sample_requests.json").read_text(encoding="utf-8")
+            (ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json").read_text(encoding="utf-8")
         )
         self.ledger = json.loads(
-            (ROOT / "data" / "service_events.json").read_text(encoding="utf-8")
+            (ROOT / "src" / "legal_function_os" / "data" / "service_events.json").read_text(encoding="utf-8")
         )
         self.config = json.loads(
-            (ROOT / "data" / "outcome_config.json").read_text(encoding="utf-8")
+            (ROOT / "src" / "legal_function_os" / "data" / "outcome_config.json").read_text(encoding="utf-8")
         )
 
     def test_seeded_tower_reconciles_and_surfaces_bottleneck(self) -> None:
@@ -95,9 +95,9 @@ class OutcomeControlTowerTests(unittest.TestCase):
             status = cli_main(
                 [
                     "--input",
-                    str(ROOT / "data" / "sample_requests.json"),
+                    str(ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json"),
                     "--events-input",
-                    str(ROOT / "data" / "service_events.json"),
+                    str(ROOT / "src" / "legal_function_os" / "data" / "service_events.json"),
                     "--out",
                     tmp,
                     "--quiet",

@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+from legal_function_os.bundled import bundled_path
 from legal_function_os.raas_deal_desk import (
     build_raas_deal_pack,
     render_raas_markdown,
@@ -18,7 +19,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         description="Build a review-gated RaaS deal decision pack from synthetic JSON."
     )
-    parser.add_argument("--input", required=True, help="Path to one synthetic RaaS deal JSON object.")
+    parser.add_argument(
+        "--input",
+        default=None,
+        help="Path to one synthetic RaaS deal JSON object. Defaults to the bundled deal.",
+    )
     parser.add_argument("--out", default=None, help="Output directory for reviewer artifacts.")
     parser.add_argument("--quiet", action="store_true", help="Do not print the markdown pack.")
     parser.add_argument(
@@ -29,7 +34,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
 
     try:
-        deal = json.loads(Path(args.input).read_text(encoding="utf-8"))
+        source = Path(args.input) if args.input else bundled_path("raas_deal.json")
+        deal = json.loads(source.read_text(encoding="utf-8"))
         if not isinstance(deal, dict):
             raise ValueError("RaaS deal input must be one JSON object")
         pack = build_raas_deal_pack(deal)

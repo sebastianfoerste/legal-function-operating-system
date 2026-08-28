@@ -6,7 +6,7 @@ from pathlib import Path
 from legal_function_os.cli import main
 
 ROOT = Path(__file__).resolve().parents[1]
-SAMPLE = str(ROOT / "data" / "sample_requests.json")
+SAMPLE = str(ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json")
 
 
 class CliNewOutputsTests(unittest.TestCase):

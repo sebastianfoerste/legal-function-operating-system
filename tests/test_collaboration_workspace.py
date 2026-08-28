@@ -12,7 +12,7 @@ from legal_function_os.collaboration_workspace import (
 )
 
 
-REQUESTS = json.loads(Path("data/sample_requests.json").read_text())
+REQUESTS = json.loads(Path("src/legal_function_os/data/sample_requests.json").read_text())
 
 
 class CollaborationWorkspaceTests(unittest.TestCase):
