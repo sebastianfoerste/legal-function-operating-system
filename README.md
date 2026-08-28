@@ -44,8 +44,9 @@ Locally:
 4. Review the [architecture flow](docs/architecture.svg).
 5. Run `make check`.
 
-The machine-readable portfolio proof contract is available at
-[`docs/portfolio-proof.json`](docs/portfolio-proof.json).
+The machine-readable verification manifest is available at
+[`docs/verification-manifest.json`](docs/verification-manifest.json). It records
+every artifact a reviewer can inspect and the commands that validate them.
 
 The [legal capacity simulation](examples/legal-capacity-simulation.md) replays the
 same synthetic portfolio across alternative queue, GC-approval, and
@@ -120,8 +121,7 @@ with the pinpoint citation and the matched clause excerpt. A `missing`
 requirement counts as a blocker.
 
 ```bash
-PYTHONPATH=src python -m legal_function_os.cli \
-  --input src/legal_function_os/data/sample_requests.json --quiet \
+PYTHONPATH=src python -m legal_function_os.cli --quiet \
   --dpa-input src/legal_function_os/data/dpa_documents.json \
   --dpa-output examples/dpa-review.json
 ```
