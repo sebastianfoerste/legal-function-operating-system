@@ -13,14 +13,14 @@ jobs:
           python-version: "3.11"
       - run: make install
       - run: make test
-      - name: Regenerate committed proof artifacts
+      - name: Regenerate committed artifacts
         run: make demo
       - name: Reject generated-artifact drift
         run: git diff --exit-code
       - name: Verify deterministic regeneration
         run: make check-generated
-      - name: Validate portfolio proof contract
-        run: make proof-check
+      - name: Validate the verification manifest
+        run: make manifest-check
       - name: Validate shared workflow control contract
         run: make contract-check
       - name: Check patch whitespace

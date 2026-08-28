@@ -1,0 +1,50 @@
+{
+  "schema_version": "verification-manifest.v1",
+  "repository": "legal-function-operating-system",
+  "repository_url": "https://github.com/sebastianfoerste/legal-function-operating-system",
+  "published_site": "https://sebastianfoerste.github.io/legal-function-operating-system/",
+  "quickstart": [
+    "README.md",
+    "CASE_STUDY.md",
+    "examples/board-pack.md"
+  ],
+  "verification_artifacts": [
+    { "path": "docs/architecture.svg", "label": "Operating architecture" },
+    { "path": "examples/board-pack.md", "label": "Board operations pack" },
+    { "path": "examples/legal-capacity-simulation.md", "label": "Capacity simulation and binding constraints" },
+    { "path": "examples/legal-outcome-control-tower.md", "label": "Outcome control tower" },
+    { "path": "examples/legal-outcome-control-tower.html", "label": "Outcome control tower browser view" },
+    { "path": "examples/raas-deal-pack.md", "label": "Industrial RaaS deal decision pack" },
+    { "path": "examples/raas-deal-desk.svg", "label": "Deal decision cockpit" },
+    { "path": "examples/raas-deal-room.html", "label": "RaaS reviewer deal room" },
+    { "path": "examples/raas-source-manifest.json", "label": "Dated primary-source manifest" },
+    { "path": "contracts/legal-workflow-controls.v1.schema.json", "label": "Shared workflow control contract" },
+    { "path": "src/legal_function_os/data/dpa_documents.json", "label": "Synthetic Art. 28 GDPR processing agreements" },
+    { "path": "RAAS_CASE_STUDY.md", "label": "Industrial robotics case study" }
+  ],
+  "validation_commands": [
+    "make test",
+    "make demo",
+    "make check-generated",
+    "make manifest-check",
+    "make contract-check",
+    "make agent-check",
+    "make check"
+  ],
+  "data_boundary": "Synthetic request, transaction and processing-agreement data only. No client or customer data.",
+  "safety_controls": [
+    "deterministic offline execution",
+    "named human approval roles",
+    "primary-source provenance and digest",
+    "Finance and external-counsel review gates",
+    "versioned control contract between the operating model and the supervised agent"
+  ],
+  "blocked_actions": [
+    "no legal advice",
+    "no accounting conclusion",
+    "no external communication",
+    "no contract signature",
+    "no self-approval",
+    "no client data"
+  ]
+}
