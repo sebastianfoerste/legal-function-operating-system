@@ -1,0 +1,29 @@
+[
+  {
+    "id": "DPA-001",
+    "title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+    "clauses": {
+      "documented_instructions": "Der Auftragsverarbeiter verarbeitet personenbezogene Daten ausschließlich auf dokumentierte Weisung des Verantwortlichen, einschließlich in Bezug auf Übermittlungen in Drittländer.",
+      "confidentiality_commitment": "Der Auftragsverarbeiter stellt sicher, dass sich die zur Verarbeitung befugten Personen zur Vertraulichkeit verpflichtet haben oder einer angemessenen gesetzlichen Verschwiegenheitspflicht unterliegen.",
+      "security_measures": "Der Auftragsverarbeiter ergreift alle nach Art. 32 DSGVO erforderlichen technische und organisatorische Maßnahmen, dokumentiert in Anlage 2.",
+      "subprocessor_authorization": "Die Beauftragung weiterer Unterauftragsverarbeiter erfolgt nur mit vorheriger gesonderter oder allgemeiner schriftlicher Genehmigung des Verantwortlichen.",
+      "data_subject_rights_assistance": "Der Auftragsverarbeiter unterstützt den Verantwortlichen mit geeigneten Maßnahmen bei der Erfüllung der Betroffenenrechte nach Kapitel III DSGVO.",
+      "breach_and_dpia_assistance": "Der Auftragsverarbeiter unterstützt bei der Meldung einer Verletzung des Schutzes personenbezogener Daten und bei einer Datenschutz-Folgenabschätzung.",
+      "deletion_return": "Nach Abschluss der Erbringung der Verarbeitungsleistungen erfolgt nach Wahl des Verantwortlichen die Löschung oder Rückgabe aller personenbezogenen Daten.",
+      "audit_rights": "Der Auftragsverarbeiter stellt alle erforderlichen Informationen zum Nachweis bereit und ermöglicht Überprüfungen einschließlich Inspektionen."
+    }
+  },
+  {
+    "id": "DPA-002",
+    "title": "Data Processing Agreement Analytics Vendor (synthetic)",
+    "clauses": {
+      "documented_instructions": "The processor shall process personal data only on documented instructions from the controller.",
+      "confidentiality_commitment": "Personnel authorised to process personal data are bound by an obligation of confidentiality.",
+      "security_measures": "The processor maintains an information security programme reviewed annually by management.",
+      "subprocessor_authorization": "The processor may engage a sub-processor subject to the controller's prior general written authorisation and a thirty day objection period.",
+      "data_subject_rights_assistance": "The processor assists the controller in responding to data subject requests within ten business days.",
+      "breach_and_dpia_assistance": "The processor notifies the controller without undue delay after becoming aware of a personal data breach.",
+      "deletion_return": "At the controller's election the processor shall delete or return all personal data at the end of the services."
+    }
+  }
+]
