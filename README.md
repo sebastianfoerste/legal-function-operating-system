@@ -88,10 +88,33 @@ three external-counsel referrals across eight synthetic requests.
 | Board reporting | Executive roll-up and request register | `board_pack.py` |
 | Capacity simulation | Queue demand, binding constraints, minimum uplift, approval overflow, and scenario delta | `capacity_simulator.py` |
 | Outcome control tower | Business-time SLAs, wait-state reconciliation, effort calibration, stalled-work queue, and value proxies | `outcome_control_tower.py` |
+| Supervised agent runs | Step-by-step matter runs with evidence and a binding approval step | `agent_run.py` |
+| Requester shared space | Status sharing behind a documented approval gate | `shared_space.py` |
+| DPA clause review | Art. 28 Abs. 3 lit. a–h DSGVO coverage per document | `contract_intelligence.py` |
 
 The workspace outputs add a deterministic request vault, guided workflows, a GC
 command center, operational lists, and a local knowledge portal. Portal answers
 cite approved local resources or return an insufficient-evidence result.
+
+### DPA clause review
+
+The clause playbook checks a processing agreement against each requirement of
+Article 28(3) GDPR and returns `pass`, `review`, or `missing` per requirement,
+with the pinpoint citation and the matched clause excerpt. A `missing`
+requirement counts as a blocker.
+
+```bash
+PYTHONPATH=src python -m legal_function_os.cli \
+  --input data/sample_requests.json --quiet \
+  --dpa-input data/dpa_documents.json \
+  --dpa-output examples/dpa-review.json
+```
+
+The two synthetic agreements in [`data/dpa_documents.json`](data/dpa_documents.json)
+produce fourteen `pass` rows, one `review` row where a security clause never
+references Art. 32 DSGVO or technical and organisational measures, and one
+`missing` row where the Art. 28 Abs. 3 lit. h audit and inspection right is absent.
+The review states a coverage result. It does not state that an agreement is lawful.
 
 ## Specialist deal-desk case studies
 
