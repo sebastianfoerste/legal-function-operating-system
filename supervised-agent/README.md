@@ -1,8 +1,11 @@
-# legal-ops-agent
+# supervised-agent
 
-[![Python CI](https://github.com/sebastianfoerste/legal-ops-agent/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sebastianfoerste/legal-ops-agent/actions/workflows/ci.yml)
+[![CI](https://github.com/sebastianfoerste/legal-function-operating-system/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/sebastianfoerste/legal-function-operating-system/actions/workflows/ci.yml)
 
-CI workflow and deterministic test suite are included.
+The supervised legal-operations agent, formerly published as the standalone
+`legal-ops-agent` repository. It keeps its own Python 3.13 runtime, models, CLI and
+test suite; the badge above is this repository's gate, whose `agent` job runs
+`make -C supervised-agent check` on every change.
 
 See [CASE_STUDY.md](CASE_STUDY.md) for the problem, controls, and limitations.
 Verification manifest: [`docs/verification-manifest.json`](docs/verification-manifest.json).

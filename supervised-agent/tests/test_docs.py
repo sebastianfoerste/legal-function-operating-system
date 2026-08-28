@@ -7,7 +7,9 @@ README_PATH = Path("README.md")
 def test_readme_uses_current_project_name():
     readme = README_PATH.read_text(encoding="utf-8")
 
-    assert "# legal-ops-agent" in readme
+    # The component was renamed when it was consolidated into the legal function
+    # operating system; the standalone legal-ops-agent repository is archived.
+    assert "# supervised-agent" in readme
     assert "LegalAgent" not in readme
 
 

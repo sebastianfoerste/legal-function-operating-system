@@ -11,4 +11,4 @@ The shared JSON Schema normalizes four boundaries:
 3. Synthetic and approved-public source boundaries.
 4. Audit events and optional hash-chain integrity.
 
-The public `legal-ops-agent` repository remains a read-only release surface. `make agent-export` prepares a local path-export branch and does not push it.
+The public `legal-ops-agent` repository is archived and points here. It remains readable as a dated snapshot and receives no fixes. `make agent-export` prepares a local path-export branch and does not push it.
