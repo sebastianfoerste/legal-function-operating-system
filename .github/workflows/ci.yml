@@ -21,5 +21,21 @@ jobs:
         run: make check-generated
       - name: Validate portfolio proof contract
         run: make proof-check
+      - name: Validate shared workflow control contract
+        run: make contract-check
       - name: Check patch whitespace
         run: git diff --check
+
+  agent:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install supervised-agent dependencies
+        run: pip install -r supervised-agent/requirements.lock
+      - name: Install supervised-agent dev tooling
+        run: pip install "black>=25.0" "mypy>=1.14" "pytest>=8.0" "ruff>=0.9"
+      - name: Lint, type-check, test and compile the agent
+        run: make -C supervised-agent check PYTHON=python

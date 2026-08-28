@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PYTHONPATH := src
 
-.PHONY: install test demo board-demo raas-demo check-generated proof-check check clean
+.PHONY: install test demo board-demo raas-demo check-generated proof-check contract-check agent-check agent-export check clean
 
 install:
 	@echo "No third-party dependencies. Pure standard library."
@@ -25,7 +25,16 @@ check-generated:
 proof-check:
 	@$(PYTHON) scripts/check_portfolio_proof.py
 
-check: test check-generated proof-check
+contract-check:
+	@$(PYTHON) scripts/check_shared_contracts.py
+
+agent-check:
+	@$(MAKE) -C supervised-agent check
+
+agent-export:
+	@scripts/export-supervised-agent.sh
+
+check: test check-generated proof-check contract-check agent-check
 	@git diff --check
 
 clean:

@@ -1,0 +1,44 @@
+{
+  "schema_version": "verification-manifest.v1",
+  "repository": "legal-ops-agent",
+  "repository_url": "https://github.com/sebastianfoerste/legal-ops-agent",
+  "quickstart": [
+    "README.md",
+    "docs/verification-guide.md",
+    "examples/matter-run.md",
+    "examples/trust-cockpit-saas-msa-2026-06-30.md"
+  ],
+  "verification_artifacts": [
+    {
+      "path": "docs/demo.png",
+      "label": "Demo screenshot"
+    },
+    {
+      "path": "docs/architecture.svg",
+      "label": "Architecture flow"
+    },
+    {
+      "path": "examples/trust-cockpit-saas-msa-2026-06-30.md",
+      "label": "Dated trust-cockpit run"
+    },
+    {
+      "path": "examples/audit-chain-saas-msa-2026-06-30.json",
+      "label": "Tamper-evident audit-chain run"
+    }
+  ],
+  "validation_commands": [
+    "make check"
+  ],
+  "data_boundary": "Synthetic matters and public regulatory source identifiers only.",
+  "safety_controls": [
+    "source-boundary checks",
+    "tamper-evident audit trail",
+    "human review gate before export"
+  ],
+  "blocked_actions": [
+    "no external delivery",
+    "no regulator filing",
+    "no outreach",
+    "no confidential or privileged source prefixes"
+  ]
+}

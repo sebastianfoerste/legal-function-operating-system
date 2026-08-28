@@ -1,0 +1,50 @@
+# OS / editor
+.DS_Store
+.idea/
+.vscode/
+
+# Python envs
+.venv/
+venv/
+
+# Python caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Test / coverage
+.coverage
+coverage.xml
+htmlcov/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
+
+# Runtime outputs
+*.log
+.companion/
+.telemetry/
+demo_output/
+
+# Local tooling
+.agent/
+.antigravity/
+.npm-local/
+
+# Env
+.env
+.env.local
+
+# CODEx_HYGIENE_BLOCK
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.playwright-mcp/
+.eslintcache
+*.tsbuildinfo
+*.log

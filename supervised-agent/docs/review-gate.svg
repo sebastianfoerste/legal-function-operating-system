@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="617" height="332" viewBox="0 0 617 332" font-family="SFMono-Regular,ui-monospace,Menlo,Consolas,monospace">
+<rect x="0" y="0" width="617" height="332" rx="10" fill="#0d1117"/>
+<rect x="0" y="0" width="617" height="36" rx="10" fill="#161b22"/>
+<rect x="0" y="26" width="617" height="10" fill="#161b22"/>
+<circle cx="20" cy="18" r="6" fill="#ff5f56"/>
+<circle cx="40" cy="18" r="6" fill="#ffbd2e"/>
+<circle cx="60" cy="18" r="6" fill="#27c93f"/>
+<text x="308" y="23" fill="#8b949e" font-size="13" text-anchor="middle">legal-ops-agent — supervised review</text>
+<text x="22.0" y="66" fill="#8b949e" font-size="14" xml:space="preserve">$ </text>
+<text x="38.8" y="66" fill="#3fb950" font-size="14" xml:space="preserve">python -m cli --input matters/saas_msa_deviation.json</text>
+<text x="22.0" y="88" fill="#8b949e" font-size="14" xml:space="preserve">matter: </text>
+<text x="89.2" y="88" fill="#c9d1d9" font-size="14" xml:space="preserve">SaaS MSA deviation review</text>
+<text x="299.2" y="88" fill="#d29922" font-size="14" xml:space="preserve">   urgency: high</text>
+<text x="22.0" y="110" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
+<text x="22.0" y="132" fill="#f0f6fc" font-size="14" font-weight="700" xml:space="preserve">findings:</text>
+<text x="22.0" y="154" fill="#f85149" font-size="14" xml:space="preserve">  [high]   </text>
+<text x="114.4" y="154" fill="#c9d1d9" font-size="14" xml:space="preserve">bespoke commitments: liability cap, audit, roadmap</text>
+<text x="22.0" y="176" fill="#d29922" font-size="14" xml:space="preserve">  [medium] </text>
+<text x="114.4" y="176" fill="#c9d1d9" font-size="14" xml:space="preserve">privacy: customer data categories in scope</text>
+<text x="22.0" y="198" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
+<text x="22.0" y="220" fill="#f0f6fc" font-size="14" font-weight="700" xml:space="preserve">routing: </text>
+<text x="97.6" y="220" fill="#c9d1d9" font-size="14" xml:space="preserve">owner Privacy Counsel · SLA 24h</text>
+<text x="22.0" y="242" fill="#8b949e" font-size="14" xml:space="preserve">  reviewers: Legal Ops, Privacy, Commercial, General Counsel</text>
+<text x="22.0" y="264" fill="#c9d1d9" font-size="14" xml:space="preserve"></text>
+<text x="22.0" y="286" fill="#f0f6fc" font-size="14" font-weight="700" xml:space="preserve">review_state: </text>
+<text x="139.6" y="286" fill="#d29922" font-size="14" xml:space="preserve">needs_review</text>
+<text x="22.0" y="308" fill="#c9d1d9" font-size="14" xml:space="preserve">human-review-gate: </text>
+<text x="181.6" y="308" fill="#3fb950" font-size="14" xml:space="preserve">PASS</text>
+<text x="215.2" y="308" fill="#58a6ff" font-size="14" xml:space="preserve"> — export blocked until approval</text>
+</svg>

@@ -1,0 +1,46 @@
+[project]
+name = "legal-ops-agent"
+version = "0.1.0"
+requires-python = ">=3.13"
+
+[project.optional-dependencies]
+dev = [
+  "black>=25.0",
+  "mypy>=1.14",
+  "pytest>=8.0",
+  "ruff>=0.9",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py313"]
+include = '\.pyi?$'
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+exclude = [
+  ".git",
+  ".venv",
+  "venv",
+  "build",
+  "dist",
+  "node_modules",
+  "__pycache__",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = false
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true
+disable_error_code = ["import-untyped", "union-attr", "operator", "assignment", "return-value"]

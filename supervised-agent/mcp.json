@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "legal-ops-agent": {
+      "command": "python",
+      "args": ["-m", "runtime_agent.app"],
+      "env": {
+        "LEGAL_AGENT_EXTERNAL_MODEL_ENABLED": "false"
+      }
+    }
+  }
+}

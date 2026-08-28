@@ -17,6 +17,8 @@ faces as a company scales:
 All bundled data is synthetic. Every consequential decision requires human review.
 The repository does not provide legal or accounting advice.
 
+The supervised legal-operations agent is maintained in `supervised-agent`. Both components retain their own Python runtime and test gate. Their interoperability boundary is `contracts/legal-workflow-controls.v1.schema.json`, which normalizes review state, approval gates, source boundaries and audit events without changing either component's public interfaces. Run `make contract-check` for the shared contract, `make agent-check` for the agent and `make check` for the combined gate.
+
 ## Two-minute reviewer path
 
 1. Read the [general legal-function case study](CASE_STUDY.md).
