@@ -1,6 +1,6 @@
 """Command-line entry point.
 
-    python -m legal_function_os.cli --input data/sample_requests.json --out examples
+    python -m legal_function_os.cli --out examples
 
 Writes board-pack.md and board-pack.json. Exits non-zero when there are open
 board-attention items or SLA breaches, so it can gate a reporting pipeline.
@@ -14,6 +14,7 @@ import sys
 from pathlib import Path
 
 from legal_function_os.agent_run import build_agent_runs
+from legal_function_os.bundled import bundled_path
 from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.capacity_simulator import (
     build_capacity_simulation,
@@ -31,7 +32,11 @@ from legal_function_os.outcome_control_tower import (
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Legal function operating system: board pack.")
-    parser.add_argument("--input", required=True, help="Path to a JSON array of legal requests.")
+    parser.add_argument(
+        "--input",
+        default=None,
+        help="Path to a JSON array of legal requests. Defaults to the bundled synthetic set.",
+    )
     parser.add_argument("--out", default=None, help="Output directory for the board pack.")
     parser.add_argument("--period", default="current period", help="Reporting period label.")
     parser.add_argument(
@@ -102,7 +107,8 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    requests = json.loads(Path(args.input).read_text(encoding="utf-8"))
+    source = Path(args.input) if args.input else bundled_path("sample_requests.json")
+    requests = json.loads(source.read_text(encoding="utf-8"))
     if not isinstance(requests, list):
         print("Input must be a JSON array of requests.", file=sys.stderr)
         return 2

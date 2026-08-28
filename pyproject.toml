@@ -19,3 +19,6 @@ raas-deal-desk = "legal_function_os.raas_cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+legal_function_os = ["data/*.json"]

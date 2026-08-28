@@ -10,7 +10,7 @@ from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.cli import main as cli_main
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUESTS = json.loads((ROOT / "data" / "sample_requests.json").read_text(encoding="utf-8"))
+REQUESTS = json.loads((ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json").read_text(encoding="utf-8"))
 
 
 def _req(rid):
@@ -129,11 +129,11 @@ class BoardPack(unittest.TestCase):
 
     def test_cli_fail_on_breach_gates_only_missed_slas(self):
         self.assertEqual(
-            cli_main(["--input", str(ROOT / "data" / "sample_requests.json"), "--quiet"]),
+            cli_main(["--input", str(ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json"), "--quiet"]),
             0,
         )
         self.assertEqual(
-            cli_main(["--input", str(ROOT / "data" / "sample_requests.json"), "--quiet", "--fail-on-breach"]),
+            cli_main(["--input", str(ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json"), "--quiet", "--fail-on-breach"]),
             1,
         )
 

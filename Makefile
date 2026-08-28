@@ -13,10 +13,10 @@ test:
 demo: board-demo raas-demo
 
 board-demo:
-	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.cli --input data/sample_requests.json --out examples --period "Q2 2026 (synthetic)" --capacity-scenarios data/capacity_scenarios.json --capacity-output examples --events-input data/service_events.json --outcome-config data/outcome_config.json --outcome-output examples
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.cli --input src/legal_function_os/data/sample_requests.json --out examples --period "Q2 2026 (synthetic)" --capacity-scenarios src/legal_function_os/data/capacity_scenarios.json --capacity-output examples --events-input src/legal_function_os/data/service_events.json --outcome-config src/legal_function_os/data/outcome_config.json --outcome-output examples
 
 raas-demo:
-	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.raas_cli --input data/raas_deal.json --out examples --quiet
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.raas_cli --input src/legal_function_os/data/raas_deal.json --out examples --quiet
 	@echo "Wrote examples/raas-deal-pack.md, .json, reviewer HTML, visual SVG, and source manifest."
 
 site:

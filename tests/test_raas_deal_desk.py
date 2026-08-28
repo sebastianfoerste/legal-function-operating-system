@@ -22,7 +22,7 @@ from legal_function_os.raas_deal_desk import (
 from legal_function_os.raas_rules import _build_signing_gate
 
 ROOT = Path(__file__).resolve().parents[1]
-DEAL = json.loads((ROOT / "data" / "raas_deal.json").read_text(encoding="utf-8"))
+DEAL = json.loads((ROOT / "src" / "legal_function_os" / "data" / "raas_deal.json").read_text(encoding="utf-8"))
 
 
 class RaaSDealDeskTests(unittest.TestCase):
@@ -172,7 +172,7 @@ class RaaSDealDeskTests(unittest.TestCase):
                 raas_cli_main(
                     [
                         "--input",
-                        str(ROOT / "data" / "raas_deal.json"),
+                        str(ROOT / "src" / "legal_function_os" / "data" / "raas_deal.json"),
                         "--out",
                         tmp_dir,
                         "--quiet",
@@ -184,7 +184,7 @@ class RaaSDealDeskTests(unittest.TestCase):
                 raas_cli_main(
                     [
                         "--input",
-                        str(ROOT / "data" / "raas_deal.json"),
+                        str(ROOT / "src" / "legal_function_os" / "data" / "raas_deal.json"),
                         "--quiet",
                         "--fail-on-blocker",
                     ]

@@ -13,10 +13,10 @@ ROOT = Path(__file__).resolve().parents[1]
 class CapacitySimulationTests(unittest.TestCase):
     def setUp(self):
         self.requests = json.loads(
-            (ROOT / "data" / "sample_requests.json").read_text(encoding="utf-8")
+            (ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json").read_text(encoding="utf-8")
         )
         self.scenarios = json.loads(
-            (ROOT / "data" / "capacity_scenarios.json").read_text(encoding="utf-8")
+            (ROOT / "src" / "legal_function_os" / "data" / "capacity_scenarios.json").read_text(encoding="utf-8")
         )
 
     def test_simulation_surfaces_and_reduces_constraints(self):

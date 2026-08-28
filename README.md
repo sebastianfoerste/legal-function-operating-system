@@ -25,6 +25,16 @@ The supervised legal-operations agent is maintained in `supervised-agent`. Both 
 the deal room, outcome control tower, decision cockpit and architecture flow are
 published from this repository. No clone required.
 
+Or run it in one command, also without cloning:
+
+```bash
+uvx --from git+https://github.com/sebastianfoerste/legal-function-operating-system legal-function-os
+```
+
+That prints the board operations pack from the bundled synthetic requests.
+`raas-deal-desk` is the second entry point and prints the deal decision pack.
+Both accept `--input` to run against your own JSON instead.
+
 Locally:
 
 1. Read the [general legal-function case study](CASE_STUDY.md).
@@ -111,12 +121,12 @@ requirement counts as a blocker.
 
 ```bash
 PYTHONPATH=src python -m legal_function_os.cli \
-  --input data/sample_requests.json --quiet \
-  --dpa-input data/dpa_documents.json \
+  --input src/legal_function_os/data/sample_requests.json --quiet \
+  --dpa-input src/legal_function_os/data/dpa_documents.json \
   --dpa-output examples/dpa-review.json
 ```
 
-The two synthetic agreements in [`data/dpa_documents.json`](data/dpa_documents.json)
+The two synthetic agreements in [`src/legal_function_os/data/dpa_documents.json`](src/legal_function_os/data/dpa_documents.json)
 produce fourteen `pass` rows, one `review` row where a security clause never
 references Art. 32 DSGVO or technical and organisational measures, and one
 `missing` row where the Art. 28 Abs. 3 lit. h audit and inspection right is absent.
@@ -190,7 +200,7 @@ The specialist signing gate can be used in a pipeline:
 
 ```bash
 PYTHONPATH=src python -m legal_function_os.raas_cli \
-  --input data/raas_deal.json \
+  --input src/legal_function_os/data/raas_deal.json \
   --out examples \
   --fail-on-blocker
 ```
@@ -214,14 +224,18 @@ src/legal_function_os/
   raas_sources.py          dated primary-source registry
   raas_renderers.py        Markdown, HTML, SVG, and JSON outputs
   raas_cli.py              artifact generation and blocker gate
-data/
-  sample_requests.json     synthetic general legal requests
-  service_events.json      versioned synthetic request lifecycle
-  outcome_config.json      business calendar and value assumptions
-  raas_deal.json           synthetic specialist transaction
+  bundled.py               locates the synthetic data shipped in the wheel
+  data/                    synthetic data, packaged so the demo runs uninstalled
+    sample_requests.json   synthetic general legal requests
+    service_events.json    versioned synthetic request lifecycle
+    outcome_config.json    business calendar and value assumptions
+    capacity_scenarios.json  illustrative capacity constraints
+    dpa_documents.json     synthetic Art. 28 GDPR processing agreements
+    raas_deal.json         synthetic specialist transaction
 examples/                  committed reviewer and machine-readable outputs
+site/                      generated Pages site (not committed)
 tests/                     deterministic standard-library tests
-scripts/                   artifact and portfolio-proof verification
+scripts/                   artifact, site, and contract verification
 ```
 
 ## Controls

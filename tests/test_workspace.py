@@ -5,7 +5,7 @@ from pathlib import Path
 from legal_function_os.workspace import build_legal_function_workspace
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUESTS = json.loads((ROOT / "data" / "sample_requests.json").read_text(encoding="utf-8"))
+REQUESTS = json.loads((ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json").read_text(encoding="utf-8"))
 
 
 class LegalFunctionWorkspace(unittest.TestCase):

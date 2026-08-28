@@ -31,19 +31,19 @@ def main() -> int:
         board_status = board_cli(
             [
                 "--input",
-                str(ROOT / "data" / "sample_requests.json"),
+                str(ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json"),
                 "--out",
                 str(output),
                 "--period",
                 "Q2 2026 (synthetic)",
                 "--capacity-scenarios",
-                str(ROOT / "data" / "capacity_scenarios.json"),
+                str(ROOT / "src" / "legal_function_os" / "data" / "capacity_scenarios.json"),
                 "--capacity-output",
                 str(output),
                 "--events-input",
-                str(ROOT / "data" / "service_events.json"),
+                str(ROOT / "src" / "legal_function_os" / "data" / "service_events.json"),
                 "--outcome-config",
-                str(ROOT / "data" / "outcome_config.json"),
+                str(ROOT / "src" / "legal_function_os" / "data" / "outcome_config.json"),
                 "--outcome-output",
                 str(output),
                 "--quiet",
@@ -52,7 +52,7 @@ def main() -> int:
         raas_status = raas_cli(
             [
                 "--input",
-                str(ROOT / "data" / "raas_deal.json"),
+                str(ROOT / "src" / "legal_function_os" / "data" / "raas_deal.json"),
                 "--out",
                 str(output),
                 "--quiet",
