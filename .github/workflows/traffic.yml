@@ -5,10 +5,15 @@ name: traffic-snapshot
 # is presented moved anything. Results land on the orphan `traffic-stats` branch so
 # they never touch main's history.
 #
-# The traffic endpoints need a token with repository admin rights. The built-in
-# GITHUB_TOKEN does not have them and returns 403, so views and clones are recorded
-# as null until a personal access token with the `repo` scope is stored as the
-# TRAFFIC_TOKEN secret. Stars and the timeline are captured either way.
+# The traffic endpoints need repository Administration: read. The built-in
+# GITHUB_TOKEN does not have it and returns 403, so views and clones are recorded
+# as null until a token is stored as the TRAFFIC_TOKEN secret.
+#
+# Use a FINE-GRAINED personal access token, not a classic one: scope it to this
+# repository only, grant Administration: read (plus Metadata: read, which is
+# mandatory), and set a short expiry. A classic `repo` token would carry write
+# access to every repository the owner can reach, which this job never needs.
+# Stars and the timeline are captured either way.
 
 on:
   schedule:
