@@ -1,0 +1,134 @@
+{
+  "schema": "legal-ops-agent.pilot-record.v1",
+  "generated_at_utc": "2026-01-01T11:00:00Z",
+  "protocol": "docs/PILOT_PROTOCOL.md",
+  "matter_title": "SaaS MSA deviation review",
+  "matter_id": "synthetic-worked-example",
+  "round_id": "example",
+  "assessment_id": "loa_f24a4bdcd9aa0f21",
+  "review_source": "agent_rules",
+  "review_sha256": "747810dbde6a6b0aa1f352f470c998cdd9813a12c72c28f187feb007dea7df8d",
+  "documents": [],
+  "recommendations": [
+    {
+      "finding_id": "change-1",
+      "locator": "finding:1",
+      "proposed_text": "Consequential commitments require written approval and source-bound review.",
+      "rationale": "Confirm DPA roles, transfer basis, subprocessors and deletion mechanics.",
+      "evidence": "business contact data, customer workspace metadata"
+    },
+    {
+      "finding_id": "change-2",
+      "locator": "finding:2",
+      "proposed_text": "Consequential commitments require written approval and source-bound review.",
+      "rationale": "Record each commitment in the customer obligations register before approval.",
+      "evidence": "higher liability cap for security incidents, controlled annual audit right, non-binding roadmap review"
+    }
+  ],
+  "sessions": [
+    {
+      "session_id": "747810dbde6a-R00",
+      "assessment_id": "loa_f24a4bdcd9aa0f21",
+      "final_review_state": "revision_requested",
+      "export_allowed": false,
+      "timing": {
+        "started_at_utc": "2026-01-01T10:00:00Z",
+        "reviewable_at_utc": "2026-01-01T10:15:00Z",
+        "closed_at_utc": "2026-01-01T10:30:00Z",
+        "draft_preparation_seconds": 1.0,
+        "minutes_to_reviewable_draft": 15.0,
+        "elapsed_review_minutes": 30.0,
+        "declared_review_minutes": null,
+        "review_minutes": 30.0,
+        "review_minutes_source": "audit_timestamps"
+      },
+      "audit_chain": {
+        "verified": true,
+        "event_count": 9,
+        "chain_root_hash": "bb35a56896f82713112fe8bb8a3df1302a5037c75bd822655e6b7842ed6d9bee",
+        "broken_at_seq": null,
+        "reason": "chain intact"
+      },
+      "accepted": [],
+      "corrected": [
+        {
+          "finding_id": "change-1",
+          "decision": "corrected",
+          "usefulness": 3,
+          "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a correction requires.",
+          "proposed_text": "Consequential commitments require written approval and source-bound review.",
+          "corrected_text": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reviewer's replacement wording."
+        }
+      ],
+      "rejected": [
+        {
+          "finding_id": "change-2",
+          "decision": "rejected",
+          "usefulness": 2,
+          "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a rejection requires.",
+          "proposed_text": "Consequential commitments require written approval and source-bound review.",
+          "corrected_text": null
+        }
+      ],
+      "material_omissions": [
+        "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for an issue the draft missed."
+      ],
+      "harness_fields": {
+        "matter_id": "synthetic-worked-example",
+        "round_id": "example",
+        "review_sha256": "747810dbde6a6b0aa1f352f470c998cdd9813a12c72c28f187feb007dea7df8d",
+        "reviewer_id": "R00",
+        "reviewer_profile": "SYNTHETIC EXAMPLE, not a reviewer's view. No person reviewed anything.",
+        "evidence_class": "synthetic_example",
+        "minutes_to_reviewable_draft": 15.0,
+        "review_minutes": 30.0,
+        "decisions": [
+          {
+            "finding_id": "change-1",
+            "decision": "corrected",
+            "usefulness": 3,
+            "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a correction requires."
+          },
+          {
+            "finding_id": "change-2",
+            "decision": "rejected",
+            "usefulness": 2,
+            "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a rejection requires."
+          }
+        ],
+        "material_omissions": [
+          "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for an issue the draft missed."
+        ],
+        "workflow_feedback": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for feedback on the workflow."
+      },
+      "harness_session": null
+    }
+  ],
+  "summary": {
+    "measured": false,
+    "reason": "no session by a practising lawyer other than the author is recorded",
+    "sessions": 0,
+    "reviewers": 0,
+    "sessions_excluded": 1,
+    "findings_rated": 0,
+    "accepted_rate": null,
+    "corrected_rate": null,
+    "rejected_rate": null,
+    "mean_usefulness": null,
+    "median_review_minutes": null,
+    "median_elapsed_review_minutes": null,
+    "sessions_with_declared_review_time": 0,
+    "median_minutes_to_reviewable_draft": null,
+    "material_omissions": 0
+  },
+  "acceptance": {
+    "status": "not_measured",
+    "results": []
+  },
+  "claim": "No reviewer pilot is evidenced: no session by a practising lawyer other than the author is recorded.",
+  "claim_limits": [
+    "Synthetic documents only. No client, matter or confidential material was reviewed.",
+    "One matter. The recommendations rated are this agent's rule-based workflow recommendations; the agent does not read contract text.",
+    "Not an enterprise implementation. No adoption inside an organisation is recorded."
+  ]
+}

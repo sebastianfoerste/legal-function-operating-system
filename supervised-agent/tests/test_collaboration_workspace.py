@@ -38,9 +38,19 @@ def test_playbook_changes_and_docx_remain_review_gated(tmp_path) -> None:
     change_set = build_change_set(assessment, source)
     with pytest.raises(ValueError, match="every proposed change to be decided"):
         render_annotated_docx(change_set, source, tmp_path / "blocked.docx")
-    change_set = decide_change(change_set, change_set.changes[0].id, "accepted")
+    change_set = decide_change(
+        change_set, change_set.changes[0].id, "accepted", reviewer="Privacy Counsel"
+    )
+    with pytest.raises(ValueError, match="needs a written reason"):
+        decide_change(change_set, change_set.changes[1].id, "rejected", reviewer="Privacy Counsel")
     for change in list(change_set.changes[1:]):
-        change_set = decide_change(change_set, change.id, "rejected")
+        change_set = decide_change(
+            change_set,
+            change.id,
+            "rejected",
+            reviewer="Privacy Counsel",
+            reason="The playbook position does not fit this synthetic finding.",
+        )
     with pytest.raises(ValueError, match="must not overwrite"):
         render_annotated_docx(change_set, source, source)
     output = render_annotated_docx(change_set, source, tmp_path / "reviewed.docx")
@@ -64,11 +74,43 @@ def test_docx_changes_are_inserted_before_the_final_section_marker(tmp_path) -> 
     write_source_docx(source, include_nested_section=True)
     change_set = build_change_set(assessment, source)
     for change in list(change_set.changes):
-        change_set = decide_change(change_set, change.id, "accepted")
+        change_set = decide_change(change_set, change.id, "accepted", reviewer="Privacy Counsel")
     output = render_annotated_docx(change_set, source, tmp_path / "reviewed.docx")
     with zipfile.ZipFile(output) as package:
         document = package.read("word/document.xml").decode()
     assert document.rfind("<w:ins") < document.rfind("<w:sectPr")
+
+
+def test_corrected_change_exports_the_reviewer_wording_under_the_reviewer_name(tmp_path) -> None:
+    assessment = assess_matter(build_sample_matter())
+    source = tmp_path / "source.docx"
+    write_source_docx(source)
+    change_set = build_change_set(assessment, source)
+    first, *rest = change_set.changes
+    with pytest.raises(ValueError, match="corrected text belongs"):
+        decide_change(change_set, first.id, "corrected", reviewer="R01", reason="Too broad.")
+    with pytest.raises(ValueError, match="names its reviewer"):
+        decide_change(change_set, first.id, "accepted", reviewer=" ")
+    change_set = decide_change(
+        change_set,
+        first.id,
+        "corrected",
+        reviewer="R01",
+        reason="Too broad for a synthetic low-risk commitment.",
+        corrected_text="Commitments above the agreed threshold require written approval.",
+    )
+    for change in rest:
+        change_set = decide_change(change_set, change.id, "accepted", reviewer="R01")
+    output = render_annotated_docx(change_set, source, tmp_path / "reviewed.docx")
+    with zipfile.ZipFile(output) as package:
+        document = package.read("word/document.xml").decode()
+    root = ElementTree.fromstring(document)
+    namespace = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
+    insertions = root.findall(".//w:ins", namespace)
+    assert "".join(insertions[0].itertext()) == (
+        "Commitments above the agreed threshold require written approval."
+    )
+    assert {node.get(f"{{{namespace['w']}}}author") for node in insertions} == {"R01"}
 
 
 def test_matter_lists_require_evidence_and_timeline_is_hash_chained() -> None:

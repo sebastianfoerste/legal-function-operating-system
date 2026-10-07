@@ -3,11 +3,13 @@ from __future__ import annotations
 import hashlib
 import json
 from datetime import datetime, timezone
+from pathlib import Path
 
 from models import (
     ControlCheck,
     ControlStatus,
     CustomerCommitmentRecord,
+    DocumentVerificationRecord,
     LegalOpsAssessment,
     MatterIntake,
     ReviewDecision,
@@ -16,6 +18,7 @@ from models import (
     SourceVerificationRecord,
 )
 from src.audit_chain import append_audit_event
+from src.matter_documents import FAILED_STATUSES, verify_matter_documents
 from src.source_verification import verify_source_refs
 
 SYSTEM_ACTOR = "LegalOps Agent"
@@ -25,15 +28,32 @@ def utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
+def canonical_matter_json(matter: MatterIntake) -> str:
+    """The intake as hashed for ids and digests."""
+
+    fields = matter.model_dump(mode="json")
+    # Intakes written before documents existed keep the ids and digests they always had.
+    for optional in ("matter_id", "round_id", "documents"):
+        if not fields[optional]:
+            del fields[optional]
+    return json.dumps(fields, sort_keys=True)
+
+
 def stable_assessment_id(matter: MatterIntake) -> str:
-    payload = json.dumps(matter.model_dump(mode="json"), sort_keys=True)
+    payload = canonical_matter_json(matter)
     return f"loa_{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
+
+
+def all_source_refs(matter: MatterIntake) -> list[str]:
+    """Every reference under the source boundary: the matter's own and its documents'."""
+
+    return [*matter.source_refs, *(document.source_ref for document in matter.documents)]
 
 
 def blocked_source_refs(matter: MatterIntake) -> list[str]:
     return [
         record.source_ref
-        for record in verify_source_refs(matter.source_refs)
+        for record in verify_source_refs(all_source_refs(matter))
         if record.status == "blocker"
     ]
 
@@ -41,7 +61,7 @@ def blocked_source_refs(matter: MatterIntake) -> list[str]:
 def unapproved_source_refs(matter: MatterIntake) -> list[str]:
     return [
         record.source_ref
-        for record in verify_source_refs(matter.source_refs)
+        for record in verify_source_refs(all_source_refs(matter))
         if record.status == "warning" and record.category != "missing"
     ]
 
@@ -64,9 +84,31 @@ def build_sample_matter() -> MatterIntake:
     )
 
 
-def generate_findings(matter: MatterIntake) -> list[RiskFinding]:
+def generate_findings(
+    matter: MatterIntake,
+    document_verifications: list[DocumentVerificationRecord] | None = None,
+) -> list[RiskFinding]:
     findings: list[RiskFinding] = []
     blocked_refs = blocked_source_refs(matter)
+    failed_documents = [
+        record for record in document_verifications or [] if record.status in FAILED_STATUSES
+    ]
+
+    if failed_documents:
+        findings.append(
+            RiskFinding(
+                category="document_integrity",
+                severity="blocker",
+                summary="A matter document does not match the version the intake recorded.",
+                evidence=", ".join(
+                    f"{record.document_id}: {record.status}" for record in failed_documents
+                ),
+                recommended_action=(
+                    "Restore the recorded document version or record the new hash at intake "
+                    "before any review starts."
+                ),
+            )
+        )
 
     if blocked_refs:
         findings.append(
@@ -151,10 +193,38 @@ def generate_findings(matter: MatterIntake) -> list[RiskFinding]:
     return findings
 
 
+def _document_integrity_control(
+    document_verifications: list[DocumentVerificationRecord],
+) -> ControlCheck:
+    failed = [record for record in document_verifications if record.status in FAILED_STATUSES]
+    unchecked = [record for record in document_verifications if record.status == "not_checked"]
+    status: ControlStatus
+    if failed:
+        status = "blocker"
+        summary = "A matter document failed hash verification."
+        subjects = failed
+    elif unchecked:
+        status = "warning"
+        summary = "Matter documents were not checked against their recorded hashes."
+        subjects = unchecked
+    else:
+        status = "pass"
+        summary = "Every matter document matches its recorded hash."
+        subjects = document_verifications
+    return ControlCheck(
+        control_id="document-integrity",
+        status=status,
+        summary=summary,
+        evidence=", ".join(f"{record.document_id}: {record.status}" for record in subjects),
+        owner_role="Legal Operations",
+    )
+
+
 def generate_controls(
     matter: MatterIntake,
     findings: list[RiskFinding],
     source_verifications: list[SourceVerificationRecord],
+    document_verifications: list[DocumentVerificationRecord] | None = None,
 ) -> list[ControlCheck]:
     blocked_refs = [
         record.source_ref for record in source_verifications if record.status == "blocker"
@@ -167,10 +237,10 @@ def generate_controls(
         source_boundary_status: ControlStatus = "blocker"
         source_boundary_summary = "Blocked source references prevent export."
         source_boundary_evidence = ", ".join(blocked_refs)
-    elif matter.source_refs and not warning_refs:
+    elif all_source_refs(matter) and not warning_refs:
         source_boundary_status = "pass"
         source_boundary_summary = "Matter source boundary is explicit."
-        source_boundary_evidence = ", ".join(matter.source_refs)
+        source_boundary_evidence = ", ".join(all_source_refs(matter))
     elif warning_refs:
         source_boundary_status = "warning"
         source_boundary_summary = "Source references require approval before reviewer reliance."
@@ -196,6 +266,9 @@ def generate_controls(
             owner_role="General Counsel",
         ),
     ]
+
+    if document_verifications:
+        controls.append(_document_integrity_control(document_verifications))
 
     if any(finding.severity == "blocker" for finding in findings):
         controls.append(
@@ -276,18 +349,25 @@ def route_matter(matter: MatterIntake, findings: list[RiskFinding]) -> RoutingDe
     )
 
 
-def assess_matter(matter: MatterIntake) -> LegalOpsAssessment:
-    source_verifications = verify_source_refs(matter.source_refs)
-    findings = generate_findings(matter)
+def assess_matter(
+    matter: MatterIntake,
+    *,
+    documents_root: Path | None = None,
+    created_at: str | None = None,
+) -> LegalOpsAssessment:
+    source_verifications = verify_source_refs(all_source_refs(matter))
+    document_verifications = verify_matter_documents(matter, documents_root)
+    findings = generate_findings(matter, document_verifications)
     routing = route_matter(matter, findings)
-    created_at = utc_now_iso()
+    created_at = created_at or utc_now_iso()
     return LegalOpsAssessment(
         assessment_id=stable_assessment_id(matter),
         created_at_utc=created_at,
         matter=matter,
         findings=findings,
-        controls=generate_controls(matter, findings, source_verifications),
+        controls=generate_controls(matter, findings, source_verifications, document_verifications),
         source_verifications=source_verifications,
+        document_verifications=document_verifications,
         customer_commitments=build_customer_commitment_register(matter),
         routing=routing,
         review_state="needs_review",
@@ -298,6 +378,21 @@ def assess_matter(matter: MatterIntake) -> LegalOpsAssessment:
             actor=SYSTEM_ACTOR,
             note="Assessment created from typed matter intake.",
             timestamp_utc=created_at,
+            # Binds the reviewed document versions into the chain from its first link.
+            details=(
+                {
+                    "documents": [
+                        {
+                            "document_id": record.document_id,
+                            "sha256": record.expected_sha256,
+                            "status": record.status,
+                        }
+                        for record in document_verifications
+                    ]
+                }
+                if document_verifications
+                else None
+            ),
         ),
     )
 
@@ -305,15 +400,22 @@ def assess_matter(matter: MatterIntake) -> LegalOpsAssessment:
 def apply_review_decision(
     assessment: LegalOpsAssessment,
     decision: ReviewDecision,
+    *,
+    decided_at: str | None = None,
 ) -> LegalOpsAssessment:
     blocker_present = any(finding.severity == "blocker" for finding in assessment.findings)
-    export_allowed = decision.state == "approved" and not blocker_present
+    # Documents an intake pins by hash must have been checked, not merely listed.
+    documents_verified = all(
+        record.status == "verified" for record in assessment.document_verifications
+    )
+    export_allowed = decision.state == "approved" and not blocker_present and documents_verified
     audit_events = append_audit_event(
         assessment.audit_events,
         event_type="review_decision_applied",
         actor=decision.reviewer,
         note=decision.note,
-        timestamp_utc=utc_now_iso(),
+        timestamp_utc=decided_at or utc_now_iso(),
+        details={"state": decision.state},
     )
     payload = assessment.model_dump(mode="python")
     payload.update(

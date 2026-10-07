@@ -186,6 +186,49 @@ flowchart TD
   F --> H[Artifact manifest and review packet]
 ```
 
+## Reviewer pilot
+
+The agent can carry one synthetic contracting matter through intake, assessment,
+lawyer review, revision and export, and record what a reviewer did with it. No
+session has been held; this section describes what exists.
+
+- **Documents.** An intake references documents by id, kind, path and SHA-256 hash.
+  A changed, missing or out-of-root file is a blocker, and a review draft is prepared
+  only when every document matches. The two Northwind intakes under
+  [`examples/matters/`](examples/matters) point at the synthetic matter held in
+  `contract-review-eval-harness` and copy none of it.
+- **Decisions.** Each recommendation is accepted, corrected or rejected by a reviewer
+  recorded under a pseudonym. A correction or rejection needs a written reason. Every
+  decision is an event in the hash-chained audit trail.
+- **Timings.** Time to a reviewable draft and elapsed review time are read from the
+  audit events of each session. A reviewer may also declare active minutes; the record
+  states which figure it reports.
+- **Verification.** At export each session's events are replayed onto the draft, and a
+  session file that differs from its replay is refused. Outside the pilot, an intake
+  that pins documents by hash cannot be exported until those documents are verified
+  (`--documents-root`).
+- **Recommendations.** The agent does not read contract text, and its own rules yield
+  one recommendation on the Northwind intakes. `prepare --harness-review` therefore
+  takes a model review captured by `contract-review-eval-harness` as the set a lawyer
+  rates: one recommendation per finding, under the finding's id, bound to the
+  harness's hash of that review. The model and setup behind it are not shown to the
+  reviewer.
+- **Record.** `python -m src.pilot_cli export` writes a pilot record per draft: per
+  session the accepted, corrected and rejected recommendations with reasons, material
+  omissions and timings. For a session on a harness review it also writes a reviewer
+  session in the harness's own format, which the harness can check against that review.
+
+The record states the claim it supports and where the rated recommendations came
+from. Sessions by practising lawyers on synthetic documents evidence a user pilot with
+its sample size. They are no evidence of an enterprise implementation. On a harness
+review, the legal substance under review is the model's and the supervised workflow is
+this agent's.
+
+See [docs/PILOT_PROTOCOL.md](docs/PILOT_PROTOCOL.md) for the task, the criteria, what
+is recorded, consent and pseudonymity. The record under
+[`examples/pilot/synthetic-worked-example/`](examples/pilot/synthetic-worked-example)
+is fabricated and labelled as such in its data.
+
 ## Design principles
 
 - Human review before consequential use.
@@ -208,6 +251,11 @@ flowchart TD
 - [`src/audit_chain.py`](src/audit_chain.py): Tamper-evident hash chain builder for the audit trail.
 - [`src/review_packet.py`](src/review_packet.py): Markdown review-packet renderer for legal sign-off.
 - [`src/cli.py`](src/cli.py): Fixture-driven command line entry point.
+- [`src/matter_documents.py`](src/matter_documents.py): Hash verification for documents an intake references in place.
+- [`src/harness_review.py`](src/harness_review.py): A model review captured by contract-review-eval-harness, as the recommendations a lawyer rates.
+- [`src/pilot_session.py`](src/pilot_session.py): Reviewer sessions with per-recommendation decisions, reasons and timings in the audit trail.
+- [`src/pilot_record.py`](src/pilot_record.py): Pilot record export and the claim it supports.
+- [`src/pilot_cli.py`](src/pilot_cli.py): Command line for one reviewer pilot, from draft to record.
 - [`examples/matters/`](examples/matters): Synthetic SaaS, DPA, AI-vendor, product and regulatory-monitoring fixtures.
 - [`examples/clauses/`](examples/clauses): Synthetic redacted clause fixtures.
 - [`runtime_agent/app.py`](runtime_agent/app.py): Small HTTP canary for health checks and local workflow calls.

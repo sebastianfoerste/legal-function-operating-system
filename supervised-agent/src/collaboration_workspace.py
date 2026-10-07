@@ -4,18 +4,21 @@ from __future__ import annotations
 
 import hashlib
 import html
-import json
 import os
 import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TypedDict
-from xml.sax.saxutils import escape
+from typing import Literal, TypedDict
+from xml.sax.saxutils import escape, quoteattr
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from models import LegalOpsAssessment, compute_audit_event_hash
+from src.legal_ops import canonical_matter_json
 from src.source_verification import verify_source_refs
+
+ChangeDecision = Literal["pending", "accepted", "corrected", "rejected"]
+DECIDED: frozenset[str] = frozenset({"accepted", "corrected", "rejected"})
 
 
 class DocumentChange(BaseModel):
@@ -25,7 +28,37 @@ class DocumentChange(BaseModel):
     proposed_text: str
     rationale: str
     source_refs: list[str]
-    decision: str = "pending"
+    decision: ChangeDecision = "pending"
+    reviewer: str | None = None
+    reason: str = ""
+    corrected_text: str | None = None
+    usefulness: int | None = Field(default=None, ge=1, le=4)
+    decided_at: str | None = None
+
+    @model_validator(mode="after")
+    def validate_decision(self) -> "DocumentChange":
+        if self.decision == "pending":
+            return self
+        if not (self.reviewer or "").strip():
+            raise ValueError(f"{self.id}: a decided change names its reviewer")
+        # An acceptance needs no explanation. A rejection or correction without one
+        # loses the half of the record that could change the system.
+        if self.decision != "accepted" and not self.reason.strip():
+            raise ValueError(f"{self.id}: a {self.decision} change needs a written reason")
+        if (self.decision == "corrected") != bool((self.corrected_text or "").strip()):
+            raise ValueError(
+                f"{self.id}: corrected text belongs to a corrected change, and only there"
+            )
+        return self
+
+    def reviewed_text(self) -> str | None:
+        """The wording that survives review, or None when the change was rejected."""
+
+        if self.decision == "accepted":
+            return self.proposed_text
+        if self.decision == "corrected":
+            return self.corrected_text
+        return None
 
 
 class DocumentChangeSet(BaseModel):
@@ -121,7 +154,7 @@ def build_change_set(
     source = (
         source_document.read_bytes()
         if source_document
-        else json.dumps(assessment.matter.model_dump(mode="json"), sort_keys=True).encode()
+        else canonical_matter_json(assessment.matter).encode()
     )
     changes = [
         DocumentChange(
@@ -145,17 +178,37 @@ def build_change_set(
 
 
 def decide_change(
-    change_set: DocumentChangeSet, change_id: str, decision: str
+    change_set: DocumentChangeSet,
+    change_id: str,
+    decision: str,
+    *,
+    reviewer: str,
+    reason: str = "",
+    corrected_text: str | None = None,
+    usefulness: int | None = None,
+    decided_at: str | None = None,
 ) -> DocumentChangeSet:
-    if decision not in {"accepted", "rejected"}:
-        raise ValueError("change decision must be accepted or rejected")
-    updated = change_set.model_copy(deep=True)
-    change = next((candidate for candidate in updated.changes if candidate.id == change_id), None)
-    if change is None:
+    if decision not in DECIDED:
+        raise ValueError("change decision must be accepted, corrected or rejected")
+    index = next(
+        (i for i, candidate in enumerate(change_set.changes) if candidate.id == change_id), None
+    )
+    if index is None:
         raise ValueError(f"unknown change: {change_id}")
-    change.decision = decision
+    decided = change_set.changes[index].model_dump()
+    decided.update(
+        decision=decision,
+        reviewer=reviewer,
+        reason=reason.strip(),
+        corrected_text=corrected_text,
+        usefulness=usefulness,
+        decided_at=decided_at,
+    )
+    updated = change_set.model_copy(deep=True)
+    # Rebuilt through validation: assigning to the fields would skip the reason rule.
+    updated.changes[index] = DocumentChange.model_validate(decided)
     updated.export_allowed = bool(updated.changes) and all(
-        item.decision in {"accepted", "rejected"} for item in updated.changes
+        item.decision in DECIDED for item in updated.changes
     )
     return updated
 
@@ -330,9 +383,9 @@ def render_annotated_docx(change_set: DocumentChangeSet, source: Path, output: P
         raise ValueError("source DOCX digest does not match the reviewed change set")
     change_timestamp = _reproducible_now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     paragraphs = "".join(
-        f"<w:p><w:ins w:author='Legal reviewer' w:date='{change_timestamp}'><w:r><w:t>{escape(change.proposed_text)}</w:t></w:r></w:ins></w:p>"
+        f"<w:p><w:ins w:author={quoteattr(change.reviewer or 'Legal reviewer')} w:date='{change_timestamp}'><w:r><w:t>{escape(text)}</w:t></w:r></w:ins></w:p>"
         for change in change_set.changes
-        if change.decision == "accepted"
+        if (text := change.reviewed_text()) is not None
     )
     output.parent.mkdir(parents=True, exist_ok=True)
     with (

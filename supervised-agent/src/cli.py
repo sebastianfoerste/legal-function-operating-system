@@ -37,6 +37,11 @@ def load_matter(path: Path | None) -> MatterIntake:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Run the LegalOps Agent workflow.")
     parser.add_argument("--input", type=Path, help="Path to an approved JSON matter intake file.")
+    parser.add_argument(
+        "--documents-root",
+        type=Path,
+        help="Directory the intake's document paths are relative to; enables hash checks.",
+    )
     parser.add_argument("--json-output", type=Path, help="Write assessment JSON to this path.")
     parser.add_argument(
         "--packet-output", type=Path, help="Write markdown review packet to this path."
@@ -97,6 +102,7 @@ def _trust_cockpit_command(args: argparse.Namespace) -> str:
     parts = ["python", "-m", "src.cli"]
     optional_paths = [
         ("--input", args.input),
+        ("--documents-root", args.documents_root),
         ("--json-output", args.json_output),
         ("--packet-output", args.packet_output),
         ("--commitments-output", args.commitments_output),
@@ -120,7 +126,7 @@ def _trust_cockpit_command(args: argparse.Namespace) -> str:
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     matter = load_matter(args.input)
-    assessment = assess_matter(matter)
+    assessment = assess_matter(matter, documents_root=args.documents_root)
 
     if args.approve_note:
         assessment = apply_review_decision(
