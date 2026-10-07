@@ -1,0 +1,347 @@
+{
+  "schema": "legal-function-os.outcome-control-tower.v1",
+  "generated_at_utc": "2026-09-10T10:00:00+00:00",
+  "source": {
+    "ledger_schema": "legal-function-os.service-event-ledger.v1",
+    "config_schema": "legal-function-os.outcome-config.v1",
+    "request_count": 3,
+    "event_count": 17
+  },
+  "calendar": {
+    "timezone": "Europe/Berlin",
+    "workday_start": "09:00",
+    "workday_end": "18:00",
+    "working_weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4
+    ],
+    "excluded_dates": [
+      "2026-07-10"
+    ]
+  },
+  "executive_summary": {
+    "requests": 3,
+    "completed_requests": 2,
+    "open_requests": 1,
+    "stalled_requests": 1,
+    "throughput_rate": 0.667,
+    "reopen_count": 0,
+    "response_sla_attainment": 1.0,
+    "resolution_sla_attainment": 1.0,
+    "states": {
+      "completed": 2,
+      "submitted": 1
+    },
+    "binding_queue": "Commercial"
+  },
+  "value_proxy": {
+    "assumption_notice": "All monetary figures are assumption-based management proxies over synthetic effort records. They are not realised savings or accounting conclusions.",
+    "assumptions": {
+      "currency": "EUR",
+      "default_internal_role": "Legal Counsel",
+      "internal_role_hourly_cost_eur": {
+        "Legal Counsel": 145,
+        "Legal Operations": 105,
+        "General Counsel": 240,
+        "Privacy Counsel": 175
+      },
+      "external_reference_hourly_rate_eur": 475,
+      "baseline_effort_minutes_by_request_type": {
+        "commercial_contract": 420,
+        "dpa": 360,
+        "ai_governance": 480,
+        "fundraising": 720,
+        "vendor_review": 240,
+        "dispute": 600,
+        "employment": 210
+      }
+    },
+    "estimated_internal_cost_eur": 1279.58,
+    "estimated_labour_efficiency_value_eur": 2066.25,
+    "estimated_external_spend_avoidance_eur": 1926.67
+  },
+  "queue_calibration": [
+    {
+      "queue": "Commercial",
+      "requests": 3,
+      "planned_effort_points": 17,
+      "observed_effort_minutes": 405,
+      "observed_minutes_per_point": 23.82,
+      "open_requests": 1,
+      "stalled_requests": 1
+    }
+  ],
+  "bottlenecks": [
+    {
+      "queue": "Commercial",
+      "requests": 3,
+      "planned_effort_points": 17,
+      "observed_effort_minutes": 405,
+      "observed_minutes_per_point": 23.82,
+      "open_requests": 1,
+      "stalled_requests": 1
+    }
+  ],
+  "action_queue": [
+    {
+      "request_id": "PM-BLOCKED-003",
+      "title": "Uncapped liability request with restricted source (synthetic)",
+      "queue": "Commercial",
+      "state": "submitted",
+      "inactive_business_hours": 18.0,
+      "recommended_action": "Review ownership, priority, and the next controlled step."
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "PM-BLOCKED-003",
+      "title": "Uncapped liability request with restricted source (synthetic)",
+      "request_type": "commercial_contract",
+      "queue": "Commercial",
+      "priority": "P2_high",
+      "risk": "HIGH",
+      "state": "submitted",
+      "submitted_at_utc": "2026-09-08T10:00:00+00:00",
+      "last_event_at_utc": "2026-09-08T10:00:00+00:00",
+      "first_response_business_hours": null,
+      "gross_cycle_business_hours": 18.0,
+      "business_wait_hours": 0.0,
+      "legal_controlled_hours": 18.0,
+      "approval_dwell_hours": 0.0,
+      "inactive_business_hours": 18.0,
+      "response_sla": "unmeasured",
+      "resolution_sla": "open",
+      "reopen_count": 0,
+      "stalled": true,
+      "planned_effort_points": 8,
+      "observed_effort_minutes": 15,
+      "value_proxy": {
+        "baseline_effort_minutes": 420,
+        "estimated_minutes_avoided": 405,
+        "estimated_internal_cost_eur": 36.25,
+        "estimated_labour_efficiency_value_eur": 978.75,
+        "estimated_external_spend_avoidance_eur": 82.5
+      },
+      "timeline": [
+        {
+          "event_id": "PM-BLOCKED-003-01",
+          "request_id": "PM-BLOCKED-003",
+          "event_type": "submitted",
+          "occurred_at_utc": "2026-09-08T10:00:00Z",
+          "actor_role": "Business Requester",
+          "note": "Pilot event matter_created (synthetic).",
+          "effort_minutes": 15
+        }
+      ]
+    },
+    {
+      "request_id": "PM-ROUTINE-001",
+      "title": "Routine SaaS MSA deviation review (synthetic)",
+      "request_type": "commercial_contract",
+      "queue": "Commercial",
+      "priority": "P3_standard",
+      "risk": "LOW",
+      "state": "completed",
+      "submitted_at_utc": "2026-09-07T08:00:00+00:00",
+      "last_event_at_utc": "2026-09-07T15:30:00+00:00",
+      "first_response_business_hours": 1.17,
+      "gross_cycle_business_hours": 7.5,
+      "business_wait_hours": 0.0,
+      "legal_controlled_hours": 7.5,
+      "approval_dwell_hours": 0.0,
+      "inactive_business_hours": 0.0,
+      "response_sla": "met",
+      "resolution_sla": "met",
+      "reopen_count": 0,
+      "stalled": false,
+      "planned_effort_points": 3,
+      "observed_effort_minutes": 90,
+      "value_proxy": {
+        "baseline_effort_minutes": 420,
+        "estimated_minutes_avoided": 330,
+        "estimated_internal_cost_eur": 304.58,
+        "estimated_labour_efficiency_value_eur": 797.5,
+        "estimated_external_spend_avoidance_eur": 407.92
+      },
+      "timeline": [
+        {
+          "event_id": "PM-ROUTINE-001-01",
+          "request_id": "PM-ROUTINE-001",
+          "event_type": "submitted",
+          "occurred_at_utc": "2026-09-07T08:00:00Z",
+          "actor_role": "Business Requester",
+          "note": "Pilot event matter_created (synthetic).",
+          "effort_minutes": 12
+        },
+        {
+          "event_id": "PM-ROUTINE-001-02",
+          "request_id": "PM-ROUTINE-001",
+          "event_type": "acknowledged",
+          "occurred_at_utc": "2026-09-07T09:10:00Z",
+          "actor_role": "Legal Counsel",
+          "note": "Pilot event triage_completed (synthetic).",
+          "effort_minutes": 10
+        },
+        {
+          "event_id": "PM-ROUTINE-001-03",
+          "request_id": "PM-ROUTINE-001",
+          "event_type": "assigned",
+          "occurred_at_utc": "2026-09-07T09:20:00Z",
+          "actor_role": "Legal Counsel",
+          "note": "Pilot event review_started (synthetic).",
+          "effort_minutes": 3
+        },
+        {
+          "event_id": "PM-ROUTINE-001-04",
+          "request_id": "PM-ROUTINE-001",
+          "event_type": "work_started",
+          "occurred_at_utc": "2026-09-07T09:20:00Z",
+          "actor_role": "Legal Counsel",
+          "note": "Pilot event review_started (synthetic)."
+        },
+        {
+          "event_id": "PM-ROUTINE-001-05",
+          "request_id": "PM-ROUTINE-001",
+          "event_type": "approval_requested",
+          "occurred_at_utc": "2026-09-07T14:00:00Z",
+          "actor_role": "General Counsel",
+          "note": "Pilot event approved (synthetic).",
+          "effort_minutes": 55
+        },
+        {
+          "event_id": "PM-ROUTINE-001-06",
+          "request_id": "PM-ROUTINE-001",
+          "event_type": "approved",
+          "occurred_at_utc": "2026-09-07T14:00:00Z",
+          "actor_role": "General Counsel",
+          "note": "Pilot event approved (synthetic)."
+        },
+        {
+          "event_id": "PM-ROUTINE-001-07",
+          "request_id": "PM-ROUTINE-001",
+          "event_type": "completed",
+          "occurred_at_utc": "2026-09-07T15:30:00Z",
+          "actor_role": "Business Requester",
+          "note": "Pilot event delivery_accepted (synthetic).",
+          "effort_minutes": 10
+        }
+      ]
+    },
+    {
+      "request_id": "PM-SPECIALIST-002",
+      "title": "Enterprise SaaS MSA deviation review (synthetic)",
+      "request_type": "commercial_contract",
+      "queue": "Commercial",
+      "priority": "P2_high",
+      "risk": "MEDIUM",
+      "state": "completed",
+      "submitted_at_utc": "2026-09-08T08:30:00+00:00",
+      "last_event_at_utc": "2026-09-10T09:00:00+00:00",
+      "first_response_business_hours": 1.5,
+      "gross_cycle_business_hours": 18.5,
+      "business_wait_hours": 6.0,
+      "legal_controlled_hours": 12.5,
+      "approval_dwell_hours": 0.0,
+      "inactive_business_hours": 0.0,
+      "response_sla": "met",
+      "resolution_sla": "met",
+      "reopen_count": 0,
+      "stalled": false,
+      "planned_effort_points": 6,
+      "observed_effort_minutes": 300,
+      "value_proxy": {
+        "baseline_effort_minutes": 420,
+        "estimated_minutes_avoided": 120,
+        "estimated_internal_cost_eur": 938.75,
+        "estimated_labour_efficiency_value_eur": 290.0,
+        "estimated_external_spend_avoidance_eur": 1436.25
+      },
+      "timeline": [
+        {
+          "event_id": "PM-SPECIALIST-002-01",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "submitted",
+          "occurred_at_utc": "2026-09-08T08:30:00Z",
+          "actor_role": "Business Requester",
+          "note": "Pilot event matter_created (synthetic).",
+          "effort_minutes": 20
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-02",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "acknowledged",
+          "occurred_at_utc": "2026-09-08T10:00:00Z",
+          "actor_role": "Legal Counsel",
+          "note": "Pilot event triage_completed (synthetic).",
+          "effort_minutes": 20
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-03",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "assigned",
+          "occurred_at_utc": "2026-09-08T11:00:00Z",
+          "actor_role": "Legal Counsel",
+          "note": "Pilot event review_started (synthetic).",
+          "effort_minutes": 5
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-04",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "work_started",
+          "occurred_at_utc": "2026-09-08T11:00:00Z",
+          "actor_role": "Legal Counsel",
+          "note": "Pilot event review_started (synthetic)."
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-05",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "waiting_on_business",
+          "occurred_at_utc": "2026-09-08T12:00:00Z",
+          "actor_role": "Legal Counsel",
+          "note": "Pilot event change_decided (synthetic).",
+          "effort_minutes": 55
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-06",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "resumed",
+          "occurred_at_utc": "2026-09-09T09:00:00Z",
+          "actor_role": "Business Requester",
+          "note": "Pilot event comment_response_added (synthetic).",
+          "effort_minutes": 50
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-07",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "approval_requested",
+          "occurred_at_utc": "2026-09-09T14:30:00Z",
+          "actor_role": "General Counsel",
+          "note": "Pilot event approved (synthetic).",
+          "effort_minutes": 135
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-08",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "approved",
+          "occurred_at_utc": "2026-09-09T14:30:00Z",
+          "actor_role": "General Counsel",
+          "note": "Pilot event approved (synthetic)."
+        },
+        {
+          "event_id": "PM-SPECIALIST-002-09",
+          "request_id": "PM-SPECIALIST-002",
+          "event_type": "completed",
+          "occurred_at_utc": "2026-09-10T09:00:00Z",
+          "actor_role": "Business Requester",
+          "note": "Pilot event delivery_accepted (synthetic).",
+          "effort_minutes": 15
+        }
+      ]
+    }
+  ],
+  "review_gate": "A human legal-operations owner must validate event completeness, calendar settings, effort records, value assumptions, and every staffing or external-counsel decision.",
+  "external_action_allowed": false
+}

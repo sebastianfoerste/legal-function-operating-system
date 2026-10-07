@@ -1,0 +1,33 @@
+{
+  "schema": "legal-ops-agent.pilot-measurement-plan.v1",
+  "defined_before_results": true,
+  "baseline": {
+    "status": "not_collected",
+    "method": "Retrospective sample of the last 15 closed SaaS contract-deviation requests handled without the workflow, reconstructed from request and reply timestamps and the reviewers' time records. Where time records are missing, the reviewer estimates effort within one week of closing and the figure is marked as an estimate.",
+    "window": "The eight weeks before the first pilot matter is opened.",
+    "measures": [
+      "elapsed time from request to accepted deliverable",
+      "elapsed time from request to first reviewer action",
+      "reviewer effort in minutes",
+      "number of clarification rounds with the requester",
+      "number of deliverables corrected after first delivery"
+    ]
+  },
+  "pilot_window": "Six weeks from the first pilot matter, or 20 closed matters, whichever comes first. The first week is a settling week and is reported separately.",
+  "measures": {
+    "intake_completeness": "Required facts present at the first submission attempt, out of five.",
+    "assignment_minutes": "Intake submitted to review started.",
+    "waiting_minutes_by_cause": "Gaps between consecutive recorded actions, attributed to the role that acted next: requester or missing facts, matter owner, specialist, approver.",
+    "effort_minutes": "Declared effort per action, split into intake, review and correction. Correction is effort spent while a revision is open or on amendments after review began.",
+    "revision_count": "Number of revision requests.",
+    "reopened_issues": "Number of resolved comments that were reopened.",
+    "total_minutes_to_accepted_deliverable": "Matter opened to requester acceptance.",
+    "software_execution_ms": "Measured execution time of assessment, routing, change proposal and export."
+  },
+  "interpretation_rules": [
+    "No comparison is drawn until the baseline is collected with the method above.",
+    "Scripted rehearsal data is never reported as a pilot result.",
+    "Software execution time and human effort are reported separately.",
+    "A delay is attributed to the system only where software execution time or a refused command caused by a defect explains it."
+  ]
+}

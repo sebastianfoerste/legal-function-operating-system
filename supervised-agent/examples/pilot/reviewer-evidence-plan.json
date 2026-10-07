@@ -1,0 +1,22 @@
+{
+  "schema": "legal-ops-agent.reviewer-evidence-plan.v1",
+  "agreed_with_reviewers": false,
+  "status_note": "Proposed by the pilot's author. No reviewer has been recruited. The thresholds become the pilot's criteria only when reviewers have agreed them before the first session, and this file is changed in a commit that precedes that session.",
+  "counted_sessions": "Sessions by practising lawyers other than the author. The author's own sessions and fabricated examples are stored and excluded.",
+  "criteria": {
+    "min_reviewers": 3,
+    "min_usable_rate": 0.6,
+    "max_misleading_rate": 0.1,
+    "max_omissions_per_session": 1.0
+  },
+  "definitions": {
+    "min_reviewers": "Distinct practising lawyers with a closed session on the draft.",
+    "min_usable_rate": "Share of rated recommendations scored 3 or 4: usable as written, or after correction.",
+    "max_misleading_rate": "Share of rated recommendations scored 1: wrong in a way that would have cost time or caused harm.",
+    "max_omissions_per_session": "Material omissions recorded, divided by counted sessions."
+  },
+  "reported_not_criteria": {
+    "mean_usefulness": "The scale has no neutral point. A mean of 2.5 is reached when half the recommendations are misleading and half are usable.",
+    "review_minutes": "No unassisted baseline is recorded, so a review time shows effort and cannot show a saving."
+  }
+}

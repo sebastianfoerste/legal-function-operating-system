@@ -1,0 +1,61 @@
+{
+  "schema": "legal-ops-agent.pilot-scenario.v1",
+  "scenario_id": "blocked",
+  "title": "Scenario 3: matter that must remain blocked",
+  "purpose": "A matter that cites a confidential source, asks for uncapped liability and has no agreed decision authority never leaves triage, whichever route is tried.",
+  "synthetic": true,
+  "matter_id": "PM-BLOCKED-003",
+  "document_variant": "blocked",
+  "document_name": "synthetic-msa-blocked.docx",
+  "intake": {
+    "matter": {
+      "title": "Uncapped liability request with restricted source (synthetic)",
+      "requester": "Synthetic Requester A",
+      "business_unit": "Revenue Operations",
+      "matter_type": "contract",
+      "jurisdiction": "Germany",
+      "summary": "A prospective customer asks for unlimited supplier liability and the request cites an internal pricing memo that must not enter this workflow.",
+      "urgency": "high",
+      "data_categories": ["business contact data"],
+      "customer_commitments": [],
+      "source_refs": ["synthetic:customer-draft-msa-blocked", "confidential:internal-pricing-memo"]
+    },
+    "value_band": "250k-1m",
+    "personal_data": true,
+    "uncapped_liability": true,
+    "facts": {
+      "counterparty": "Example Logistics AG (fictitious)",
+      "annual_contract_value_eur": "610000",
+      "signature_target_date": "2026-09-25",
+      "requested_deviations": "unlimited supplier liability",
+      "business_owner": "Synthetic Account Executive H"
+    },
+    "instructions": "The customer says unlimited liability is a condition of signing.",
+    "decision_authority": ""
+  },
+  "steps": [
+    {"id": "C01", "actor": "syn-requester-revops", "command": "create_matter", "at": "2026-09-08T10:00:00Z", "effort_minutes": 15, "expect": "ok",
+     "say": "The requester opens the matter. Because a blocked source prefix is present, the system withholds document processing: no change is proposed."},
+    {"id": "C02", "actor": "syn-requester-revops", "command": "submit_intake", "at": "2026-09-08T10:05:00Z", "expect": "ok",
+     "say": "The intake fields are complete, so the matter reaches the triage queue."},
+    {"id": "C03", "actor": "syn-owner-legalops", "command": "complete_triage", "at": "2026-09-08T11:00:00Z", "effort_minutes": 10, "expect": "transition_blocked",
+     "expect_evidence": ["sources_usable", "pilot_scope_met", "decision_authority_agreed"],
+     "say": "Triage is refused for three independent reasons: a confidential source, a charter exclusion (uncapped liability) and no agreed decision authority."},
+    {"id": "C04", "actor": "syn-owner-legalops", "command": "assign", "args": {"role": "final_approver", "assignee_id": "syn-approver-gc"}, "at": "2026-09-08T11:05:00Z", "expect": "permission_denied",
+     "say": "The owner tries to skip triage and assign an approver. The owner holds the role but is not assigned to this matter."},
+    {"id": "C05", "actor": "syn-approver-gc", "command": "approve", "args": {"note": "Approving on commercial grounds because the customer insists on this term."}, "at": "2026-09-08T11:10:00Z", "expect": "permission_denied",
+     "say": "A General Counsel approval attempt is refused: seniority grants nothing on a matter the approver is not assigned to, and approval is not reachable from triage in any case."},
+    {"id": "C06", "actor": "syn-owner-legalops", "command": "export_internal_review", "at": "2026-09-08T11:15:00Z", "expect": "permission_denied",
+     "say": "Even an internal review export is refused for an unassigned actor."},
+    {"id": "C07", "direct": "stateless_delivery_gate", "at": "2026-09-08T11:20:00Z", "expect": "export_blocked",
+     "say": "Library bypass: calling the export gate directly with an in-memory approval fails on the blocker finding and the missing store decisions."},
+    {"id": "C08", "direct": "legacy_docx_render", "at": "2026-09-08T11:25:00Z", "expect": "export_blocked",
+     "say": "Library bypass: the stateless DOCX path refuses to process a document while a blocked source reference is present."},
+    {"restart": true, "say": "Stop the process. The blocked state must survive a restart."},
+    {"id": "C09", "actor": "syn-owner-second", "command": "complete_triage", "at": "2026-09-09T09:00:00Z", "expect": "transition_blocked",
+     "say": "After the restart a different matter owner tries triage. The same three holds apply."},
+    {"id": "C10", "actor": "syn-requester-revops", "command": "prepare_delivery", "at": "2026-09-09T09:05:00Z", "expect": "transition_blocked",
+     "say": "The requester asks for the package directly. Refused."}
+  ],
+  "expected_final": {"state": "triage", "version": 1, "delivery_packages": 0, "closed_outcome": null}
+}

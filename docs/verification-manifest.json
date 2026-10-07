@@ -20,7 +20,9 @@
     { "path": "examples/raas-source-manifest.json", "label": "Dated primary-source manifest" },
     { "path": "contracts/legal-workflow-controls.v1.schema.json", "label": "Shared workflow control contract" },
     { "path": "src/legal_function_os/data/dpa_documents.json", "label": "Synthetic Art. 28 GDPR processing agreements" },
-    { "path": "RAAS_CASE_STUDY.md", "label": "Industrial robotics case study" }
+    { "path": "RAAS_CASE_STUDY.md", "label": "Industrial robotics case study" },
+    { "path": "supervised-agent/docs/pilot/CASE_STUDY.md", "label": "Supervised pilot workflow case study" },
+    { "path": "supervised-agent/examples/pilot/rehearsal-2026-10-06/rehearsal-report.md", "label": "Pilot rehearsal across process restarts" }
   ],
   "validation_commands": [
     "make test",

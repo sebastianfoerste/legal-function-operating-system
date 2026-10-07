@@ -1,0 +1,118 @@
+{
+  "schema": "legal-ops-agent.deliverable-manifest.v1",
+  "kind": "delivery_package",
+  "matter_id": "PM-ROUTINE-001",
+  "matter_version": 1,
+  "content_hash": "0ea1fbdebb03a91dada8f83753e71f3ff62c9893e594cdac72fbee5b146b4eae",
+  "review_hash": "40d8f1c81a1729eb1ea147e407a7f38339c43a84041bf86f51d9009622e3aeec",
+  "source_document": {
+    "name": "synthetic-msa-routine.docx",
+    "sha256": "d6e2cbbc934b974fcc1c990aa61944991f9288d0ffbada6eee63efeb4159e627"
+  },
+  "playbook": {
+    "ref": "synthetic:saas-msa-deviation-playbook@v1",
+    "sha256": "ece9ab3d3b1fb84dfc64761393237b79af00047d4a1333d2381e6a12a4a375eb"
+  },
+  "eligibility": {
+    "schema": "legal-ops-agent.export-eligibility.v1",
+    "kind": "delivery_package",
+    "eligible": true,
+    "checks": [
+      {
+        "check_id": "assessment_present",
+        "status": "pass",
+        "required": true,
+        "detail": "assessment loa_c42d369151d4cca0"
+      },
+      {
+        "check_id": "assessment_bound_to_version",
+        "status": "pass",
+        "required": true,
+        "detail": "assessment is bound to version 1"
+      },
+      {
+        "check_id": "assessment_approved",
+        "status": "pass",
+        "required": true,
+        "detail": "parent assessment is approved with a documented review note"
+      },
+      {
+        "check_id": "source_boundary_clear",
+        "status": "pass",
+        "required": true,
+        "detail": "no blocked source prefix"
+      },
+      {
+        "check_id": "no_blocker_findings",
+        "status": "pass",
+        "required": true,
+        "detail": "no blocker finding"
+      },
+      {
+        "check_id": "document_hash_matches",
+        "status": "pass",
+        "required": true,
+        "detail": "document digest matches the reviewed version"
+      },
+      {
+        "check_id": "changes_decided",
+        "status": "pass",
+        "required": true,
+        "detail": "2 proposed change(s) decided"
+      },
+      {
+        "check_id": "no_unresolved_blockers",
+        "status": "pass",
+        "required": true,
+        "detail": "no open critical comment, clarification or hold"
+      },
+      {
+        "check_id": "required_reviewer_decisions",
+        "status": "pass",
+        "required": true,
+        "detail": "1 required decision(s) bound to this version"
+      },
+      {
+        "check_id": "audit_chain_verified",
+        "status": "pass",
+        "required": true,
+        "detail": "audit chain intact"
+      },
+      {
+        "check_id": "matter_state_permits_delivery",
+        "status": "pass",
+        "required": true,
+        "detail": "matter state is approved"
+      }
+    ],
+    "external_delivery_allowed": false
+  },
+  "event_chain_root": "cf155ecac9ecc060a63349f333d5129f8c5775eccb17b9426f6feabbbe68faaa",
+  "generated_at_utc": "2026-10-06T19:22:37.460041Z",
+  "folder": "PM-ROUTINE-001/v1/delivery",
+  "files": [
+    {
+      "name": "customer-package.md",
+      "sha256": "54b53c5b09415cf33cf86369c6f0d38f53a588992fe99136bcaab6036611e9b6",
+      "bytes": 4906
+    },
+    {
+      "name": "customer-package.html",
+      "sha256": "fd8acf276aa9c8cee6aa5ed957d3d2806d4ebbc1db6f6dfec0fc20dca8a4d50e",
+      "bytes": 6653
+    },
+    {
+      "name": "reviewed-document.docx",
+      "sha256": "7a29b17c36c746d3087726bd7d071bce25a12ee6a93052fe34759ef87195d6c0",
+      "bytes": 2838
+    },
+    {
+      "name": "issue-list.json",
+      "sha256": "137a03a543a2ec9391f7576bbdb31b9d70a562421418777be2e202d3ff0feefc",
+      "bytes": 1850
+    }
+  ],
+  "external_delivery": "disabled",
+  "identity": "simulated local roles, not authenticated",
+  "synthetic": true
+}

@@ -1,9 +1,9 @@
 import hashlib
 import zipfile
-from xml.etree import ElementTree
 
 import pytest
 
+from models import ReviewDecision
 from src.collaboration_workspace import (
     build_change_set,
     build_matter_list,
@@ -14,61 +14,113 @@ from src.collaboration_workspace import (
     render_review_room,
     resolve_list_item,
 )
-from src.legal_ops import assess_matter, build_sample_matter
+from src.docx_redline import list_tracked_changes, read_paragraph_texts
+from src.export_gate import ExportBlockedError
+from src.legal_ops import apply_review_decision, assess_matter, build_sample_matter
+from src.pilot.fixtures import build_synthetic_msa
+
+APPROVAL_NOTE = "Approved after commercial counsel review of the synthetic MSA deviation."
 
 
-def write_source_docx(path, *, include_nested_section: bool = False) -> None:
-    content_types = "<?xml version='1.0'?><Types xmlns='http://schemas.openxmlformats.org/package/2006/content-types'><Default Extension='xml' ContentType='application/xml'/><Override PartName='/word/document.xml' ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml'/></Types>"
-    nested_section = (
-        "<w:p><w:pPr><w:sectPr/></w:pPr><w:r><w:t>Second section</w:t></w:r></w:p>"
-        if include_nested_section
-        else ""
+def _approved(assessment):
+    return apply_review_decision(
+        assessment, ReviewDecision(reviewer="General Counsel", state="approved", note=APPROVAL_NOTE)
     )
-    document = f"<?xml version='1.0'?><w:document xmlns:w='http://schemas.openxmlformats.org/wordprocessingml/2006/main'><w:body><w:p><w:r><w:t>Original source clause</w:t></w:r></w:p>{nested_section}<w:sectPr/></w:body></w:document>"
-    with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as package:
-        package.writestr("[Content_Types].xml", content_types)
-        package.writestr("word/document.xml", document)
 
 
-def test_playbook_changes_and_docx_remain_review_gated(tmp_path) -> None:
+def _decide_all(change_set, decision="accepted"):
+    for change in list(change_set.changes):
+        change_set = decide_change(change_set, change.id, decision)
+    return change_set
+
+
+def test_decided_change_set_cannot_export_while_assessment_is_unapproved(tmp_path) -> None:
+    """Regression: a fully decided change set used to export under an unapproved assessment."""
+
     assessment = assess_matter(build_sample_matter())
     source = tmp_path / "source.docx"
-    write_source_docx(source)
+    source.write_bytes(build_synthetic_msa("routine"))
+    change_set = _decide_all(build_change_set(assessment, source))
+    assert change_set.all_changes_decided
+    assert assessment.review_state == "needs_review" and not assessment.export_allowed
+
+    with pytest.raises(ExportBlockedError, match="assessment_approved"):
+        render_annotated_docx(change_set, source, tmp_path / "out.docx", assessment=assessment)
+    assert not (tmp_path / "out.docx").exists()
+
+    with pytest.raises(TypeError):
+        render_annotated_docx(change_set, source, tmp_path / "out.docx")  # type: ignore[call-arg]
+
+
+def test_change_set_is_bound_to_its_assessment(tmp_path) -> None:
+    source = tmp_path / "source.docx"
+    source.write_bytes(build_synthetic_msa("routine"))
+    change_set = _decide_all(build_change_set(assess_matter(build_sample_matter()), source))
+    other = build_sample_matter().model_copy(update={"title": "A different approved matter"})
+    with pytest.raises(ExportBlockedError, match="different assessment"):
+        render_annotated_docx(
+            change_set, source, tmp_path / "out.docx", assessment=_approved(assess_matter(other))
+        )
+
+
+def test_document_specific_changes_are_tracked_at_their_locator(tmp_path) -> None:
+    assessment = assess_matter(build_sample_matter())
+    source = tmp_path / "source.docx"
+    source.write_bytes(build_synthetic_msa("routine"))
     source_digest = hashlib.sha256(source.read_bytes()).hexdigest()
     change_set = build_change_set(assessment, source)
-    with pytest.raises(ValueError, match="every proposed change to be decided"):
-        render_annotated_docx(change_set, source, tmp_path / "blocked.docx")
+    assert [change.rule_id for change in change_set.changes] == ["payment-terms", "audit-right"]
+    assert all(change.anchor is not None and change.original_text for change in change_set.changes)
+
+    with pytest.raises(ExportBlockedError, match="every proposed change to be decided"):
+        render_annotated_docx(
+            change_set, source, tmp_path / "blocked.docx", assessment=_approved(assessment)
+        )
     change_set = decide_change(change_set, change_set.changes[0].id, "accepted")
-    for change in list(change_set.changes[1:]):
-        change_set = decide_change(change_set, change.id, "rejected")
+    change_set = decide_change(change_set, change_set.changes[1].id, "rejected")
     with pytest.raises(ValueError, match="must not overwrite"):
-        render_annotated_docx(change_set, source, source)
-    output = render_annotated_docx(change_set, source, tmp_path / "reviewed.docx")
+        render_annotated_docx(change_set, source, source, assessment=_approved(assessment))
+
+    output = render_annotated_docx(
+        change_set, source, tmp_path / "reviewed.docx", assessment=_approved(assessment)
+    )
     assert hashlib.sha256(source.read_bytes()).hexdigest() == source_digest
     assert zipfile.is_zipfile(output)
-    with zipfile.ZipFile(output) as package:
-        document = package.read("word/document.xml").decode()
-    assert "Original source clause" in document
-    assert "<w:ins" in document
-    assert change_set.changes[0].proposed_text in document
-    root = ElementTree.fromstring(document)
-    namespace = {"w": "http://schemas.openxmlformats.org/wordprocessingml/2006/main"}
-    inserted_changes = ["".join(node.itertext()) for node in root.findall(".//w:ins", namespace)]
-    assert inserted_changes == [change_set.changes[0].proposed_text]
-    assert document.count("<w:ins") == 1
+    reviewed = output.read_bytes()
+    assert read_paragraph_texts(reviewed, "rejected") == read_paragraph_texts(
+        source.read_bytes(), "accepted"
+    )
+    accepted_view = "\n".join(read_paragraph_texts(reviewed, "accepted"))
+    assert "within thirty (30) days of receipt" in accepted_view
+    assert "at any time and without prior notice" in accepted_view  # rejected change not applied
+    assert [(c.kind, c.text) for c in list_tracked_changes(reviewed)] == [
+        ("deletion", "ninety (90) days"),
+        ("insertion", "thirty (30) days"),
+    ]
 
 
-def test_docx_changes_are_inserted_before_the_final_section_marker(tmp_path) -> None:
+def test_changed_source_document_is_refused(tmp_path) -> None:
     assessment = assess_matter(build_sample_matter())
-    source = tmp_path / "multi-section.docx"
-    write_source_docx(source, include_nested_section=True)
-    change_set = build_change_set(assessment, source)
-    for change in list(change_set.changes):
-        change_set = decide_change(change_set, change.id, "accepted")
-    output = render_annotated_docx(change_set, source, tmp_path / "reviewed.docx")
-    with zipfile.ZipFile(output) as package:
-        document = package.read("word/document.xml").decode()
-    assert document.rfind("<w:ins") < document.rfind("<w:sectPr")
+    source = tmp_path / "source.docx"
+    source.write_bytes(build_synthetic_msa("routine"))
+    change_set = _decide_all(build_change_set(assessment, source))
+    source.write_bytes(build_synthetic_msa("specialist"))
+    with pytest.raises(ExportBlockedError, match="digest does not match"):
+        render_annotated_docx(
+            change_set, source, tmp_path / "out.docx", assessment=_approved(assessment)
+        )
+
+
+def test_no_generic_wording_is_proposed_without_a_document() -> None:
+    change_set = build_change_set(assess_matter(build_sample_matter()))
+    assert change_set.changes == []
+    assert change_set.schema_id == "document.change-set.v2"
+
+
+def test_blocked_source_prevents_document_processing(tmp_path) -> None:
+    matter = build_sample_matter().model_copy(update={"source_refs": ["confidential:memo"]})
+    with pytest.raises(ValueError, match="blocked source references"):
+        build_change_set(assess_matter(matter))
 
 
 def test_matter_lists_require_evidence_and_timeline_is_hash_chained() -> None:
@@ -102,15 +154,19 @@ def test_source_date_epoch_rejects_out_of_range_values(monkeypatch) -> None:
         build_matter_list(assess_matter(build_sample_matter()))
 
 
-def test_local_review_room_has_no_external_dependencies(tmp_path) -> None:
+def test_static_review_room_snapshot_offers_no_unsaved_controls(tmp_path) -> None:
     assessment = assess_matter(build_sample_matter())
+    source = tmp_path / "source.docx"
+    source.write_bytes(build_synthetic_msa("routine"))
     room = render_review_room(
         assessment,
-        build_change_set(assessment),
+        build_change_set(assessment, source),
         build_matter_list(assessment),
         tmp_path / "review-room.html",
     )
     content = room.read_text()
+    assert "Nothing on this page is saved" in content
     assert "External access and delivery are disabled" in content
-    assert "Accept" in content and "Reject" in content and "Reviewer comment" in content
+    assert "<button" not in content and "<script" not in content
+    assert "ninety (90) days" in content
     assert "http://" not in content and "https://" not in content

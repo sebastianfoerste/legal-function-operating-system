@@ -24,16 +24,40 @@
     {
       "path": "examples/audit-chain-saas-msa-2026-06-30.json",
       "label": "Tamper-evident audit-chain run"
+    },
+    {
+      "path": "docs/pilot/PILOT_CHARTER.md",
+      "label": "Pilot charter"
+    },
+    {
+      "path": "docs/pilot/RUNBOOK.md",
+      "label": "Pilot runbook with state machine"
+    },
+    {
+      "path": "docs/pilot/CAPABILITY_RECORD.md",
+      "label": "Executable, static and simulated capabilities"
+    },
+    {
+      "path": "examples/pilot/rehearsal-2026-10-06/rehearsal-report.md",
+      "label": "Dated end-to-end rehearsal across restarts"
+    },
+    {
+      "path": "examples/pilot/rehearsal-2026-10-06/exports/PM-SPECIALIST-002/v3/delivery/customer-package.md",
+      "label": "Reviewed synthetic customer package"
     }
   ],
   "validation_commands": [
-    "make check"
+    "make check",
+    "python -m src.pilot.cli rehearse --db /tmp/pilot-rehearsal/pilot.sqlite3 --out /tmp/pilot-rehearsal/out"
   ],
   "data_boundary": "Synthetic matters and public regulatory source identifiers only.",
   "safety_controls": [
     "source-boundary checks",
     "tamper-evident audit trail",
-    "human review gate before export"
+    "human review gate before export",
+    "single export-eligibility check for every reviewed document and delivery package",
+    "approvals bound to the exact matter version and reviewed state",
+    "simulated local roles, labelled; no authentication"
   ],
   "blocked_actions": [
     "no external delivery",

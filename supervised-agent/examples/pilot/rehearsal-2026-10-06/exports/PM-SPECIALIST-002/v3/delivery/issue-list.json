@@ -1,0 +1,121 @@
+{
+  "matter_id": "PM-SPECIALIST-002",
+  "matter_version": 3,
+  "issues": [
+    {
+      "change_id": "chg-payment-terms-2816324e",
+      "locator": "clause 2.1 para:5@2816324e7bcecef3[50:66]",
+      "topic": "Payment terms",
+      "severity": "low",
+      "counterparty_wording": "ninety (90) days",
+      "playbook_wording": "thirty (30) days",
+      "outcome": "Exception accepted: counterparty wording stays",
+      "final_wording": "ninety (90) days",
+      "reason": "Finance accepts ninety day payment terms for this customer, as recorded in the requester's instructions.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    },
+    {
+      "change_id": "chg-audit-right-7e46718e",
+      "locator": "clause 3.1 para:7@7e46718e80a25f96[66:102]",
+      "topic": "Audit right",
+      "severity": "medium",
+      "counterparty_wording": "at any time and without prior notice",
+      "playbook_wording": "once in any twelve (12) month period on thirty (30) days' prior written notice, during business hours and subject to Supplier's confidentiality requirements",
+      "outcome": "Reverted to the standard position",
+      "final_wording": "once in any twelve (12) month period on thirty (30) days' prior written notice, during business hours and subject to Supplier's confidentiality requirements",
+      "reason": "The draft grants an unrestricted audit right without notice or frequency limit.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    },
+    {
+      "change_id": "chg-subprocessors-3340f2a6",
+      "locator": "clause 4.1 para:9@3340f2a656402908[4:92]",
+      "topic": "Subprocessors",
+      "severity": "high",
+      "counterparty_wording": "Supplier shall not engage any subprocessor for the processing of Customer Personal Data.",
+      "playbook_wording": "Supplier may engage the subprocessors listed in Annex 2 and shall give Customer thirty (30) days' prior notice of any intended addition or replacement, during which Customer may object on reasonable grounds.",
+      "outcome": "Reverted to the standard position",
+      "final_wording": "Supplier may engage the subprocessors listed in Annex 2 and shall give Customer thirty (30) days' prior notice of any intended addition or replacement, during which Customer may object on reasonable grounds.",
+      "reason": "The draft prohibits every subprocessor, which the service architecture cannot meet.",
+      "decided_by": "Synthetic Specialist C (Privacy Counsel) (syn-specialist-privacy)"
+    },
+    {
+      "change_id": "chg-liability-cap-c8bcf70e",
+      "locator": "clause 5.1 para:11@c8bcf70e682918c9[73:101]",
+      "topic": "Limitation of liability",
+      "severity": "high",
+      "counterparty_wording": "three hundred percent (300%)",
+      "playbook_wording": "one hundred percent (100%)",
+      "outcome": "Fallback wording agreed",
+      "final_wording": "two hundred percent (200%)",
+      "reason": "Fallback position: 200% cap agreed with Finance for this strategic customer.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    },
+    {
+      "change_id": "chg-liability-exclusions-c8bcf70e",
+      "locator": "after clause 5.1 para:11@c8bcf70e682918c9",
+      "topic": "Exclusion of indirect loss",
+      "severity": "medium",
+      "counterparty_wording": "(no clause in the draft)",
+      "playbook_wording": "Neither party is liable for indirect or consequential loss, loss of profit or loss of data, except where liability cannot be limited or excluded by law.",
+      "outcome": "Reverted to the standard position",
+      "final_wording": "Neither party is liable for indirect or consequential loss, loss of profit or loss of data, except where liability cannot be limited or excluded by law.",
+      "reason": "The draft contains no exclusion of indirect or consequential loss.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    },
+    {
+      "change_id": "chg-roadmap-commitment-632261c0",
+      "locator": "clause 6.1 para:13@632261c0f005e01d[4:104]",
+      "topic": "Roadmap commitment",
+      "severity": "high",
+      "counterparty_wording": "Supplier shall deliver the features described in the Product Roadmap no later than 31 December 2026.",
+      "playbook_wording": "Any product roadmap is provided for information only and is not a commitment to deliver any feature or functionality.",
+      "outcome": "Reverted to the standard position",
+      "final_wording": "Any product roadmap is provided for information only and is not a commitment to deliver any feature or functionality.",
+      "reason": "The draft converts the product roadmap into a dated delivery obligation.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    },
+    {
+      "change_id": "chg-most-favoured-customer-e9bbead5",
+      "locator": "clause 6.2 para:14@e9bbead59c0ed168",
+      "topic": "Most-favoured-customer pricing",
+      "severity": "medium",
+      "counterparty_wording": "6.2\tCustomer shall be entitled to the most favourable pricing offered by Supplier to any other customer.",
+      "playbook_wording": "(delete clause)",
+      "outcome": "Reverted to the standard position",
+      "final_wording": "(clause deleted)",
+      "reason": "The draft adds a most-favoured-customer pricing clause.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    }
+  ],
+  "obligations": [
+    {
+      "obligation": "Notify Finance of the extended payment period before the order form is issued.",
+      "arises_from": "Payment terms (exception accepted)",
+      "owner_role": "Commercial Counsel",
+      "owner": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)",
+      "due": "2026-10-13"
+    },
+    {
+      "obligation": "Record the agreed liability cap in the customer commitments register and inform Finance and the insurer contact.",
+      "arises_from": "Limitation of liability (fallback wording agreed)",
+      "owner_role": "Commercial Counsel",
+      "owner": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)",
+      "due": "2026-10-14"
+    },
+    {
+      "obligation": "Record and track the customer commitment: higher liability cap",
+      "arises_from": "Intake commitment register",
+      "owner_role": "Commercial Counsel",
+      "owner": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)",
+      "due": "2026-10-15"
+    },
+    {
+      "obligation": "Record and track the customer commitment: controlled annual audit right",
+      "arises_from": "Intake commitment register",
+      "owner_role": "Commercial Counsel",
+      "owner": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)",
+      "due": "2026-10-15"
+    }
+  ],
+  "tracked_changes": 12
+}

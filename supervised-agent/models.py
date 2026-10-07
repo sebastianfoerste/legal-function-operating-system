@@ -2,9 +2,18 @@ from __future__ import annotations
 
 import hashlib
 import json
-from typing import Literal
+from pathlib import PurePosixPath
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 MatterType = Literal[
     "contract",
@@ -17,11 +26,45 @@ Urgency = Literal["low", "medium", "high"]
 RiskSeverity = Literal["low", "medium", "high", "blocker"]
 ReviewState = Literal["needs_review", "approved", "rejected", "revision_requested", "escalated"]
 ControlStatus = Literal["pass", "warning", "blocker"]
-AuditEventType = Literal["assessment_created", "review_decision_applied", "review_packet_generated"]
+AuditEventType = Literal[
+    "assessment_created",
+    "review_decision_applied",
+    "review_packet_generated",
+    "review_draft_ready",
+    "review_session_started",
+    "draft_marked_reviewable",
+    "recommendation_decision_recorded",
+    "material_omission_recorded",
+    "review_session_closed",
+]
+DocumentVerificationStatus = Literal["verified", "mismatch", "missing", "refused", "not_checked"]
 SourceCategory = Literal[
     "synthetic", "public_regulatory", "public_unapproved", "blocked", "missing"
 ]
 ReviewPacketRunStatus = Literal["blocked", "review_required", "ready"]
+
+
+class MatterDocument(BaseModel):
+    """One document of a matter file, referenced in place and pinned by hash."""
+
+    document_id: str = Field(..., pattern=r"^[a-z][a-z0-9_]*$")
+    title: str = Field(..., min_length=3)
+    kind: str = Field(..., pattern=r"^[a-z][a-z0-9_]*$")
+    path: str = Field(..., min_length=1)
+    sha256: str = Field(..., pattern=r"^[0-9a-f]{64}$")
+    source_ref: str = Field(..., min_length=3)
+    introduced_in: str | None = None
+
+    @field_validator("path")
+    @classmethod
+    def validate_relative_path(cls, value: str) -> str:
+        # The intake is input. A path that could leave the documents root would let
+        # an intake file make the agent hash, and later show, arbitrary local files.
+        path = PurePosixPath(value)
+        escapes_root = path.is_absolute() or ".." in path.parts or "\\" in value
+        if not path.parts or escapes_root or ":" in path.parts[0]:
+            raise ValueError("document path must be relative to the documents root")
+        return path.as_posix()
 
 
 class MatterIntake(BaseModel):
@@ -37,6 +80,29 @@ class MatterIntake(BaseModel):
     data_categories: list[str] = Field(default_factory=list)
     customer_commitments: list[str] = Field(default_factory=list)
     source_refs: list[str] = Field(default_factory=list)
+    matter_id: str | None = None
+    round_id: str | None = None
+    documents: list[MatterDocument] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_document_ids(self) -> "MatterIntake":
+        ids = [document.document_id for document in self.documents]
+        repeated = sorted({item for item in ids if ids.count(item) > 1})
+        if repeated:
+            raise ValueError(f"duplicate document ids: {repeated}")
+        return self
+
+    @model_serializer(mode="wrap")
+    def omit_unused_matter_file_fields(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, Any]:
+        # An intake without a matter file serialises exactly as it did before these
+        # fields existed, so every id and digest derived from it stays the same.
+        data: dict[str, Any] = handler(self)
+        for optional in ("matter_id", "round_id", "documents"):
+            if not data.get(optional):
+                data.pop(optional, None)
+        return data
 
 
 class RiskFinding(BaseModel):
@@ -88,6 +154,18 @@ class SourceVerificationRecord(BaseModel):
     requires_human_review: bool = True
 
 
+class DocumentVerificationRecord(BaseModel):
+    """Result of checking one matter document against its recorded hash."""
+
+    document_id: str = Field(..., min_length=1)
+    kind: str = Field(..., min_length=1)
+    path: str = Field(..., min_length=1)
+    expected_sha256: str = Field(..., min_length=64, max_length=64)
+    actual_sha256: str | None = None
+    status: DocumentVerificationStatus
+    reason: str = Field(..., min_length=12)
+
+
 def compute_audit_event_hash(
     seq: int,
     prev_hash: str | None,
@@ -95,20 +173,23 @@ def compute_audit_event_hash(
     actor: str,
     note: str,
     timestamp_utc: str,
+    details: dict[str, Any] | None = None,
 ) -> str:
     """Canonical SHA-256 digest for one position in the audit hash chain."""
 
-    payload = json.dumps(
-        {
-            "seq": seq,
-            "prev_hash": prev_hash,
-            "event_type": event_type,
-            "actor": actor,
-            "note": note,
-            "timestamp_utc": timestamp_utc,
-        },
-        sort_keys=True,
-    )
+    fields: dict[str, Any] = {
+        "seq": seq,
+        "prev_hash": prev_hash,
+        "event_type": event_type,
+        "actor": actor,
+        "note": note,
+        "timestamp_utc": timestamp_utc,
+    }
+    # Details enter the digest only when an event carries them, so chains written
+    # before structured details existed keep verifying unchanged.
+    if details is not None:
+        fields["details"] = details
+    payload = json.dumps(fields, sort_keys=True)
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
@@ -127,6 +208,7 @@ class AuditEvent(BaseModel):
     seq: int = Field(..., ge=0)
     prev_hash: str | None = None
     event_hash: str = Field(..., min_length=64, max_length=64)
+    details: dict[str, Any] | None = None
 
 
 class AuditChainVerification(BaseModel):
@@ -176,6 +258,7 @@ def verify_audit_chain(events: list[AuditEvent]) -> AuditChainVerification:
             event.actor,
             event.note,
             event.timestamp_utc,
+            event.details,
         )
         if recomputed != event.event_hash:
             return AuditChainVerification(
@@ -219,6 +302,7 @@ class LegalOpsAssessment(BaseModel):
     findings: list[RiskFinding]
     controls: list[ControlCheck] = Field(default_factory=list)
     source_verifications: list[SourceVerificationRecord] = Field(default_factory=list)
+    document_verifications: list[DocumentVerificationRecord] = Field(default_factory=list)
     customer_commitments: list[CustomerCommitmentRecord] = Field(default_factory=list)
     routing: RoutingDecision
     review_state: ReviewState = "needs_review"
@@ -232,6 +316,10 @@ class LegalOpsAssessment(BaseModel):
             raise ValueError("export requires approved review state")
         if self.export_allowed and any(finding.severity == "blocker" for finding in self.findings):
             raise ValueError("export is blocked while blocker findings remain")
+        if self.export_allowed and any(
+            record.status != "verified" for record in self.document_verifications
+        ):
+            raise ValueError("export is blocked while a matter document is unverified")
         if self.export_allowed and not self.review_note:
             raise ValueError("export requires a documented review note")
         if self.export_allowed:

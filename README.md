@@ -19,6 +19,8 @@ The repository does not provide legal or accounting advice.
 
 The supervised legal-operations agent is maintained in `supervised-agent`. Both components retain their own Python runtime and test gate. Their interoperability boundary is `contracts/legal-workflow-controls.v1.schema.json`, which normalizes review state, approval gates, source boundaries and audit events without changing either component's public interfaces. Run `make contract-check` for the shared contract, `make agent-check` for the agent and `make check` for the combined gate.
 
+The agent also carries one supervised pilot workflow from intake to an approved local delivery package. It takes routing, service levels and the approval tier from the rules in this package and reports through the outcome control tower's event ledger. It is ready for a supervised trial with synthetic matters; see [`supervised-agent/docs/pilot/CASE_STUDY.md`](supervised-agent/docs/pilot/CASE_STUDY.md).
+
 ## Two-minute reviewer path
 
 **[Read the artifacts in a browser](https://sebastianfoerste.github.io/legal-function-operating-system/)** —

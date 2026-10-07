@@ -1,0 +1,98 @@
+{
+  "title": "Northwind Materials GmbH: procurement of the Cverbio LabTrace platform (SYNTHETIC)",
+  "requester": "Head of Legal, Northwind Materials GmbH",
+  "business_unit": "Legal",
+  "matter_type": "contract",
+  "jurisdiction": "Germany",
+  "summary": "Advise the customer before signature of a vendor-paper SaaS agreement and data processing agreement for a business-critical system, with a vendor-paper NDA already signed. Vendor response and changed facts: The vendor answers the mark-up. The client then changes the data in scope, the timetable and its audit requirement.",
+  "data_categories": [],
+  "customer_commitments": [],
+  "source_refs": [
+    "synthetic:contract-review-eval-harness/matters/northwind-saas/matter.json"
+  ],
+  "matter_id": "northwind-saas",
+  "round_id": "round2",
+  "documents": [
+    {
+      "document_id": "nda",
+      "title": "Mutual Non-Disclosure Agreement",
+      "kind": "contract",
+      "path": "data/nda_sample.md",
+      "sha256": "915cfb648881a251528062ec95a4131ba8e9e72f30e1f639747293b4df3bdb43",
+      "source_ref": "synthetic:contract-review-eval-harness/data/nda_sample.md",
+      "introduced_in": "round1"
+    },
+    {
+      "document_id": "saas",
+      "title": "Software-as-a-Service Agreement",
+      "kind": "contract",
+      "path": "data/saas_sample.md",
+      "sha256": "47f67a676df59622621a3fccfc09f0737d0564414df6e730f7accb9198145c73",
+      "source_ref": "synthetic:contract-review-eval-harness/data/saas_sample.md",
+      "introduced_in": "round1"
+    },
+    {
+      "document_id": "dpa",
+      "title": "Data Processing Agreement",
+      "kind": "contract",
+      "path": "data/dpa_sample.md",
+      "sha256": "17a0c7b0dc7e74fe23fda6fcb394d331ada6e7286c2fb6a9497a9e58ed96f79e",
+      "source_ref": "synthetic:contract-review-eval-harness/data/dpa_sample.md",
+      "introduced_in": "round1"
+    },
+    {
+      "document_id": "negotiation_record",
+      "title": "Negotiation record",
+      "kind": "negotiation_record",
+      "path": "matters/northwind-saas/documents/negotiation_record.md",
+      "sha256": "0964c8427e39ab19e67332369705e038c829ca2fda247c72cfa8c2aefd69987e",
+      "source_ref": "synthetic:contract-review-eval-harness/matters/northwind-saas/documents/negotiation_record.md",
+      "introduced_in": "round1"
+    },
+    {
+      "document_id": "security_questionnaire",
+      "title": "Vendor security questionnaire, completed",
+      "kind": "security_questionnaire",
+      "path": "matters/northwind-saas/documents/security_questionnaire.md",
+      "sha256": "7f548a99c8f8add8429033fa572b002493ee5f16376d5a06a8d1da46f54a1095",
+      "source_ref": "synthetic:contract-review-eval-harness/matters/northwind-saas/documents/security_questionnaire.md",
+      "introduced_in": "round1"
+    },
+    {
+      "document_id": "client_instructions",
+      "title": "Instruction memo to outside counsel",
+      "kind": "client_instruction",
+      "path": "matters/northwind-saas/documents/client_instructions.md",
+      "sha256": "e8b1c5da5b7342f952dadf27d94eed9603ab1c65990b97dda28f2387f3b9bffa",
+      "source_ref": "synthetic:contract-review-eval-harness/matters/northwind-saas/documents/client_instructions.md",
+      "introduced_in": "round1"
+    },
+    {
+      "document_id": "playbook",
+      "title": "Contracting playbook for hosted services and data processing",
+      "kind": "playbook",
+      "path": "matters/northwind-saas/documents/playbook.md",
+      "sha256": "ab01814ee73a522a817dd7eef9e3e88962876f8c7e6d1faaeab485cc8fb0bca7",
+      "source_ref": "synthetic:contract-review-eval-harness/matters/northwind-saas/documents/playbook.md",
+      "introduced_in": "round1"
+    },
+    {
+      "document_id": "vendor_response",
+      "title": "Cverbio response to the Northwind mark-up",
+      "kind": "counterparty_response",
+      "path": "matters/northwind-saas/documents/vendor_response.md",
+      "sha256": "0a7682f92a244daf76533aeed441691c00f968f741af8d4a849012a27c0515b4",
+      "source_ref": "synthetic:contract-review-eval-harness/matters/northwind-saas/documents/vendor_response.md",
+      "introduced_in": "round2"
+    },
+    {
+      "document_id": "client_update",
+      "title": "Update to the instruction memo",
+      "kind": "client_instruction",
+      "path": "matters/northwind-saas/documents/client_update.md",
+      "sha256": "d8750bf21b540ac4e9293fbca304aff81d8969f348cfb11b63bf2c4e275543f8",
+      "source_ref": "synthetic:contract-review-eval-harness/matters/northwind-saas/documents/client_update.md",
+      "introduced_in": "round2"
+    }
+  ]
+}
