@@ -1,0 +1,108 @@
+{
+  "schema": "legal-ops-agent.deliverable-manifest.v1",
+  "kind": "internal_review",
+  "matter_id": "PM-SPECIALIST-002",
+  "matter_version": 2,
+  "content_hash": "19f155d9442ffc856778ca487b46dd68eab42ad691259dd34693c7e22f1ed7aa",
+  "review_hash": "d6b9f63e2de64d55206166c1dfb3e8f7d91084b970f49b9b0e3122bfb9667b26",
+  "source_document": {
+    "name": "synthetic-msa-specialist.docx",
+    "sha256": "7a170f9dc8f467e08e6406a4b7c935ba0ee8626daec45e43159a4f696c6c3973"
+  },
+  "playbook": {
+    "ref": "synthetic:saas-msa-deviation-playbook@v1",
+    "sha256": "ece9ab3d3b1fb84dfc64761393237b79af00047d4a1333d2381e6a12a4a375eb"
+  },
+  "eligibility": {
+    "schema": "legal-ops-agent.export-eligibility.v1",
+    "kind": "internal_review",
+    "eligible": true,
+    "checks": [
+      {
+        "check_id": "assessment_present",
+        "status": "pass",
+        "required": true,
+        "detail": "assessment loa_cd832438807ca3b3"
+      },
+      {
+        "check_id": "assessment_bound_to_version",
+        "status": "pass",
+        "required": true,
+        "detail": "assessment is bound to version 2"
+      },
+      {
+        "check_id": "assessment_approved",
+        "status": "fail",
+        "required": false,
+        "detail": "parent assessment is needs_review and not approved for export"
+      },
+      {
+        "check_id": "source_boundary_clear",
+        "status": "pass",
+        "required": true,
+        "detail": "no blocked source prefix"
+      },
+      {
+        "check_id": "no_blocker_findings",
+        "status": "pass",
+        "required": false,
+        "detail": "no blocker finding"
+      },
+      {
+        "check_id": "document_hash_matches",
+        "status": "pass",
+        "required": true,
+        "detail": "document digest matches the reviewed version"
+      },
+      {
+        "check_id": "changes_decided",
+        "status": "fail",
+        "required": false,
+        "detail": "export requires every proposed change to be decided; undecided: chg-audit-right-7e46718e, chg-liability-cap-c8bcf70e, chg-liability-exclusions-c8bcf70e, chg-most-favoured-customer-e9bbead5, chg-payment-terms-2816324e, chg-roadmap-commitment-632261c0, chg-subprocessors-3340f2a6"
+      },
+      {
+        "check_id": "no_unresolved_blockers",
+        "status": "fail",
+        "required": false,
+        "detail": "unresolved: coverage_gap cov-e01bae58265f on source_span coverage:e01bae58265f (current)"
+      },
+      {
+        "check_id": "required_reviewer_decisions",
+        "status": "fail",
+        "required": false,
+        "detail": "specialist_signoff:Privacy Counsel is missing; final_approval:General Counsel is missing"
+      },
+      {
+        "check_id": "audit_chain_verified",
+        "status": "pass",
+        "required": true,
+        "detail": "audit chain intact"
+      },
+      {
+        "check_id": "matter_state_permits_delivery",
+        "status": "fail",
+        "required": false,
+        "detail": "matter state review does not permit delivery"
+      }
+    ],
+    "external_delivery_allowed": false
+  },
+  "event_chain_root": "0e7e9c4586aa295bf461b399030c2c306a461ba782dd8143c115f8c6cc32cc76",
+  "generated_at_utc": "2026-10-06T19:22:37.773377Z",
+  "folder": "PM-SPECIALIST-002/v2/internal-review",
+  "files": [
+    {
+      "name": "internal-review.md",
+      "sha256": "605eb518c2cf2d141e09d54fb6d45000fbda77fdf363a0b3b43fc8ecbda79661",
+      "bytes": 7519
+    },
+    {
+      "name": "draft-redline.docx",
+      "sha256": "0ca57e9dd2e64a30cb4c7d6fa9ec67ae9cbcade369e8abdc2e3a08c80c6bafde",
+      "bytes": 3378
+    }
+  ],
+  "external_delivery": "disabled",
+  "identity": "simulated local roles, not authenticated",
+  "synthetic": true
+}

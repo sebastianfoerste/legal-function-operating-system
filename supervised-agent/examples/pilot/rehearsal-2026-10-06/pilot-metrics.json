@@ -1,0 +1,159 @@
+{
+  "schema": "legal-ops-agent.pilot-metrics.v1",
+  "data_basis": "synthetic_scripted_rehearsal",
+  "interpretation": "Scripted timestamps and declared effort demonstrate that the measures compute. They are not pilot outcomes and support no claim about time saved.",
+  "measurement_plan": {
+    "schema": "legal-ops-agent.pilot-measurement-plan.v1",
+    "defined_before_results": true,
+    "baseline": {
+      "status": "not_collected",
+      "method": "Retrospective sample of the last 15 closed SaaS contract-deviation requests handled without the workflow, reconstructed from request and reply timestamps and the reviewers' time records. Where time records are missing, the reviewer estimates effort within one week of closing and the figure is marked as an estimate.",
+      "window": "The eight weeks before the first pilot matter is opened.",
+      "measures": [
+        "elapsed time from request to accepted deliverable",
+        "elapsed time from request to first reviewer action",
+        "reviewer effort in minutes",
+        "number of clarification rounds with the requester",
+        "number of deliverables corrected after first delivery"
+      ]
+    },
+    "pilot_window": "Six weeks from the first pilot matter, or 20 closed matters, whichever comes first. The first week is a settling week and is reported separately.",
+    "measures": {
+      "intake_completeness": "Required facts present at the first submission attempt, out of five.",
+      "assignment_minutes": "Intake submitted to review started.",
+      "waiting_minutes_by_cause": "Gaps between consecutive recorded actions, attributed to the role that acted next: requester or missing facts, matter owner, specialist, approver.",
+      "effort_minutes": "Declared effort per action, split into intake, review and correction. Correction is effort spent while a revision is open or on amendments after review began.",
+      "revision_count": "Number of revision requests.",
+      "reopened_issues": "Number of resolved comments that were reopened.",
+      "total_minutes_to_accepted_deliverable": "Matter opened to requester acceptance.",
+      "software_execution_ms": "Measured execution time of assessment, routing, change proposal and export."
+    },
+    "interpretation_rules": [
+      "No comparison is drawn until the baseline is collected with the method above.",
+      "Scripted rehearsal data is never reported as a pilot result.",
+      "Software execution time and human effort are reported separately.",
+      "A delay is attributed to the system only where software execution time or a refused command caused by a defect explains it."
+    ]
+  },
+  "baseline_comparison": "not performed: no baseline has been collected",
+  "scripted_human_time": [
+    {
+      "matter_id": "PM-ROUTINE-001",
+      "state": "closed",
+      "versions": 1,
+      "intake_completeness": {
+        "required_facts": 5,
+        "present_at_first_submission": 5,
+        "missing_at_first_submission": [],
+        "ratio": 1.0
+      },
+      "assignment_minutes": 75.0,
+      "waiting_minutes_by_cause": {
+        "requester_or_missing_facts": 5.0,
+        "matter_owner_availability": 135.0,
+        "specialist_availability": 0.0,
+        "approver_availability": 230.0,
+        "requester_acceptance": 80.0
+      },
+      "waiting_on_clarification_minutes": 0.0,
+      "effort_minutes": {
+        "intake": 17,
+        "review": 73,
+        "correction": 0
+      },
+      "revision_count": 0,
+      "substantive_amendments": 0,
+      "reopened_issues": 0,
+      "refused_commands": 2,
+      "total_minutes_to_accepted_deliverable": 450.0,
+      "software_execution_ms": 7.1,
+      "audit_chain_verified": true
+    },
+    {
+      "matter_id": "PM-SPECIALIST-002",
+      "state": "closed",
+      "versions": 3,
+      "intake_completeness": {
+        "required_facts": 5,
+        "present_at_first_submission": 4,
+        "missing_at_first_submission": [
+          "business_owner"
+        ],
+        "ratio": 0.8
+      },
+      "assignment_minutes": 125.0,
+      "waiting_minutes_by_cause": {
+        "requester_or_missing_facts": 1205.0,
+        "matter_owner_availability": 315.0,
+        "specialist_availability": 120.0,
+        "approver_availability": 170.0,
+        "requester_acceptance": 1100.0
+      },
+      "waiting_on_clarification_minutes": 1260.0,
+      "effort_minutes": {
+        "intake": 45,
+        "review": 210,
+        "correction": 45
+      },
+      "revision_count": 1,
+      "substantive_amendments": 2,
+      "reopened_issues": 1,
+      "refused_commands": 7,
+      "total_minutes_to_accepted_deliverable": 2910.0,
+      "software_execution_ms": 18.4,
+      "audit_chain_verified": true
+    },
+    {
+      "matter_id": "PM-BLOCKED-003",
+      "state": "triage",
+      "versions": 1,
+      "intake_completeness": {
+        "required_facts": 5,
+        "present_at_first_submission": 5,
+        "missing_at_first_submission": [],
+        "ratio": 1.0
+      },
+      "assignment_minutes": null,
+      "waiting_minutes_by_cause": {
+        "requester_or_missing_facts": 5.0,
+        "matter_owner_availability": 0.0,
+        "specialist_availability": 0.0,
+        "approver_availability": 0.0,
+        "requester_acceptance": 0.0
+      },
+      "waiting_on_clarification_minutes": 0.0,
+      "effort_minutes": {
+        "intake": 15,
+        "review": 0,
+        "correction": 0
+      },
+      "revision_count": 0,
+      "substantive_amendments": 0,
+      "reopened_issues": 0,
+      "refused_commands": 6,
+      "total_minutes_to_accepted_deliverable": null,
+      "software_execution_ms": 2.7,
+      "audit_chain_verified": true
+    }
+  ],
+  "operational_time": [
+    {
+      "matter_id": "PM-ROUTINE-001",
+      "refused_commands": 2,
+      "software_execution_ms": 7.1,
+      "audit_chain_verified": true
+    },
+    {
+      "matter_id": "PM-SPECIALIST-002",
+      "refused_commands": 7,
+      "software_execution_ms": 18.4,
+      "audit_chain_verified": true
+    },
+    {
+      "matter_id": "PM-BLOCKED-003",
+      "refused_commands": 6,
+      "software_execution_ms": 2.7,
+      "audit_chain_verified": true
+    }
+  ]
+}

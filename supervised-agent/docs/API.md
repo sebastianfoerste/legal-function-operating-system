@@ -222,3 +222,41 @@ Output schema:
   "required": ["allowed_sources", "blocked_sources", "external_processing"]
 }
 ```
+
+## Pilot review-room API
+
+Served by `runtime_agent/app.py` under `/pilot` on `127.0.0.1`. Every data route needs the
+`X-Pilot-Actor` header naming a registered synthetic actor. The header selects a simulated
+local role. It is not authentication; see `docs/pilot/IDENTITY_CONTROLS.md`.
+
+| Method and path | Purpose |
+| --- | --- |
+| `GET /pilot` | The review room page |
+| `GET /pilot/api/actors` | Synthetic actors, onboarding tasks and scenario fixtures |
+| `GET /pilot/api/matters` | Matters the actor is assigned to, plus the unclaimed triage queue for matter owners |
+| `POST /pilot/api/matters` | Open a matter from `{"scenario_id"}` or from `{"intake", "document_name", "document_base64"}` |
+| `GET /pilot/api/matters/{id}` | The matter as that role may see it |
+| `GET /pilot/api/matters/{id}/history` | Versions, events and chain verification |
+| `GET /pilot/api/matters/{id}/package` | The approved customer package, if a delivery manifest exists |
+| `POST /pilot/api/matters/{id}/commands` | `{"command", "expected_revision", "args", "effort_minutes"}` |
+
+Answers to a refused command:
+
+| Status | `error` | Meaning |
+| --- | --- | --- |
+| 401 | `actor_required` | No actor header |
+| 403 | `permission_denied` | Unknown actor, wrong role, or not assigned to the matter |
+| 409 | `stale_submission` | The matter changed; `current_revision` is returned |
+| 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |
+| 409 | `export_blocked` | The export gate refused; `checks` lists each condition |
+| 422 | `invalid_command` | Unknown command or invalid arguments |
+
+Scripted fixture timestamps cannot be set through this API.
+
+## `document.change-set.v2`
+
+`document.change-set.v1` carried an `exportAllowed` flag that became true once every change
+was decided. Version 2 removes it. The change set records `assessment_id`,
+`allChangesDecided` and `coverageProblems`; whether an export is allowed is answered only by
+`src/export_gate.py`. `render_annotated_docx` takes the parent assessment as a required
+keyword argument.

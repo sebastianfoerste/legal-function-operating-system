@@ -23,6 +23,18 @@ REVIEW_STATE_MAP = {
     },
 }
 
+PILOT_STATE_MAP = {
+    "intake": "pending_review",
+    "triage": "pending_review",
+    "assignment": "pending_review",
+    "review": "pending_review",
+    "revision_requested": "revision_requested",
+    "revised": "pending_review",
+    "approved": "approved",
+    "ready_for_delivery": "approved",
+    "closed": "approved",
+}
+
 
 def main() -> int:
     schema = json.loads(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -56,6 +68,21 @@ def main() -> int:
     missing = sorted(item for item in required_agent_controls if item not in agent_text)
     if missing:
         raise SystemExit(f"supervised-agent control is missing: {', '.join(missing)}")
+
+    # The pilot maps its own state machine onto the shared contract in one place.
+    bridge = (ROOT / "supervised-agent" / "src" / "pilot" / "parent_bridge.py").read_text(
+        encoding="utf-8"
+    )
+    machine = (ROOT / "supervised-agent" / "src" / "pilot" / "state_machine.py").read_text(
+        encoding="utf-8"
+    )
+    for pilot_state, shared_state in PILOT_STATE_MAP.items():
+        if f'"{pilot_state}": "{shared_state}"' not in bridge:
+            raise SystemExit(f"pilot state mapping is missing or changed: {pilot_state}")
+        if f'"{pilot_state}"' not in machine:
+            raise SystemExit(f"pilot state is missing from the state machine: {pilot_state}")
+    if not set(PILOT_STATE_MAP.values()) <= allowed:
+        raise SystemExit("pilot state mapping exceeds shared contract")
 
     print("shared legal workflow control contract passed")
     return 0

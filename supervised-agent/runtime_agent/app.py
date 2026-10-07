@@ -3,12 +3,31 @@ from __future__ import annotations
 import json
 import os
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
 from src.mcp_tools import legal_ops_mcp_manifest, run_tool
+from src.pilot.api import PilotApi, encode
+from src.pilot.scenario_runner import seed_actors
+from src.pilot.service import PilotService
+from src.pilot.store import PilotStore
 
 SERVICE_NAME = "legal_ops_agent_runtime"
+DEFAULT_PILOT_DB = Path(".pilot") / "pilot.sqlite3"
+_pilot_api: PilotApi | None = None
+
+
+def pilot_api() -> PilotApi:
+    """The review-room API over the local store named by PILOT_DB."""
+
+    global _pilot_api
+    if _pilot_api is None:
+        service = PilotService(PilotStore(Path(os.getenv("PILOT_DB", str(DEFAULT_PILOT_DB)))))
+        if not service.list_actors():
+            seed_actors(service)
+        _pilot_api = PilotApi(service)
+    return _pilot_api
 
 
 class RuntimeHandler(BaseHTTPRequestHandler):
@@ -30,8 +49,23 @@ class RuntimeHandler(BaseHTTPRequestHandler):
         except json.JSONDecodeError:
             return None
 
+    def _pilot(self, method: str, body: dict[str, Any] | None = None) -> None:
+        status, payload, content_type = pilot_api().handle(
+            method, urlparse(self.path).path, dict(self.headers.items()), body
+        )
+        data = encode(payload)
+        self.send_response(status)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
     def do_GET(self) -> None:  # noqa: N802
         parsed = urlparse(self.path)
+        if parsed.path == "/pilot" or parsed.path.startswith("/pilot/"):
+            self._pilot("GET")
+            return
         if parsed.path == "/health":
             self._write_json(
                 200,
@@ -54,6 +88,10 @@ class RuntimeHandler(BaseHTTPRequestHandler):
         payload = self._read_json_body()
         if not isinstance(payload, dict):
             self._write_json(400, {"error": "invalid_json"})
+            return
+
+        if parsed.path.startswith("/pilot/"):
+            self._pilot("POST", payload)
             return
 
         if parsed.path == "/tools/call":

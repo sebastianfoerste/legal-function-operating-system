@@ -1,0 +1,40 @@
+{
+  "matter_id": "PM-ROUTINE-001",
+  "matter_version": 1,
+  "issues": [
+    {
+      "change_id": "chg-payment-terms-2816324e",
+      "locator": "clause 2.1 para:5@2816324e7bcecef3[50:66]",
+      "topic": "Payment terms",
+      "severity": "low",
+      "counterparty_wording": "ninety (90) days",
+      "playbook_wording": "thirty (30) days",
+      "outcome": "Reverted to the standard position",
+      "final_wording": "thirty (30) days",
+      "reason": "The draft extends the payment period beyond the standard thirty days.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    },
+    {
+      "change_id": "chg-audit-right-7e46718e",
+      "locator": "clause 3.1 para:7@7e46718e80a25f96[66:102]",
+      "topic": "Audit right",
+      "severity": "medium",
+      "counterparty_wording": "at any time and without prior notice",
+      "playbook_wording": "once in any twelve (12) month period on thirty (30) days' prior written notice, during business hours and subject to Supplier's confidentiality requirements",
+      "outcome": "Reverted to the standard position",
+      "final_wording": "once in any twelve (12) month period on thirty (30) days' prior written notice, during business hours and subject to Supplier's confidentiality requirements",
+      "reason": "The draft grants an unrestricted audit right without notice or frequency limit.",
+      "decided_by": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+    }
+  ],
+  "obligations": [
+    {
+      "obligation": "Record and track the customer commitment: controlled annual audit right",
+      "arises_from": "Intake commitment register",
+      "owner_role": "Commercial Counsel",
+      "owner": "Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)",
+      "due": "2026-09-18"
+    }
+  ],
+  "tracked_changes": 5
+}

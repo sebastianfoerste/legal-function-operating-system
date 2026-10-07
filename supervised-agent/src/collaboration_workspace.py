@@ -1,4 +1,10 @@
-"""Local playbooks, matter Lists, change sets and review-room rendering."""
+"""Matter Lists, the stateless change-set path and the static review-room snapshot.
+
+Proposed changes come from the versioned playbook engine in ``src.playbook`` and are
+written as tracked changes at verified locators by ``src.docx_redline``. Every
+reviewed-document export passes ``src.export_gate``; a decided change set alone
+never authorises one.
+"""
 
 from __future__ import annotations
 
@@ -9,33 +15,16 @@ import os
 import zipfile
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
-from typing import TypedDict
-from xml.sax.saxutils import escape
 
 from pydantic import BaseModel, ConfigDict, Field
 
 from models import LegalOpsAssessment, compute_audit_event_hash
+from src.docx_redline import RevisionMark, index_docx, write_reviewed_docx
+from src.export_gate import ExportContext, require_export_eligibility
+from src.playbook import DocumentChange, DocumentChangeSet, Playbook, load_playbook, propose_changes
 from src.source_verification import verify_source_refs
 
-
-class DocumentChange(BaseModel):
-    id: str
-    locator: str
-    original_text: str
-    proposed_text: str
-    rationale: str
-    source_refs: list[str]
-    decision: str = "pending"
-
-
-class DocumentChangeSet(BaseModel):
-    model_config = ConfigDict(populate_by_name=True)
-    schema_id: str = Field("document.change-set.v1", alias="schema")
-    source_digest: str
-    playbook_version: int
-    changes: list[DocumentChange]
-    source_preserved: bool = Field(True, alias="sourcePreserved")
-    export_allowed: bool = Field(False, alias="exportAllowed")
+__all__ = ["DocumentChange", "DocumentChangeSet"]
 
 
 class MatterListItem(BaseModel):
@@ -68,35 +57,6 @@ class TimelineEvent(BaseModel):
     event_hash: str
 
 
-class Playbook(TypedDict):
-    version: int
-    position: str
-    fallback: str
-    source: str
-
-
-PLAYBOOKS: dict[str, Playbook] = {
-    "contract": {
-        "version": 1,
-        "position": "Consequential commitments require written approval and source-bound review.",
-        "fallback": "Escalate the clause with a time-limited exception.",
-        "source": "synthetic:contract-playbook-v1",
-    },
-    "privacy": {
-        "version": 1,
-        "position": "Processing purpose, retention and approved subprocessors must be explicit.",
-        "fallback": "Record a documented remediation plan before signature.",
-        "source": "synthetic:dpa-playbook-v1",
-    },
-    "regulatory_monitoring": {
-        "version": 1,
-        "position": "Legal conclusions require current primary-source verification.",
-        "fallback": "Label the conclusion provisional and assign legal review.",
-        "source": "synthetic:regulatory-response-playbook-v1",
-    },
-}
-
-
 def _reproducible_now() -> datetime:
     raw_epoch = os.environ.get("SOURCE_DATE_EPOCH", "0")
     try:
@@ -106,8 +66,16 @@ def _reproducible_now() -> datetime:
 
 
 def build_change_set(
-    assessment: LegalOpsAssessment, source_document: Path | None = None
+    assessment: LegalOpsAssessment,
+    source_document: Path | None = None,
+    playbook: Playbook | None = None,
 ) -> DocumentChangeSet:
+    """Propose document-specific changes for a matter.
+
+    Without a source document there is nothing to locate a change in, so the change
+    set is empty. Generic wording is never proposed.
+    """
+
     blocked = [
         source.source_ref
         for source in assessment.source_verifications
@@ -117,44 +85,41 @@ def build_change_set(
         raise ValueError(
             f"blocked source references prevent document processing: {', '.join(blocked)}"
         )
-    playbook = PLAYBOOKS.get(assessment.matter.matter_type, PLAYBOOKS["contract"])
-    source = (
-        source_document.read_bytes()
-        if source_document
-        else json.dumps(assessment.matter.model_dump(mode="json"), sort_keys=True).encode()
-    )
-    changes = [
-        DocumentChange(
-            id=f"change-{index}",
-            locator=f"finding:{index}",
-            original_text=finding.evidence,
-            proposed_text=playbook["position"],
-            rationale=finding.recommended_action,
-            source_refs=[playbook["source"], *assessment.matter.source_refs],
-        )
-        for index, finding in enumerate(assessment.findings, start=1)
-    ]
+    playbook = playbook or load_playbook()
+    changes: list[DocumentChange] = []
+    problems: list[str] = []
+    if source_document is None:
+        source = json.dumps(assessment.matter.model_dump(mode="json"), sort_keys=True).encode()
+    else:
+        source = source_document.read_bytes()
+        proposal = propose_changes(index_docx(source), playbook)
+        changes, problems = proposal.changes, proposal.problems
     return DocumentChangeSet(
-        schema="document.change-set.v1",
+        schema="document.change-set.v2",
+        assessment_id=assessment.assessment_id,
         source_digest=hashlib.sha256(source).hexdigest(),
-        playbook_version=playbook["version"],
+        playbook_id=playbook.playbook_id,
+        playbook_version=playbook.version,
         changes=changes,
+        coverageProblems=problems,
         sourcePreserved=True,
-        exportAllowed=False,
+        allChangesDecided=not changes,
     )
 
 
 def decide_change(
     change_set: DocumentChangeSet, change_id: str, decision: str
 ) -> DocumentChangeSet:
+    """Record one decision. This never makes the change set exportable on its own."""
+
     if decision not in {"accepted", "rejected"}:
         raise ValueError("change decision must be accepted or rejected")
     updated = change_set.model_copy(deep=True)
     change = next((candidate for candidate in updated.changes if candidate.id == change_id), None)
     if change is None:
         raise ValueError(f"unknown change: {change_id}")
-    change.decision = decision
-    updated.export_allowed = bool(updated.changes) and all(
+    change.decision = decision  # type: ignore[assignment]
+    updated.all_changes_decided = all(
         item.decision in {"accepted", "rejected"} for item in updated.changes
     )
     return updated
@@ -301,53 +266,62 @@ def render_review_room(
     matter_list: MatterList,
     output: Path,
 ) -> Path:
+    """Write a static, read-only snapshot. It records nothing.
+
+    Decisions are taken in the pilot review room (``runtime_agent``), which saves
+    them through the application layer.
+    """
+
     sources = "".join(
         f"<li>{html.escape(source.source_ref)}: {source.status}</li>"
         for source in assessment.source_verifications
     )
     changes = "".join(
-        f"<tr data-change='{html.escape(change.id)}'><td>{html.escape(change.locator)}</td><td>{html.escape(change.proposed_text)}</td><td class='decision'>{change.decision}</td><td><button type='button' data-decision='accepted'>Accept</button> <button type='button' data-decision='rejected'>Reject</button></td></tr>"
+        f"<tr><td>{html.escape(change.locator)}</td><td>{html.escape(change.original_text)}</td>"
+        f"<td>{html.escape(change.proposed_text)}</td><td>{html.escape(change.decision)}</td></tr>"
         for change in change_set.changes
     )
     tasks = "".join(
         f"<li><strong>{html.escape(item.title)}</strong>, {html.escape(item.owner)}, {item.status}</li>"
         for item in matter_list.items
     )
-    document = f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(assessment.matter.title)}</title><style>body{{font:15px system-ui;max-width:1100px;margin:40px auto;color:#172033}}section{{border:1px solid #d9dee8;border-radius:10px;padding:18px;margin:16px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #d9dee8;padding:8px;text-align:left}}.gate{{color:#9a3412}}</style></head><body><h1>{html.escape(assessment.matter.title)}</h1><p class='gate'>Local review only. External access and delivery are disabled.</p><section><h2>Source verification</h2><ul>{sources}</ul></section><section><h2>Document changes</h2><table><tr><th>Locator</th><th>Proposed text</th><th>Decision</th><th>Review control</th></tr>{changes}</table><p><label>Reviewer comment <input id='review-comment' /></label> <button type='button' id='save-comment'>Add local comment</button></p><ul id='comments'></ul></section><section><h2>Matter List</h2><ul>{tasks}</ul></section><script>document.querySelectorAll('[data-decision]').forEach((button)=>button.addEventListener('click',()=>{{button.closest('tr').querySelector('.decision').textContent=button.dataset.decision;}}));document.getElementById('save-comment').addEventListener('click',()=>{{const input=document.getElementById('review-comment');if(!input.value.trim())return;const item=document.createElement('li');item.textContent=input.value.trim();document.getElementById('comments').appendChild(item);input.value='';}});</script></body></html>"""
+    document = f"""<!doctype html><html><head><meta charset='utf-8'><title>{html.escape(assessment.matter.title)}</title><style>body{{font:15px system-ui;max-width:1100px;margin:40px auto;color:#172033}}section{{border:1px solid #d9dee8;border-radius:10px;padding:18px;margin:16px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #d9dee8;padding:8px;text-align:left}}.gate{{color:#9a3412}}</style></head><body><h1>{html.escape(assessment.matter.title)}</h1><p class='gate'>Static snapshot for reading. Nothing on this page is saved. External access and delivery are disabled.</p><section><h2>Source verification</h2><ul>{sources}</ul></section><section><h2>Document changes</h2><table><tr><th>Locator</th><th>Original text</th><th>Proposed text</th><th>Decision</th></tr>{changes}</table></section><section><h2>Matter List</h2><ul>{tasks}</ul></section></body></html>"""
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8")
     return output
 
 
-def render_annotated_docx(change_set: DocumentChangeSet, source: Path, output: Path) -> Path:
+def render_annotated_docx(
+    change_set: DocumentChangeSet,
+    source: Path,
+    output: Path,
+    *,
+    assessment: LegalOpsAssessment,
+) -> Path:
+    """Write accepted changes as tracked changes, if the export gate allows it.
+
+    The parent assessment is a required argument: a fully decided change set is not
+    enough. This is a stateless call, so the reviewer named on the assessment is an
+    unauthenticated string; an approved delivery package only comes from the pilot
+    service, which checks recorded reviewer decisions.
+    """
+
     if source.resolve() == output.resolve():
         raise ValueError("reviewed DOCX output must not overwrite the source document")
-    if not change_set.export_allowed:
-        raise ValueError("DOCX export requires every proposed change to be decided")
     if not zipfile.is_zipfile(source):
         raise ValueError("source document must be a DOCX package")
-    if hashlib.sha256(source.read_bytes()).hexdigest() != change_set.source_digest:
-        raise ValueError("source DOCX digest does not match the reviewed change set")
-    change_timestamp = _reproducible_now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
-    paragraphs = "".join(
-        f"<w:p><w:ins w:author='Legal reviewer' w:date='{change_timestamp}'><w:r><w:t>{escape(change.proposed_text)}</w:t></w:r></w:ins></w:p>"
-        for change in change_set.changes
-        if change.decision == "accepted"
+    require_export_eligibility(
+        ExportContext(
+            kind="reviewed_document",
+            assessment=assessment,
+            change_set_assessment_id=change_set.assessment_id,
+            recorded_document_sha256=change_set.source_digest,
+            actual_document_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+            change_decisions={change.id: change.decision for change in change_set.changes},
+        )
     )
-    output.parent.mkdir(parents=True, exist_ok=True)
-    with (
-        zipfile.ZipFile(source) as source_package,
-        zipfile.ZipFile(output, "w", zipfile.ZIP_DEFLATED) as target_package,
-    ):
-        for member in source_package.infolist():
-            payload = source_package.read(member.filename)
-            if member.filename == "word/document.xml":
-                document = payload.decode("utf-8")
-                marker = "<w:sectPr"
-                position = document.rfind(marker)
-                if position < 0:
-                    position = document.rfind("</w:body>")
-                document = document[:position] + paragraphs + document[position:]
-                payload = document.encode("utf-8")
-            target_package.writestr(member, payload)
-    return output
+    change_timestamp = _reproducible_now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
+    edits = [change.to_edit() for change in change_set.changes if change.decision == "accepted"]
+    return write_reviewed_docx(
+        source, output, edits, RevisionMark(author="Legal reviewer", date=change_timestamp)
+    )

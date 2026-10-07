@@ -173,6 +173,25 @@ reviewer-facing evidence packet. See
 [`docs/competitive-research-2026-06-30.md`](docs/competitive-research-2026-06-30.md#round-2-audit-integrity-chain)
 for the comparison this claim is based on.
 
+## Supervised pilot workflow
+
+One narrowly scoped workflow, a customer's draft of a SaaS master subscription agreement, can be carried from intake to an accepted local delivery package: onboarding, assignment, review, revision, escalation and delivery. It is ready for a supervised trial with synthetic matters. No practitioner has taken part.
+
+```bash
+python -m src.pilot.cli rehearse --db /tmp/pilot-rehearsal/pilot.sqlite3 --out /tmp/pilot-rehearsal/out
+python -m src.pilot.cli seed --db .pilot/pilot.sqlite3
+python -m src.pilot.cli serve --db .pilot/pilot.sqlite3   # review room at http://127.0.0.1:18085/pilot
+```
+
+- [Pilot charter](docs/pilot/PILOT_CHARTER.md), [onboarding](docs/pilot/ONBOARDING.md) and [runbook](docs/pilot/RUNBOOK.md)
+- Three facilitator scripts: [routine](docs/pilot/scenarios/01-routine.md), [specialist input and revision](docs/pilot/scenarios/02-specialist-revision.md), [blocked](docs/pilot/scenarios/03-blocked.md)
+- [Capability record](docs/pilot/CAPABILITY_RECORD.md): what is executable, what is static presentation and what is simulated
+- [Identity controls](docs/pilot/IDENTITY_CONTROLS.md) required before practitioners rely on it
+- [Case study](docs/pilot/CASE_STUDY.md) and [retrospective](docs/pilot/RETROSPECTIVE.md)
+- Dated rehearsal with both delivery packages: [`examples/pilot/rehearsal-2026-10-06/`](examples/pilot/rehearsal-2026-10-06/rehearsal-report.md)
+
+Every reviewed document and delivery package passes one eligibility check in [`src/export_gate.py`](src/export_gate.py). Approvals are bound to the exact matter version and reviewed state. Roles and assignments are enforced on every command; the identity behind a role is simulated and labelled as such.
+
 ## Core workflow
 
 ```mermaid
@@ -208,6 +227,9 @@ flowchart TD
 - [`src/audit_chain.py`](src/audit_chain.py): Tamper-evident hash chain builder for the audit trail.
 - [`src/review_packet.py`](src/review_packet.py): Markdown review-packet renderer for legal sign-off.
 - [`src/cli.py`](src/cli.py): Fixture-driven command line entry point.
+- [`src/export_gate.py`](src/export_gate.py): The single export-eligibility check.
+- [`src/playbook.py`](src/playbook.py) and [`src/docx_redline.py`](src/docx_redline.py): Playbook rules, located changes and tracked changes in a defined DOCX subset.
+- [`src/pilot/`](src/pilot): Persistent store, state machine, workflow service, deliverables, measurement, review room and rehearsal for the pilot.
 - [`examples/matters/`](examples/matters): Synthetic SaaS, DPA, AI-vendor, product and regulatory-monitoring fixtures.
 - [`examples/clauses/`](examples/clauses): Synthetic redacted clause fixtures.
 - [`runtime_agent/app.py`](runtime_agent/app.py): Small HTTP canary for health checks and local workflow calls.
@@ -238,7 +260,7 @@ This runs Ruff, Black, MyPy and Pytest.
 - `legal.sources.verify`: verify source-reference boundaries without fetching external content.
 - `legal.workspace.build`: build a provenance-backed matter vault, supervised workflow-agent library and shared review room from a synthetic assessment.
 
-The local Review-workspace layer adds versioned matter playbooks, review-gated `document.change-set.v1` DOCX drafts, evidence-gated matter Lists with a hash-chained timeline, and a self-contained HTML review room. Sensitive source prefixes still block processing and no external delivery action is available.
+The local Review-workspace layer adds a versioned matter playbook, review-gated `document.change-set.v2` DOCX drafts with document-specific tracked changes, evidence-gated matter Lists with a hash-chained timeline, and a static HTML snapshot. Sensitive source prefixes still block processing and no external delivery action is available.
 
 These tools are designed for local verification. They do not send client, candidate, matter or account data to an external system.
 
@@ -279,8 +301,12 @@ or risk reviewer asks about before a tool ships.
 A public-safe prototype, not a production system.
 1. Synthetic matters only; no real DMS, identity provider, or e-signature.
 2. Triage thresholds are illustrative defaults, to be tuned per team.
-3. The audit trail is tamper-evident (hash-chained, verifiable with `legal.audit.verify`)
-   but still in-process, not persisted to an append-only external store.
-4. Roles/permissions are modelled, not enforced against a real IdP.
+3. The audit trail is tamper-evident (hash-chained, verifiable with `legal.audit.verify`).
+   The pilot persists its event chain in a local SQLite file; nothing is replicated to an
+   append-only external store.
+4. Roles and assignments are enforced in the pilot, but against simulated local actors,
+   not a real IdP.
+5. Tracked changes cover body paragraphs with simple runs; tables, fields and content
+   controls are reported and left to a person.
 Next production step: real auth for approval tiers, ticketing integration, live SLA
 tracking, and persisting the hash-chained audit log to an append-only external store.

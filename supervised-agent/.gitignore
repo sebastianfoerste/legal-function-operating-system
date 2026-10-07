@@ -48,3 +48,6 @@ __pycache__/
 .eslintcache
 *.tsbuildinfo
 *.log
+
+# Local pilot store and exports
+.pilot/

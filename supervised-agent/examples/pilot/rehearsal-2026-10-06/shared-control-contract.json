@@ -1,0 +1,637 @@
+{
+  "PM-ROUTINE-001": {
+    "schema": "legal-workflow-controls.v1",
+    "review_state": "approved",
+    "approval_gate": {
+      "human_review_required": true,
+      "export_allowed": false,
+      "external_actions_allowed": false,
+      "required_roles": [
+        "final_approver:Reviewer"
+      ],
+      "review_note": "Synthetic Approver D (Legal Ops Lead) [syn-approver-lead, simulated role]: Both deviations revert to the standard position; no exception requested. Approved for return to the customer."
+    },
+    "source_boundary": {
+      "mode": "synthetic_only",
+      "categories": [
+        "synthetic"
+      ],
+      "human_verification_required": true
+    },
+    "audit_events": [
+      {
+        "sequence": 0,
+        "event_type": "matter_created",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.294326Z",
+        "note": "Matter opened; assessment, parent routing and playbook proposals generated.",
+        "previous_hash": null,
+        "event_hash": "245653a554733070acd1f5a2ffa3b4bad88d3bb484a92fd0aecd9efb373b90a7"
+      },
+      {
+        "sequence": 1,
+        "event_type": "intake_submitted",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.301615Z",
+        "note": "Intake submitted for triage.",
+        "previous_hash": "245653a554733070acd1f5a2ffa3b4bad88d3bb484a92fd0aecd9efb373b90a7",
+        "event_hash": "948358ab98eba1207d665e0b9c7fea11e5fa0370b46c6687744700a48a87c96f"
+      },
+      {
+        "sequence": 2,
+        "event_type": "command_refused",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.303659Z",
+        "note": "approve refused; missing evidence: state: approve is not allowed from state triage",
+        "previous_hash": "948358ab98eba1207d665e0b9c7fea11e5fa0370b46c6687744700a48a87c96f",
+        "event_hash": "44c18752aaa45ceda83cf691bfef74ec78b97946eac563c73c28f31703c22e96"
+      },
+      {
+        "sequence": 3,
+        "event_type": "triage_completed",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.304804Z",
+        "note": "Triage confirmed; matter owner claimed the matter.",
+        "previous_hash": "44c18752aaa45ceda83cf691bfef74ec78b97946eac563c73c28f31703c22e96",
+        "event_hash": "336e32e34d10631c29f1469aad46aa9c3de7767cda2a2ffa73163998fda4581f"
+      },
+      {
+        "sequence": 4,
+        "event_type": "reviewer_assigned",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.307660Z",
+        "note": "syn-approver-lead assigned as final_approver.",
+        "previous_hash": "336e32e34d10631c29f1469aad46aa9c3de7767cda2a2ffa73163998fda4581f",
+        "event_hash": "6a566bd4d2f6bd993c57374af4aa24c72af7ef281bf40f78bdee05113cdb1179"
+      },
+      {
+        "sequence": 5,
+        "event_type": "review_started",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.310585Z",
+        "note": "Readiness check passed; review opened.",
+        "previous_hash": "6a566bd4d2f6bd993c57374af4aa24c72af7ef281bf40f78bdee05113cdb1179",
+        "event_hash": "bed506c4d8b60fc86efbe9011ace3b6f8e4a4c34e0dc9fa61792d21ee16ea051"
+      },
+      {
+        "sequence": 6,
+        "event_type": "command_refused",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.448144Z",
+        "note": "prepare_delivery refused; missing evidence: state: prepare_delivery is not allowed from state review",
+        "previous_hash": "bed506c4d8b60fc86efbe9011ace3b6f8e4a4c34e0dc9fa61792d21ee16ea051",
+        "event_hash": "8e25725670aa572125f0f177824cf27c5368939398b12ae75846a7bf314ba82e"
+      },
+      {
+        "sequence": 7,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.449531Z",
+        "note": "chg-payment-terms-2816324e: accepted.",
+        "previous_hash": "8e25725670aa572125f0f177824cf27c5368939398b12ae75846a7bf314ba82e",
+        "event_hash": "97837ff5f21e9f165622a3ab3db755cfab298ebdf23527812fde01321749bede"
+      },
+      {
+        "sequence": 8,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.453289Z",
+        "note": "chg-audit-right-7e46718e: accepted.",
+        "previous_hash": "97837ff5f21e9f165622a3ab3db755cfab298ebdf23527812fde01321749bede",
+        "event_hash": "3fef983002991b7c9b3c153ea9222c147def8e8d0f119b7a3ccc93cd0151b0bb"
+      },
+      {
+        "sequence": 9,
+        "event_type": "approved",
+        "actor": "syn-approver-lead",
+        "timestamp_utc": "2026-10-06T19:22:37.456737Z",
+        "note": "Final approval on version 1.",
+        "previous_hash": "3fef983002991b7c9b3c153ea9222c147def8e8d0f119b7a3ccc93cd0151b0bb",
+        "event_hash": "cf155ecac9ecc060a63349f333d5129f8c5775eccb17b9426f6feabbbe68faaa"
+      },
+      {
+        "sequence": 10,
+        "event_type": "delivery_package_prepared",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.460041Z",
+        "note": "Approved delivery package written locally; nothing was sent.",
+        "previous_hash": "cf155ecac9ecc060a63349f333d5129f8c5775eccb17b9426f6feabbbe68faaa",
+        "event_hash": "f1f63c8ec14474a12f1f7c285ab085daef4eb48b7094c52ac0bc2f929a07e7e9"
+      },
+      {
+        "sequence": 11,
+        "event_type": "delivery_accepted",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.467439Z",
+        "note": "Requester accepted the local delivery package.",
+        "previous_hash": "f1f63c8ec14474a12f1f7c285ab085daef4eb48b7094c52ac0bc2f929a07e7e9",
+        "event_hash": "6c55d4dd5e8cfd0508ae0a0883cd8458cd7d232521171b84edefd5e30661a8b0"
+      }
+    ]
+  },
+  "PM-SPECIALIST-002": {
+    "schema": "legal-workflow-controls.v1",
+    "review_state": "approved",
+    "approval_gate": {
+      "human_review_required": true,
+      "export_allowed": false,
+      "external_actions_allowed": false,
+      "required_roles": [
+        "specialist_reviewer:Privacy Counsel",
+        "final_approver:General Counsel"
+      ],
+      "review_note": "Synthetic Approver E (General Counsel) [syn-approver-gc, simulated role]: All comments resolved and exceptions evidenced; approving version 3 of the reviewed draft."
+    },
+    "source_boundary": {
+      "mode": "synthetic_only",
+      "categories": [
+        "synthetic"
+      ],
+      "human_verification_required": true
+    },
+    "audit_events": [
+      {
+        "sequence": 0,
+        "event_type": "matter_created",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.596099Z",
+        "note": "Matter opened; assessment, parent routing and playbook proposals generated.",
+        "previous_hash": null,
+        "event_hash": "eb49b97d3261951982f2fd01b474d74e677dd52c7df02db3c4abc2a7f8978373"
+      },
+      {
+        "sequence": 1,
+        "event_type": "command_refused",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.602209Z",
+        "note": "submit_intake refused; missing evidence: intake_complete: missing fact: business_owner",
+        "previous_hash": "eb49b97d3261951982f2fd01b474d74e677dd52c7df02db3c4abc2a7f8978373",
+        "event_hash": "c0342d365601135583c516131f2424924548ee66955580025b1aa24eff8bdc4b"
+      },
+      {
+        "sequence": 2,
+        "event_type": "matter_amended",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.603332Z",
+        "note": "Add the missing business owner.",
+        "previous_hash": "c0342d365601135583c516131f2424924548ee66955580025b1aa24eff8bdc4b",
+        "event_hash": "3c41f2b78b39a5d3564606dbc0d1aef6e85683c8c61f448f4c62d3990c8125e3"
+      },
+      {
+        "sequence": 3,
+        "event_type": "intake_submitted",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.605718Z",
+        "note": "Intake submitted for triage.",
+        "previous_hash": "3c41f2b78b39a5d3564606dbc0d1aef6e85683c8c61f448f4c62d3990c8125e3",
+        "event_hash": "0a44004d78d2746012368cec21e93ac5e23fa969bb918b3a18d64103f1a8887c"
+      },
+      {
+        "sequence": 4,
+        "event_type": "triage_completed",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.606984Z",
+        "note": "Triage confirmed; matter owner claimed the matter.",
+        "previous_hash": "0a44004d78d2746012368cec21e93ac5e23fa969bb918b3a18d64103f1a8887c",
+        "event_hash": "63fafbd023679c4c685adf5bbec6ada4035074d9e63b162f1df2f8a6fdbc7dc7"
+      },
+      {
+        "sequence": 5,
+        "event_type": "reviewer_assigned",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.612716Z",
+        "note": "syn-specialist-privacy assigned as specialist_reviewer.",
+        "previous_hash": "63fafbd023679c4c685adf5bbec6ada4035074d9e63b162f1df2f8a6fdbc7dc7",
+        "event_hash": "c65cb477c695a3426fcc4d7f902e89d7b2bf4653de6bb3e9dbbb357d5f492659"
+      },
+      {
+        "sequence": 6,
+        "event_type": "reviewer_assigned",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.617381Z",
+        "note": "syn-approver-gc assigned as final_approver.",
+        "previous_hash": "c65cb477c695a3426fcc4d7f902e89d7b2bf4653de6bb3e9dbbb357d5f492659",
+        "event_hash": "3cfe1ddf8a13c488ecb2aaf8afc3d7b28dce59c3c8f4af425e31b788a06512f4"
+      },
+      {
+        "sequence": 7,
+        "event_type": "command_refused",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.622687Z",
+        "note": "start_review refused; missing evidence: reviewers_available: syn-specialist-privacy has not completed onboarding",
+        "previous_hash": "3cfe1ddf8a13c488ecb2aaf8afc3d7b28dce59c3c8f4af425e31b788a06512f4",
+        "event_hash": "294d94ae812c23e36988cd053d0ca37f0df81ea36f060d848747b4195ae8f16f"
+      },
+      {
+        "sequence": 8,
+        "event_type": "review_started",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.624186Z",
+        "note": "Readiness check passed; review opened.",
+        "previous_hash": "294d94ae812c23e36988cd053d0ca37f0df81ea36f060d848747b4195ae8f16f",
+        "event_hash": "0e7e9c4586aa295bf461b399030c2c306a461ba782dd8143c115f8c6cc32cc76"
+      },
+      {
+        "sequence": 9,
+        "event_type": "internal_review_exported",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.773377Z",
+        "note": "Internal review draft written locally.",
+        "previous_hash": "0e7e9c4586aa295bf461b399030c2c306a461ba782dd8143c115f8c6cc32cc76",
+        "event_hash": "1701e9516f7a53ee8d52addd9af24b7cf690de5d3d7f7c88597d4f6ea5b1599e"
+      },
+      {
+        "sequence": 10,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.786406Z",
+        "note": "chg-audit-right-7e46718e: accepted.",
+        "previous_hash": "1701e9516f7a53ee8d52addd9af24b7cf690de5d3d7f7c88597d4f6ea5b1599e",
+        "event_hash": "50f035f35443e64ef299dbc71d3be66d7bdcf80a589a2216502e2a1dd184bbd0"
+      },
+      {
+        "sequence": 11,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.792158Z",
+        "note": "chg-payment-terms-2816324e: rejected.",
+        "previous_hash": "50f035f35443e64ef299dbc71d3be66d7bdcf80a589a2216502e2a1dd184bbd0",
+        "event_hash": "8720d5f87578c6be2be47be0397138dfda450f112b33f1c2dfe0fb80a4011c14"
+      },
+      {
+        "sequence": 12,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.798335Z",
+        "note": "chg-liability-exclusions-c8bcf70e: accepted.",
+        "previous_hash": "8720d5f87578c6be2be47be0397138dfda450f112b33f1c2dfe0fb80a4011c14",
+        "event_hash": "ff77865a51c105a73f7033988282e9b0ce827b2133feea3bd84a10c68287959d"
+      },
+      {
+        "sequence": 13,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.804179Z",
+        "note": "chg-most-favoured-customer-e9bbead5: accepted.",
+        "previous_hash": "ff77865a51c105a73f7033988282e9b0ce827b2133feea3bd84a10c68287959d",
+        "event_hash": "1de5d671b7057534b7d824abe61d97f974cd80dee91dd51c1b01b8e1f85a6704"
+      },
+      {
+        "sequence": 14,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.809866Z",
+        "note": "chg-roadmap-commitment-632261c0: accepted.",
+        "previous_hash": "1de5d671b7057534b7d824abe61d97f974cd80dee91dd51c1b01b8e1f85a6704",
+        "event_hash": "dad1b5e5d63715e8921d8cf60464202fa3c4b1fe0bb91d8b60eb9ced23759aab"
+      },
+      {
+        "sequence": 15,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.816318Z",
+        "note": "chg-liability-cap-c8bcf70e: clarification_requested.",
+        "previous_hash": "dad1b5e5d63715e8921d8cf60464202fa3c4b1fe0bb91d8b60eb9ced23759aab",
+        "event_hash": "01bef66801f4065df9f3eeaae21b817c17a67dc22def5e3d42fa2600aaa061ec"
+      },
+      {
+        "sequence": 16,
+        "event_type": "command_refused",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.823139Z",
+        "note": "chg-subprocessors-3340f2a6 needs a decision from Privacy Counsel",
+        "previous_hash": "01bef66801f4065df9f3eeaae21b817c17a67dc22def5e3d42fa2600aaa061ec",
+        "event_hash": "fbf980c7f66508d89750050375979cd34402462fdd4428e0a350c0d0d4b19c9a"
+      },
+      {
+        "sequence": 17,
+        "event_type": "change_decided",
+        "actor": "syn-specialist-privacy",
+        "timestamp_utc": "2026-10-06T19:22:37.824469Z",
+        "note": "chg-subprocessors-3340f2a6: accepted.",
+        "previous_hash": "fbf980c7f66508d89750050375979cd34402462fdd4428e0a350c0d0d4b19c9a",
+        "event_hash": "c08f61b89f56acdcfe8aa381db1920755d6348e156502dfbc92114db0d68423b"
+      },
+      {
+        "sequence": 18,
+        "event_type": "comment_resolved",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.830592Z",
+        "note": "cov-e01bae58265f resolved.",
+        "previous_hash": "c08f61b89f56acdcfe8aa381db1920755d6348e156502dfbc92114db0d68423b",
+        "event_hash": "cb93870a90947a65203e43730e05c9bf3f1701423fceaecd6302e162a2e66c68"
+      },
+      {
+        "sequence": 19,
+        "event_type": "comment_added",
+        "actor": "syn-specialist-privacy",
+        "timestamp_utc": "2026-10-06T19:22:37.837258Z",
+        "note": "note comment on finding asm-privacy.",
+        "previous_hash": "cb93870a90947a65203e43730e05c9bf3f1701423fceaecd6302e162a2e66c68",
+        "event_hash": "f763e0f994ca8d6ba34b5f3310f3f24cf7eb26669bf91c8ff980284c56cbaf7a"
+      },
+      {
+        "sequence": 20,
+        "event_type": "specialist_signed_off",
+        "actor": "syn-specialist-privacy",
+        "timestamp_utc": "2026-10-06T19:22:37.844025Z",
+        "note": "Privacy Counsel sign-off on version 2.",
+        "previous_hash": "f763e0f994ca8d6ba34b5f3310f3f24cf7eb26669bf91c8ff980284c56cbaf7a",
+        "event_hash": "fdfab4ddc2c796ec2858f21a87a6d05ef5269b3c671abaa4f6d96116ed47a150"
+      },
+      {
+        "sequence": 21,
+        "event_type": "command_refused",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:37.850292Z",
+        "note": "approve refused; missing evidence: changes_decided: undecided: chg-liability-cap-c8bcf70e; no_open_blockers: open: c-002 (clarification, current)",
+        "previous_hash": "fdfab4ddc2c796ec2858f21a87a6d05ef5269b3c671abaa4f6d96116ed47a150",
+        "event_hash": "172467575522e70fe0a87237f3a5c46cb8a8d700e551ea30d2f0948a7b7d8e60"
+      },
+      {
+        "sequence": 22,
+        "event_type": "comment_response_added",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:37.979083Z",
+        "note": "Response on c-002.",
+        "previous_hash": "172467575522e70fe0a87237f3a5c46cb8a8d700e551ea30d2f0948a7b7d8e60",
+        "event_hash": "1dcfc726c7ae76baa8b0f94f69bb5f7a6c3d469480280b998c8e023b9f6e982b"
+      },
+      {
+        "sequence": 23,
+        "event_type": "comment_resolved",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.982408Z",
+        "note": "c-002 resolved.",
+        "previous_hash": "1dcfc726c7ae76baa8b0f94f69bb5f7a6c3d469480280b998c8e023b9f6e982b",
+        "event_hash": "7b02b1473bd6bcfe30285eee7f6c8dd459b1568fcc5fac6ca368f20dfa465def"
+      },
+      {
+        "sequence": 24,
+        "event_type": "change_decided",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:37.989137Z",
+        "note": "chg-liability-cap-c8bcf70e: amended.",
+        "previous_hash": "7b02b1473bd6bcfe30285eee7f6c8dd459b1568fcc5fac6ca368f20dfa465def",
+        "event_hash": "c67eff60f73c100c693b4b01cc11450fee1e4d15b349645a673394955a7a17f3"
+      },
+      {
+        "sequence": 25,
+        "event_type": "comment_added",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:37.996045Z",
+        "note": "critical comment on deliverable_section accepted_exceptions.",
+        "previous_hash": "c67eff60f73c100c693b4b01cc11450fee1e4d15b349645a673394955a7a17f3",
+        "event_hash": "24f9e75125d3519f068ba4d9e6ff9b9df7d58d14338e9918f6f4b1f35433b7f7"
+      },
+      {
+        "sequence": 26,
+        "event_type": "revision_requested",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.001967Z",
+        "note": "Do not present the payment exception without Finance evidence.",
+        "previous_hash": "24f9e75125d3519f068ba4d9e6ff9b9df7d58d14338e9918f6f4b1f35433b7f7",
+        "event_hash": "70f8e910b087c88ff2c75895fdb0f587cdc90ba7e61017044616e493b3646282"
+      },
+      {
+        "sequence": 27,
+        "event_type": "command_refused",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.008711Z",
+        "note": "syn-owner-legalops may not resolve comment c-004",
+        "previous_hash": "70f8e910b087c88ff2c75895fdb0f587cdc90ba7e61017044616e493b3646282",
+        "event_hash": "18ffa2e13b6d0138b7b44401dd3c56de8ccd384363a0588f0ca3a9f53eb0c416"
+      },
+      {
+        "sequence": 28,
+        "event_type": "comment_response_added",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.009993Z",
+        "note": "Response on c-004.",
+        "previous_hash": "18ffa2e13b6d0138b7b44401dd3c56de8ccd384363a0588f0ca3a9f53eb0c416",
+        "event_hash": "512985e748059cc1a541c5f7cdc25fb4a65d25a9ef7d8f6294ec0fe3ac7b3460"
+      },
+      {
+        "sequence": 29,
+        "event_type": "revision_submitted",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.016216Z",
+        "note": "Finance confirmation added to the payment exception.",
+        "previous_hash": "512985e748059cc1a541c5f7cdc25fb4a65d25a9ef7d8f6294ec0fe3ac7b3460",
+        "event_hash": "c68b30fe1f453277d8a766491caa3663e18faa76a7217e7965452dc0993dbb2a"
+      },
+      {
+        "sequence": 30,
+        "event_type": "review_resumed",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.021823Z",
+        "note": "Review resumed on the revised matter.",
+        "previous_hash": "c68b30fe1f453277d8a766491caa3663e18faa76a7217e7965452dc0993dbb2a",
+        "event_hash": "dcda94ec009d86f5c3e9f10822415a403bff4d9c886e8ee7868a0f0994bb3266"
+      },
+      {
+        "sequence": 31,
+        "event_type": "comment_resolved",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.027760Z",
+        "note": "c-004 resolved.",
+        "previous_hash": "dcda94ec009d86f5c3e9f10822415a403bff4d9c886e8ee7868a0f0994bb3266",
+        "event_hash": "7fab78e0f343af6c84c52fabae765d7d33e2cfdc0b2ae4b2b4c3c425c3b7c2bc"
+      },
+      {
+        "sequence": 32,
+        "event_type": "comment_reopened",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.033960Z",
+        "note": "c-004 reopened.",
+        "previous_hash": "7fab78e0f343af6c84c52fabae765d7d33e2cfdc0b2ae4b2b4c3c425c3b7c2bc",
+        "event_hash": "001dd90bb85c47ca498aad71ab212c0c89d20dc664bfe1fb533549ee2a341480"
+      },
+      {
+        "sequence": 33,
+        "event_type": "comment_response_added",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.040071Z",
+        "note": "Response on c-004.",
+        "previous_hash": "001dd90bb85c47ca498aad71ab212c0c89d20dc664bfe1fb533549ee2a341480",
+        "event_hash": "36f1ce8899a2942b131940741b9aef65c6b511983a6c4088264d164cc871ff07"
+      },
+      {
+        "sequence": 34,
+        "event_type": "comment_resolved",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.046016Z",
+        "note": "c-004 resolved.",
+        "previous_hash": "36f1ce8899a2942b131940741b9aef65c6b511983a6c4088264d164cc871ff07",
+        "event_hash": "fe160bf324b59886cde220438d0e9056ed5e857fced440410811ee3fb3711232"
+      },
+      {
+        "sequence": 35,
+        "event_type": "matter_amended",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:38.051895Z",
+        "note": "Customer moved the signature date.",
+        "previous_hash": "fe160bf324b59886cde220438d0e9056ed5e857fced440410811ee3fb3711232",
+        "event_hash": "e81b0f9c491a98f6f8bac355b255a7facba0ff237dc377a2d39027bb9aedfc70"
+      },
+      {
+        "sequence": 36,
+        "event_type": "command_refused",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.056755Z",
+        "note": "approve refused; missing evidence: state: approve is not allowed from state revised",
+        "previous_hash": "e81b0f9c491a98f6f8bac355b255a7facba0ff237dc377a2d39027bb9aedfc70",
+        "event_hash": "d1759e9093c847eb51878d86e9a803234d19c074463492c93350481214908370"
+      },
+      {
+        "sequence": 37,
+        "event_type": "review_resumed",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.057767Z",
+        "note": "Review resumed on the revised matter.",
+        "previous_hash": "d1759e9093c847eb51878d86e9a803234d19c074463492c93350481214908370",
+        "event_hash": "ad0355e9aa3bbd51588eccd35f833ae3e234bea9b77c8e3b073f0894540d99d6"
+      },
+      {
+        "sequence": 38,
+        "event_type": "command_refused",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.063548Z",
+        "note": "approve refused; missing evidence: specialist_signoffs_current: missing or stale: specialist_signoff:Privacy Counsel",
+        "previous_hash": "ad0355e9aa3bbd51588eccd35f833ae3e234bea9b77c8e3b073f0894540d99d6",
+        "event_hash": "5da700af6b28eddfea712eff0948c89bd038785b56b88ed1d9d3ed0d0f972ffb"
+      },
+      {
+        "sequence": 39,
+        "event_type": "specialist_signed_off",
+        "actor": "syn-specialist-privacy",
+        "timestamp_utc": "2026-10-06T19:22:38.065048Z",
+        "note": "Privacy Counsel sign-off on version 3.",
+        "previous_hash": "5da700af6b28eddfea712eff0948c89bd038785b56b88ed1d9d3ed0d0f972ffb",
+        "event_hash": "01cb7c9ef8a1a3cbfdbf869a3d6d45d21e1012c70643adfabe822598c491454b"
+      },
+      {
+        "sequence": 40,
+        "event_type": "approved",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.070873Z",
+        "note": "Final approval on version 3.",
+        "previous_hash": "01cb7c9ef8a1a3cbfdbf869a3d6d45d21e1012c70643adfabe822598c491454b",
+        "event_hash": "076eeb32ef0dff4b1c53c902b29bc0c5f79fc199f7e88fe11022543f496a5621"
+      },
+      {
+        "sequence": 41,
+        "event_type": "delivery_package_prepared",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.078481Z",
+        "note": "Approved delivery package written locally; nothing was sent.",
+        "previous_hash": "076eeb32ef0dff4b1c53c902b29bc0c5f79fc199f7e88fe11022543f496a5621",
+        "event_hash": "b3b6a83da4673a9944067d779b11a8eb7e196dd5a5f6a64ecaf561456025d678"
+      },
+      {
+        "sequence": 42,
+        "event_type": "delivery_accepted",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:38.225731Z",
+        "note": "Requester accepted the local delivery package.",
+        "previous_hash": "b3b6a83da4673a9944067d779b11a8eb7e196dd5a5f6a64ecaf561456025d678",
+        "event_hash": "0913387b481b5ed1a4e6458ac653b6d22db3e9b5d938bb72ea5d66a7e7b40fc1"
+      }
+    ]
+  },
+  "PM-BLOCKED-003": {
+    "schema": "legal-workflow-controls.v1",
+    "review_state": "blocked",
+    "approval_gate": {
+      "human_review_required": true,
+      "export_allowed": false,
+      "external_actions_allowed": false,
+      "required_roles": [
+        "final_approver:General Counsel"
+      ],
+      "review_note": null
+    },
+    "source_boundary": {
+      "mode": "synthetic_only",
+      "categories": [
+        "blocked",
+        "synthetic"
+      ],
+      "human_verification_required": true
+    },
+    "audit_events": [
+      {
+        "sequence": 0,
+        "event_type": "matter_created",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:38.367019Z",
+        "note": "Matter opened; assessment, parent routing and playbook proposals generated.",
+        "previous_hash": null,
+        "event_hash": "f9b743fd11cb141f81a0dbc3bceff0f9f352601d1619c714f19f01e7ee2e4c69"
+      },
+      {
+        "sequence": 1,
+        "event_type": "intake_submitted",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:38.372534Z",
+        "note": "Intake submitted for triage.",
+        "previous_hash": "f9b743fd11cb141f81a0dbc3bceff0f9f352601d1619c714f19f01e7ee2e4c69",
+        "event_hash": "cdbe6e9609592738f5184a7453037dee86e3120ef17330d1b2e9cdfefd1fdd24"
+      },
+      {
+        "sequence": 2,
+        "event_type": "command_refused",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.373905Z",
+        "note": "complete_triage refused; missing evidence: sources_usable: confidential: (blocker); pilot_scope_met: a request for uncapped liability is outside the pilot; decision_authority_agreed: no decision authority recorded; the matter needs General Counsel",
+        "previous_hash": "cdbe6e9609592738f5184a7453037dee86e3120ef17330d1b2e9cdfefd1fdd24",
+        "event_hash": "6d47a6fa1902f0e1bd631c8c703daa1d0ace5479f0232ff8217f378be269e2c6"
+      },
+      {
+        "sequence": 3,
+        "event_type": "command_refused",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.374837Z",
+        "note": "syn-owner-legalops is not assigned to matter PM-BLOCKED-003",
+        "previous_hash": "6d47a6fa1902f0e1bd631c8c703daa1d0ace5479f0232ff8217f378be269e2c6",
+        "event_hash": "e863942a9b4ccdda68d49a5680c47ab94a06e106b30f0941047da7b8e32336d8"
+      },
+      {
+        "sequence": 4,
+        "event_type": "command_refused",
+        "actor": "syn-approver-gc",
+        "timestamp_utc": "2026-10-06T19:22:38.375873Z",
+        "note": "syn-approver-gc is not assigned to matter PM-BLOCKED-003",
+        "previous_hash": "e863942a9b4ccdda68d49a5680c47ab94a06e106b30f0941047da7b8e32336d8",
+        "event_hash": "a810849e498254dfeafe435d89a682fd58da4e8f681b276561e21c4e1d2637c1"
+      },
+      {
+        "sequence": 5,
+        "event_type": "command_refused",
+        "actor": "syn-owner-legalops",
+        "timestamp_utc": "2026-10-06T19:22:38.377191Z",
+        "note": "syn-owner-legalops is not assigned to matter PM-BLOCKED-003",
+        "previous_hash": "a810849e498254dfeafe435d89a682fd58da4e8f681b276561e21c4e1d2637c1",
+        "event_hash": "fe1a19b211ba6c108265f37dab42e8a70d5ae2e5eab6f5be583524fff99a74ae"
+      },
+      {
+        "sequence": 6,
+        "event_type": "command_refused",
+        "actor": "syn-owner-second",
+        "timestamp_utc": "2026-10-06T19:22:38.514594Z",
+        "note": "complete_triage refused; missing evidence: sources_usable: confidential: (blocker); pilot_scope_met: a request for uncapped liability is outside the pilot; decision_authority_agreed: no decision authority recorded; the matter needs General Counsel",
+        "previous_hash": "fe1a19b211ba6c108265f37dab42e8a70d5ae2e5eab6f5be583524fff99a74ae",
+        "event_hash": "2e72d44a801bf96ba18f76282d965ffb089dcb91c6bcfa6190e979644f7f7d7c"
+      },
+      {
+        "sequence": 7,
+        "event_type": "command_refused",
+        "actor": "syn-requester-revops",
+        "timestamp_utc": "2026-10-06T19:22:38.516095Z",
+        "note": "prepare_delivery refused; missing evidence: state: prepare_delivery is not allowed from state triage",
+        "previous_hash": "2e72d44a801bf96ba18f76282d965ffb089dcb91c6bcfa6190e979644f7f7d7c",
+        "event_hash": "78e2329180dcafa793089ef6cbae18a92d8edf1f84b15e8b49279317acf63b70"
+      }
+    ]
+  }
+}
