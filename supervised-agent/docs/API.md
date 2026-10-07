@@ -42,6 +42,31 @@ Example call:
 }
 ```
 
+### Matter documents
+
+An intake may name the matter it belongs to and reference its documents in place.
+All three fields are optional, and an intake without them serialises exactly as
+before, so its assessment id is unchanged.
+
+| Field | Meaning |
+|---|---|
+| `matter_id`, `round_id` | The matter and the point in its history this intake describes |
+| `documents[].document_id`, `.kind`, `.title` | Identity of one document; `kind` is free, for example `contract` or `playbook` |
+| `documents[].path` | Relative to a documents root given at run time. Absolute paths and `..` are refused |
+| `documents[].sha256` | Hash of the exact version the intake refers to |
+| `documents[].source_ref` | Source-boundary reference, checked like `source_refs` |
+| `documents[].introduced_in` | Optional. The round in which the document entered the matter |
+
+The assessment returns one `document_verifications` record per document, with status
+`verified`, `mismatch`, `missing`, `refused` (the path leaves the root) or
+`not_checked`. MCP tools take no documents root, so through them every document is
+`not_checked`. A `mismatch`, `missing` or `refused` document is a blocker finding. An
+assessment whose documents are not all `verified` cannot reach `export_allowed`, even
+after approval. The command line checks hashes with `python -m src.cli --documents-root <dir>`.
+
+Audit events may carry a `details` object. It enters the event hash only when present,
+so chains written before it existed verify unchanged.
+
 ## `legal.review.decide`
 
 Purpose: apply a human review decision to an assessment.

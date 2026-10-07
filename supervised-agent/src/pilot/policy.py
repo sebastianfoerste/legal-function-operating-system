@@ -25,9 +25,10 @@ def is_substantive_change(field: str, before: str, after: str) -> bool:
     in whitespace or letter case. The matter title is a label and never substantive.
     """
 
-    # TODO(human): this default is deliberately conservative. Decide as the legal owner
-    # whether some fields should invalidate only the approvals they affect, for example
-    # whether a changed `fact:signature_target_date` needs a fresh privacy sign-off.
+    # Kept conservative for the pilot: a substantive change invalidates every approval,
+    # not only the ones the field bears on. Narrowing that, for example whether a changed
+    # `fact:signature_target_date` needs a fresh privacy sign-off, is a judgment for the
+    # legal owner and should rest on what the pilot shows about needless re-approvals.
     if before == after or field in _NEVER_SUBSTANTIVE:
         return False
     if field.startswith(_ALWAYS_SUBSTANTIVE):
