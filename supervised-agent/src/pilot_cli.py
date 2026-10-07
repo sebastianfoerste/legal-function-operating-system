@@ -26,8 +26,8 @@ from src.pilot_session import (
     close_review_session,
     mark_draft_reviewable,
     prepare_review_draft,
-    record_change_decision,
     record_material_omission,
+    record_recommendation_decision,
     start_review_session,
 )
 from src.review_packet import write_review_packet
@@ -113,8 +113,8 @@ def _prepare(args: argparse.Namespace) -> int:
         render_recommendations(draft), encoding="utf-8"
     )
     print(f"draft ready ({draft.review_source}): {draft.review_sha256}")
-    for change in draft.change_set.changes:
-        print(f"{change.id}: {change.proposed_text}")
+    for item in draft.recommendation_set.recommendations:
+        print(f"{item.id}: {item.proposed_text}")
     return 0
 
 
@@ -140,9 +140,9 @@ def _reviewable(args: argparse.Namespace) -> int:
 def _decide(args: argparse.Namespace) -> int:
     _update(
         args.session,
-        lambda session: record_change_decision(
+        lambda session: record_recommendation_decision(
             session,
-            change_id=args.change,
+            recommendation_id=args.recommendation,
             decision=args.decision,
             usefulness=args.usefulness,
             reason=args.reason,
@@ -241,7 +241,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     decide = commands.add_parser("decide", help="Record a decision on one recommendation.")
     decide.add_argument("--session", type=Path, required=True)
-    decide.add_argument("--change", required=True)
+    decide.add_argument("--recommendation", required=True)
     decide.add_argument("--decision", required=True, choices=["accepted", "corrected", "rejected"])
     decide.add_argument("--usefulness", type=int, required=True, choices=[1, 2, 3, 4])
     decide.add_argument("--reason", default="")

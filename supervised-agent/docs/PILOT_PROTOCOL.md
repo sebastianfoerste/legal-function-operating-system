@@ -68,7 +68,8 @@ Three points follow from this.
 - A review is model output. One with unknown fields, unsafe ids, no findings or
   oversized text is refused before a reviewer sees it.
 
-Without `--harness-review` the recommendations are the agent's own, and the record
+Without `--harness-review` the recommendations are the agent's own: the action its
+rules recommend for each finding, under ids such as `finding-1`. The record then
 states `agent_rules`.
 
 ## The task
@@ -103,19 +104,30 @@ decision stays in the audit trail and the later one counts.
 ## Acceptance criteria
 
 The criteria are agreed with the reviewers before the first session and do not change
-afterwards. They are thresholds on the measures the record already computes over
-sessions by practising lawyers:
+afterwards. They are thresholds on measures the record computes over sessions by
+practising lawyers.
 
-- number of sessions and of distinct reviewers;
-- share of recommendations accepted, corrected and rejected;
-- mean usefulness;
-- median review time and median time to a reviewable draft;
-- number of material omissions.
+**Status: proposed by the author, not yet agreed with any reviewer.** No reviewer has
+been recruited. The record prints "thresholds: proposed by author" beside every
+result until that changes.
 
-**The thresholds are not set in this version.** They are written into
-`evaluate_acceptance` in `src/pilot_record.py`, and the commit that sets them must
-precede the first session by a practising lawyer. Until then the record reports
-`criteria_not_set`. A record with no counted session reports `not_measured`.
+| Criterion | Proposed threshold | Why this measure |
+|---|---|---|
+| Distinct practising lawyers | at least 3 | Fewer is one or two people's taste |
+| Recommendations scored 3 or 4 | at least 60 % | The share a lawyer could use, as written or after correction |
+| Recommendations scored 1 | at most 10 % | A misleading recommendation costs more than a useless one |
+| Material omissions per session | at most 1 | What the review missed, as each reviewer saw it |
+
+Two choices need explaining. The mean usefulness score is reported and is not a
+criterion: the scale has no neutral point, and a mean of 2.5 is reached when half the
+recommendations are misleading and half are usable. Review time is reported and is
+not a criterion: without an unassisted baseline it shows effort and cannot show a
+saving.
+
+The thresholds are constants in `src/pilot_record.py`. When the reviewers have agreed
+them, `CRITERIA_AGREED_WITH_REVIEWERS` is set in a commit that precedes the first
+session, and the record then prints "thresholds: agreed with reviewers". A record
+with no counted session reports `not_measured`.
 
 ## What is recorded
 
@@ -128,7 +140,7 @@ previous event's hash and the event's own content, including the fields below.
 | Draft fixed | `review_draft_ready` | Hash of the recommendations, their ids, hash of the assessment |
 | Session opened | `review_session_started` | Pseudonym, evidence class, profile, hash of the recommendations |
 | Draft fit to hand on | `draft_marked_reviewable` | Time |
-| Decision | `change_decision_recorded` | Recommendation, decision, usefulness, reason, corrected wording |
+| Decision | `recommendation_decision_recorded` | Recommendation, decision, usefulness, reason, corrected wording |
 | Omission | `material_omission_recorded` | The reviewer's description |
 | Matter decided | `review_decision_applied` | State and note |
 | Session closed | `review_session_closed` | Final state, declared review time, feedback |
@@ -214,7 +226,7 @@ python -m src.pilot_cli start --draft pilot/round1/draft.json \
 
 ```bash
 python -m src.pilot_cli decide --session pilot/round1/sessions/R01.json \
-  --change change-1 --decision corrected --usefulness 3 \
+  --recommendation k1 --decision corrected --usefulness 3 \
   --reason "<reason>" --corrected-text "<replacement wording>"
 ```
 
@@ -259,7 +271,7 @@ harness format `contract-review-eval.reviewer-session.v1`:
 | `review_sha256` | The harness's hash of the review, or the hash of the agent's own recommendations |
 | `reviewer_id`, `reviewer_profile`, `evidence_class` | The session |
 | `minutes_to_reviewable_draft`, `review_minutes` | The timings above |
-| `decisions[].finding_id` | The finding's id in the review, or `change-1` and so on |
+| `decisions[].finding_id` | The finding's id in the review, or `finding-1` and so on |
 | `decisions[].decision`, `.usefulness`, `.reason` | The decision event |
 | `material_omissions`, `workflow_feedback` | The omission and closing events |
 

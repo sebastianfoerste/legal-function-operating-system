@@ -19,8 +19,8 @@ from src.pilot_session import (
     close_review_session,
     mark_draft_reviewable,
     prepare_review_draft,
-    record_change_decision,
     record_material_omission,
+    record_recommendation_decision,
     start_review_session,
 )
 
@@ -44,10 +44,10 @@ def build_example_record() -> PilotRecord:
         reviewer_profile=f"{LABEL} No person reviewed anything.",
         at="2026-01-01T10:00:00Z",
     )
-    first, second = (change.id for change in draft.change_set.changes)
-    session = record_change_decision(
+    first, second = (item.id for item in draft.recommendation_set.recommendations)
+    session = record_recommendation_decision(
         session,
-        change_id=first,
+        recommendation_id=first,
         decision="corrected",
         usefulness=3,
         reason=f"{LABEL} Placeholder for the reason a correction requires.",
@@ -55,9 +55,9 @@ def build_example_record() -> PilotRecord:
         at="2026-01-01T10:10:00Z",
     )
     session = mark_draft_reviewable(session, at="2026-01-01T10:15:00Z")
-    session = record_change_decision(
+    session = record_recommendation_decision(
         session,
-        change_id=second,
+        recommendation_id=second,
         decision="rejected",
         usefulness=2,
         reason=f"{LABEL} Placeholder for the reason a rejection requires.",

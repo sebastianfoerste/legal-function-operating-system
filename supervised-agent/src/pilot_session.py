@@ -32,14 +32,14 @@ from models import (
     verify_audit_chain,
 )
 from src.audit_chain import append_audit_event
-from src.collaboration_workspace import (
-    DECIDED,
-    DocumentChangeSet,
-    build_change_set,
-    decide_change,
-)
-from src.harness_review import HarnessMatterReview, change_set_from_harness_review
+from src.harness_review import HarnessMatterReview, recommendations_from_harness_review
 from src.legal_ops import SYSTEM_ACTOR, apply_review_decision, assess_matter, utc_now_iso
+from src.recommendations import (
+    DECIDED,
+    RecommendationSet,
+    decide_recommendation,
+    recommendations_from_assessment,
+)
 
 DRAFT_SCHEMA: Final = "legal-ops-agent.pilot-review-draft.v1"
 SESSION_SCHEMA: Final = "legal-ops-agent.pilot-review-session.v1"
@@ -59,23 +59,22 @@ def _digest(payload: Any) -> str:
     return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
-def review_sha256(change_set: DocumentChangeSet) -> str:
+def review_sha256(recommendation_set: RecommendationSet) -> str:
     """Identity of the exact recommendations put to a reviewer, decisions excluded."""
 
     return _digest(
         {
-            "source_digest": change_set.source_digest,
-            "playbook_version": change_set.playbook_version,
-            "changes": [
+            "source_digest": recommendation_set.source_digest,
+            "recommendations": [
                 {
-                    "id": change.id,
-                    "locator": change.locator,
-                    "original_text": change.original_text,
-                    "proposed_text": change.proposed_text,
-                    "rationale": change.rationale,
-                    "source_refs": change.source_refs,
+                    "id": item.id,
+                    "locator": item.locator,
+                    "original_text": item.original_text,
+                    "proposed_text": item.proposed_text,
+                    "rationale": item.rationale,
+                    "source_refs": item.source_refs,
                 }
-                for change in change_set.changes
+                for item in recommendation_set.recommendations
             ],
         }
     )
@@ -96,7 +95,7 @@ class PilotReviewDraft(BaseModel):
         DRAFT_SCHEMA, alias="schema"
     )
     assessment: LegalOpsAssessment
-    change_set: DocumentChangeSet
+    recommendation_set: RecommendationSet
     review_source: ReviewSource = "agent_rules"
     review_sha256: str = Field(..., min_length=64, max_length=64)
 
@@ -117,7 +116,7 @@ class PilotReviewSession(BaseModel):
     review_source: ReviewSource = "agent_rules"
     review_sha256: str = Field(..., min_length=64, max_length=64)
     assessment: LegalOpsAssessment
-    change_set: DocumentChangeSet
+    recommendation_set: RecommendationSet
     material_omissions: list[str] = Field(default_factory=list)
     workflow_feedback: str = ""
     declared_review_minutes: float | None = Field(default=None, gt=0)
@@ -204,11 +203,11 @@ def prepare_review_draft(
     source: ReviewSource
     if harness_review is None:
         source = "agent_rules"
-        change_set = build_change_set(assessment)
-        digest = review_sha256(change_set)
+        recommendation_set = recommendations_from_assessment(assessment)
+        digest = review_sha256(recommendation_set)
     else:
         source = "harness_review"
-        change_set = change_set_from_harness_review(harness_review, matter)
+        recommendation_set = recommendations_from_harness_review(harness_review, matter)
         digest = harness_review.canonical_sha256()
     timestamp = ready_at or utc_now_iso()
     _require_not_before_last(assessment.audit_events, timestamp)
@@ -223,15 +222,15 @@ def prepare_review_draft(
             "review_source": source,
             # The review hash may be the harness's. This one is always over the
             # recommendations as worded here, so a rewording is detectable either way.
-            "recommendations_sha256": review_sha256(change_set),
+            "recommendations_sha256": review_sha256(recommendation_set),
             "assessment_sha256": assessment_sha256(assessment),
-            "finding_ids": [change.id for change in change_set.changes],
+            "finding_ids": [item.id for item in recommendation_set.recommendations],
         },
     )
     return PilotReviewDraft(
         schema=DRAFT_SCHEMA,
         assessment=assessment.model_copy(update={"audit_events": events}),
-        change_set=change_set,
+        recommendation_set=recommendation_set,
         review_source=source,
         review_sha256=digest,
     )
@@ -248,7 +247,7 @@ def draft_problems(draft: PilotReviewDraft) -> list[str]:
     if ready.event_type != "review_draft_ready" or not ready.details:
         return ["the draft's audit chain does not end with the draft being fixed"]
     problems: list[str] = []
-    recommendations = review_sha256(draft.change_set)
+    recommendations = review_sha256(draft.recommendation_set)
     fixed = (ready.details.get("review_source"), ready.details.get("review_sha256"))
     if (
         recommendations != ready.details.get("recommendations_sha256")
@@ -258,7 +257,7 @@ def draft_problems(draft: PilotReviewDraft) -> list[str]:
         problems.append("the draft's recommendations are not the ones its audit chain fixed")
     if assessment_sha256(draft.assessment) != ready.details.get("assessment_sha256"):
         problems.append("the draft's assessment is not the one its audit chain fixed")
-    if any(change.decision != "pending" for change in draft.change_set.changes):
+    if any(item.decision != "pending" for item in draft.recommendation_set.recommendations):
         problems.append("the draft already carries decisions")
     return problems
 
@@ -314,7 +313,7 @@ def start_review_session(
         review_source=draft.review_source,
         review_sha256=draft.review_sha256,
         assessment=draft.assessment,
-        change_set=draft.change_set,
+        recommendation_set=draft.recommendation_set,
     )
     return _append(
         session,
@@ -342,22 +341,22 @@ def mark_draft_reviewable(
     )
 
 
-def record_change_decision(
+def record_recommendation_decision(
     session: PilotReviewSession,
     *,
-    change_id: str,
+    recommendation_id: str,
     decision: str,
     usefulness: int,
     reason: str = "",
     corrected_text: str | None = None,
     at: str | None = None,
 ) -> PilotReviewSession:
-    """Record one decision. A later decision on the same change supersedes it."""
+    """Record one decision. A later decision on the same recommendation supersedes it."""
 
     timestamp = at or utc_now_iso()
-    change_set = decide_change(
-        session.change_set,
-        change_id,
+    recommendation_set = decide_recommendation(
+        session.recommendation_set,
+        recommendation_id,
         decision,
         reviewer=session.reviewer_id,
         reason=reason,
@@ -367,17 +366,17 @@ def record_change_decision(
     )
     return _append(
         session,
-        "change_decision_recorded",
-        f"Recommendation {change_id} {decision}.",
+        "recommendation_decision_recorded",
+        f"Recommendation {recommendation_id} {decision}.",
         timestamp,
         {
-            "finding_id": change_id,
+            "finding_id": recommendation_id,
             "decision": decision,
             "usefulness": usefulness,
             "reason": reason.strip(),
             "corrected_text": corrected_text,
         },
-        change_set=change_set,
+        recommendation_set=recommendation_set,
     )
 
 
@@ -409,7 +408,11 @@ def close_review_session(
 
     if is_closed(session):
         raise ValueError(f"session {session.session_id} is already closed")
-    pending = [change.id for change in session.change_set.changes if change.decision not in DECIDED]
+    pending = [
+        item.id
+        for item in session.recommendation_set.recommendations
+        if item.decision not in DECIDED
+    ]
     if pending:
         raise ValueError(f"every recommendation needs a decision before closing: {pending}")
     timestamp = at or utc_now_iso()
@@ -495,10 +498,10 @@ def replay_session(draft: PilotReviewDraft, events: list[AuditEvent]) -> PilotRe
         at = event.timestamp_utc
         if event.event_type == "draft_marked_reviewable":
             session = mark_draft_reviewable(session, at=at)
-        elif event.event_type == "change_decision_recorded":
-            session = record_change_decision(
+        elif event.event_type == "recommendation_decision_recorded":
+            session = record_recommendation_decision(
                 session,
-                change_id=details["finding_id"],
+                recommendation_id=details["finding_id"],
                 decision=details["decision"],
                 usefulness=details["usefulness"],
                 reason=details["reason"],

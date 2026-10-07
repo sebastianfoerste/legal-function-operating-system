@@ -10,7 +10,7 @@ from src.collaboration_workspace import build_change_set
 from src.legal_ops import apply_review_decision, assess_matter, stable_assessment_id
 from src.matter_documents import manifest_differences, verify_matter_documents
 from src.review_packet import build_review_packet
-from tests.pilot_support import document_matter, harness_root
+from tests.evidence_support import document_matter, harness_root
 
 NORTHWIND_INTAKES = {
     "round1": Path("examples/matters/northwind_saas_round1.json"),
@@ -127,7 +127,7 @@ def test_unchecked_documents_warn_and_hold_the_export_gate(tmp_path):
         )
 
 
-def test_change_set_digest_of_an_intake_without_documents_is_unchanged():
+def test_recommendation_set_digest_of_an_intake_without_documents_is_unchanged():
     # The recipe build_change_set used before the intake could reference documents.
     matter = MatterIntake.model_validate_json(
         Path("examples/matters/saas_msa_deviation.json").read_text(encoding="utf-8")

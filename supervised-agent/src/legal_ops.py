@@ -28,19 +28,8 @@ def utc_now_iso() -> str:
     return datetime.now(tz=timezone.utc).replace(microsecond=0).isoformat().replace("+00:00", "Z")
 
 
-def canonical_matter_json(matter: MatterIntake) -> str:
-    """The intake as hashed for ids and digests."""
-
-    fields = matter.model_dump(mode="json")
-    # Intakes written before documents existed keep the ids and digests they always had.
-    for optional in ("matter_id", "round_id", "documents"):
-        if not fields[optional]:
-            del fields[optional]
-    return json.dumps(fields, sort_keys=True)
-
-
 def stable_assessment_id(matter: MatterIntake) -> str:
-    payload = canonical_matter_json(matter)
+    payload = json.dumps(matter.model_dump(mode="json"), sort_keys=True)
     return f"loa_{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
 
 

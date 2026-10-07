@@ -16,8 +16,8 @@ from src.pilot_session import (
     close_review_session,
     mark_draft_reviewable,
     prepare_review_draft,
-    record_change_decision,
     record_material_omission,
+    record_recommendation_decision,
     start_review_session,
 )
 
@@ -91,16 +91,16 @@ def closed_session(
 ) -> PilotReviewSession:
     """A full session: one correction, one rejection, one omission, then a decision."""
 
-    first, second = (change.id for change in draft.change_set.changes)
+    first, second = (item.id for item in draft.recommendation_set.recommendations)
     session = start_review_session(
         draft,
         reviewer_id=reviewer_id,
         evidence_class=evidence_class,
         at="2026-03-02T10:00:00Z",
     )
-    session = record_change_decision(
+    session = record_recommendation_decision(
         session,
-        change_id=first,
+        recommendation_id=first,
         decision="corrected",
         usefulness=3,
         reason="Fabricated reason for a correction.",
@@ -108,9 +108,9 @@ def closed_session(
         at="2026-03-02T10:12:00Z",
     )
     session = mark_draft_reviewable(session, at="2026-03-02T10:20:00Z")
-    session = record_change_decision(
+    session = record_recommendation_decision(
         session,
-        change_id=second,
+        recommendation_id=second,
         decision="rejected",
         usefulness=1,
         reason="Fabricated reason for a rejection.",

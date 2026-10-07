@@ -11,8 +11,8 @@ from src import pilot_cli
 from src.harness_review import (
     SESSION_SCHEMA,
     HarnessMatterReview,
-    change_set_from_harness_review,
     load_harness_review,
+    recommendations_from_harness_review,
     template_differences,
 )
 from src.pilot_record import build_pilot_record, render_recommendations, write_pilot_record
@@ -20,11 +20,11 @@ from src.pilot_session import (
     close_review_session,
     draft_problems,
     prepare_review_draft,
-    record_change_decision,
+    record_recommendation_decision,
     session_problems,
     start_review_session,
 )
-from tests.pilot_support import document_matter, harness_root, prepared_draft
+from tests.evidence_support import document_matter, harness_root, prepared_draft
 
 # A fabricated review in the harness's output format. It has no legal content: it
 # exists to exercise the mapping, and it cites the two fabricated test documents.
@@ -82,13 +82,13 @@ def _closed(draft, reviewer_id="R01", evidence_class="practising_lawyer"):
     session = start_review_session(
         draft, reviewer_id=reviewer_id, evidence_class=evidence_class, at="2026-03-02T10:00:00Z"
     )
-    for change in draft.change_set.changes:
-        session = record_change_decision(
+    for item in draft.recommendation_set.recommendations:
+        session = record_recommendation_decision(
             session,
-            change_id=change.id,
-            decision="accepted" if change.id == "k1" else "rejected",
-            usefulness=4 if change.id == "k1" else 2,
-            reason="" if change.id == "k1" else "Fabricated reason for a rejection.",
+            recommendation_id=item.id,
+            decision="accepted" if item.id == "k1" else "rejected",
+            usefulness=4 if item.id == "k1" else 2,
+            reason="" if item.id == "k1" else "Fabricated reason for a rejection.",
             at="2026-03-02T10:10:00Z",
         )
     return close_review_session(
@@ -166,8 +166,8 @@ def test_capture_is_read_without_its_origin(tmp_path):
 
 
 def test_each_finding_becomes_one_recommendation_under_its_own_id(tmp_path):
-    change_set = change_set_from_harness_review(_review(), document_matter(tmp_path))
-    changes = {change.id: change for change in change_set.changes}
+    recommendation_set = recommendations_from_harness_review(_review(), document_matter(tmp_path))
+    changes = {item.id: item for item in recommendation_set.recommendations}
 
     assert list(changes) == ["k1", "p1", "e1"]
     assert changes["k1"].proposed_text == "Toy conflict."
@@ -190,7 +190,7 @@ def test_each_finding_becomes_one_recommendation_under_its_own_id(tmp_path):
     # A citation of a document the round does not hold is shown to the reviewer as such.
     assert changes["e1"].locator == "escalation | documents: annex (not on the file)"
     assert changes["e1"].source_refs == []
-    assert change_set.source_digest == _review().canonical_sha256()
+    assert recommendation_set.source_digest == _review().canonical_sha256()
 
 
 def test_draft_on_a_harness_review_is_bound_to_the_harness_hash(tmp_path):
@@ -206,10 +206,10 @@ def test_draft_on_a_harness_review_is_bound_to_the_harness_hash(tmp_path):
     assert details["finding_ids"] == ["k1", "p1", "e1"]
     assert draft_problems(draft) == []
     # The rule-based findings stay in the assessment; they are not what is rated.
-    assert [change.id for change in draft.change_set.changes] == ["k1", "p1", "e1"]
+    assert [item.id for item in draft.recommendation_set.recommendations] == ["k1", "p1", "e1"]
 
     reworded = draft.model_copy(deep=True)
-    reworded.change_set.changes[0].proposed_text = "A rewritten finding."
+    reworded.recommendation_set.recommendations[0].proposed_text = "A rewritten finding."
     assert draft_problems(reworded) == [
         "the draft's recommendations are not the ones its audit chain fixed"
     ]
@@ -249,7 +249,7 @@ def test_session_on_a_harness_review_exports_a_harness_reviewer_session(tmp_path
 
 
 def test_session_on_the_agents_own_rules_exports_no_harness_session(tmp_path):
-    from tests.pilot_support import closed_session
+    from tests.evidence_support import closed_session
 
     draft = prepared_draft(tmp_path / "rules")
     record = build_pilot_record(draft, [closed_session(draft)])
@@ -347,10 +347,10 @@ def test_hash_and_session_agree_with_the_harness_itself(tmp_path):
     session = start_review_session(
         draft, reviewer_id="R00", evidence_class="synthetic_example", at="2026-03-02T10:00:00Z"
     )
-    for change in draft.change_set.changes:
-        session = record_change_decision(
+    for item in draft.recommendation_set.recommendations:
+        session = record_recommendation_decision(
             session,
-            change_id=change.id,
+            recommendation_id=item.id,
             decision="accepted",
             usefulness=4,
             at="2026-03-02T10:05:00Z",

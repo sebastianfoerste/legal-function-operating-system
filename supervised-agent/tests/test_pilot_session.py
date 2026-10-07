@@ -9,14 +9,14 @@ from src.pilot_session import (
     is_closed,
     mark_draft_reviewable,
     prepare_review_draft,
-    record_change_decision,
     record_material_omission,
+    record_recommendation_decision,
     review_sha256,
     session_problems,
     session_timing,
     start_review_session,
 )
-from tests.pilot_support import closed_session, document_matter, prepared_draft
+from tests.evidence_support import closed_session, document_matter, prepared_draft
 
 NOT_IN_CHAIN = "the file is not what the audit chain records"
 CLOSE = {
@@ -35,9 +35,9 @@ def _started(draft, reviewer_id="R01"):
 
 
 def _all_accepted(session, at="2026-03-02T10:05:00Z"):
-    for change in session.change_set.changes:
-        session = record_change_decision(
-            session, change_id=change.id, decision="accepted", usefulness=4, at=at
+    for item in session.recommendation_set.recommendations:
+        session = record_recommendation_decision(
+            session, recommendation_id=item.id, decision="accepted", usefulness=4, at=at
         )
     return session
 
@@ -70,8 +70,12 @@ def test_draft_binds_recommendations_and_assessment_into_the_audit_chain(tmp_pat
 
     ready = draft.assessment.audit_events[-1]
     assert ready.event_type == "review_draft_ready"
-    assert ready.details["review_sha256"] == draft.review_sha256 == review_sha256(draft.change_set)
-    assert ready.details["finding_ids"] == ["change-1", "change-2"]
+    assert (
+        ready.details["review_sha256"]
+        == draft.review_sha256
+        == review_sha256(draft.recommendation_set)
+    )
+    assert ready.details["finding_ids"] == ["finding-1", "finding-2"]
     assert verify_audit_chain(draft.assessment.audit_events).verified is True
     assert draft_problems(draft) == []
     reloaded = PilotReviewDraft.model_validate_json(draft.model_dump_json(by_alias=True))
@@ -90,12 +94,14 @@ def test_edited_draft_is_refused_at_session_start_and_at_export(tmp_path):
     draft = prepared_draft(tmp_path)
     session = closed_session(draft)
 
-    reworded = _edited(draft, change_set__changes__0__proposed_text="A rewritten recommendation.")
+    reworded = _edited(
+        draft, recommendation_set__recommendations__0__proposed_text="A rewritten recommendation."
+    )
     assert draft_problems(reworded) == [
         "the draft's recommendations are not the ones its audit chain fixed"
     ]
     # Rewriting the stored hash to match does not help: the chain holds its own copy.
-    rehashed = _edited(reworded, review_sha256=review_sha256(reworded.change_set))
+    rehashed = _edited(reworded, review_sha256=review_sha256(reworded.recommendation_set))
     assert draft_problems(rehashed) == [
         "the draft's recommendations are not the ones its audit chain fixed"
     ]
@@ -122,16 +128,16 @@ def test_session_records_every_step_in_the_audit_chain(tmp_path):
         "assessment_created",
         "review_draft_ready",
         "review_session_started",
-        "change_decision_recorded",
+        "recommendation_decision_recorded",
         "draft_marked_reviewable",
-        "change_decision_recorded",
+        "recommendation_decision_recorded",
         "material_omission_recorded",
         "review_decision_applied",
         "review_session_closed",
     ]
     assert {event.actor for event in events[2:]} == {"R01"}
     assert events[5].details == {
-        "finding_id": "change-2",
+        "finding_id": "finding-2",
         "decision": "rejected",
         "usefulness": 1,
         "reason": "Fabricated reason for a rejection.",
@@ -141,7 +147,7 @@ def test_session_records_every_step_in_the_audit_chain(tmp_path):
     assert verify_audit_chain(events).verified is True
     assert session_problems(session, draft) == []
     assert session.assessment.export_allowed is True
-    assert session.change_set.changes[0].reviewer == "R01"
+    assert session.recommendation_set.recommendations[0].reviewer == "R01"
 
     reloaded = PilotReviewSession.model_validate_json(session.model_dump_json(by_alias=True))
     assert session_problems(reloaded, draft) == []
@@ -185,22 +191,30 @@ def test_declared_review_time_is_kept_apart_from_elapsed_time(tmp_path):
 
 def test_rejection_and_correction_need_a_reason(tmp_path):
     session = _started(prepared_draft(tmp_path))
-    with pytest.raises(ValueError, match="rejected change needs a written reason"):
-        record_change_decision(session, change_id="change-1", decision="rejected", usefulness=2)
-    with pytest.raises(ValueError, match="corrected change needs a written reason"):
-        record_change_decision(
+    with pytest.raises(ValueError, match="rejected recommendation needs a written reason"):
+        record_recommendation_decision(
+            session, recommendation_id="finding-1", decision="rejected", usefulness=2
+        )
+    with pytest.raises(ValueError, match="corrected recommendation needs a written reason"):
+        record_recommendation_decision(
             session,
-            change_id="change-1",
+            recommendation_id="finding-1",
             decision="corrected",
             usefulness=3,
             corrected_text="Fabricated wording.",
         )
     with pytest.raises(ValueError, match="corrected text belongs"):
-        record_change_decision(
-            session, change_id="change-1", decision="corrected", usefulness=3, reason="Too broad."
+        record_recommendation_decision(
+            session,
+            recommendation_id="finding-1",
+            decision="corrected",
+            usefulness=3,
+            reason="Too broad.",
         )
-    with pytest.raises(ValueError, match="unknown change"):
-        record_change_decision(session, change_id="change-9", decision="accepted", usefulness=4)
+    with pytest.raises(ValueError, match="unknown recommendation"):
+        record_recommendation_decision(
+            session, recommendation_id="finding-9", decision="accepted", usefulness=4
+        )
 
 
 @pytest.mark.parametrize(
@@ -224,10 +238,14 @@ def test_reviewer_is_a_pseudonym_and_zero_ids_are_reserved_for_examples(
 
 def test_session_cannot_close_with_a_pending_recommendation(tmp_path):
     session = _started(prepared_draft(tmp_path))
-    session = record_change_decision(
-        session, change_id="change-1", decision="accepted", usefulness=4, at="2026-03-02T10:05:00Z"
+    session = record_recommendation_decision(
+        session,
+        recommendation_id="finding-1",
+        decision="accepted",
+        usefulness=4,
+        at="2026-03-02T10:05:00Z",
     )
-    with pytest.raises(ValueError, match=r"needs a decision before closing: \['change-2'\]"):
+    with pytest.raises(ValueError, match=r"needs a decision before closing: \['finding-2'\]"):
         close_review_session(session, at="2026-03-02T10:30:00Z", **CLOSE)
 
 
@@ -257,16 +275,16 @@ def test_events_keep_their_order(tmp_path):
 
 def test_later_decision_supersedes_and_both_stay_in_the_chain(tmp_path):
     draft = prepared_draft(tmp_path)
-    session = record_change_decision(
+    session = record_recommendation_decision(
         _started(draft),
-        change_id="change-1",
+        recommendation_id="finding-1",
         decision="accepted",
         usefulness=4,
         at="2026-03-02T10:05:00Z",
     )
-    session = record_change_decision(
+    session = record_recommendation_decision(
         session,
-        change_id="change-1",
+        recommendation_id="finding-1",
         decision="rejected",
         usefulness=2,
         reason="Fabricated second thought.",
@@ -276,10 +294,10 @@ def test_later_decision_supersedes_and_both_stay_in_the_chain(tmp_path):
     recorded = [
         event.details["decision"]
         for event in session.assessment.audit_events
-        if event.event_type == "change_decision_recorded"
+        if event.event_type == "recommendation_decision_recorded"
     ]
     assert recorded == ["accepted", "rejected"]
-    assert session.change_set.changes[0].decision == "rejected"
+    assert session.recommendation_set.recommendations[0].decision == "rejected"
     assert session_problems(session, draft) == []
 
 
@@ -288,8 +306,8 @@ def test_reviewers_work_on_separate_copies_of_the_draft(tmp_path):
     closed_session(draft, "R01")
     second = _started(draft, "R02")
 
-    assert all(change.decision == "pending" for change in second.change_set.changes)
-    assert all(change.decision == "pending" for change in draft.change_set.changes)
+    assert all(item.decision == "pending" for item in second.recommendation_set.recommendations)
+    assert all(item.decision == "pending" for item in draft.recommendation_set.recommendations)
     assert session_problems(second, draft) == []
 
 
@@ -301,10 +319,22 @@ def test_reviewers_work_on_separate_copies_of_the_draft(tmp_path):
         ({"material_omissions": []}, "material_omissions"),
         ({"declared_review_minutes": 5.0}, "declared_review_minutes"),
         ({"workflow_feedback": "It was excellent."}, "workflow_feedback"),
-        ({"change_set__changes__1__reason": "A kinder reason."}, "change_set.changes"),
-        ({"change_set__changes__1__usefulness": 4}, "change_set.changes"),
-        ({"change_set__changes__0__decided_at": "2026-03-02T10:01:00Z"}, "change_set.changes"),
-        ({"change_set__changes__0__proposed_text": "A better one."}, "change_set.changes"),
+        (
+            {"recommendation_set__recommendations__1__reason": "A kinder reason."},
+            "recommendation_set.recommendations",
+        ),
+        (
+            {"recommendation_set__recommendations__1__usefulness": 4},
+            "recommendation_set.recommendations",
+        ),
+        (
+            {"recommendation_set__recommendations__0__decided_at": "2026-03-02T10:01:00Z"},
+            "recommendation_set.recommendations",
+        ),
+        (
+            {"recommendation_set__recommendations__0__proposed_text": "A better one."},
+            "recommendation_set.recommendations",
+        ),
         ({"assessment__matter__matter_id": "another-matter"}, "assessment.matter"),
         ({"assessment__findings": []}, "assessment.findings"),
         ({"assessment__review_note": "R02: A different note entirely."}, "assessment.review_note"),

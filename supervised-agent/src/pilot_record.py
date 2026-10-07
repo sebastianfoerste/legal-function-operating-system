@@ -74,7 +74,7 @@ def claim_limits(review_source: str) -> list[str]:
     return [SYNTHETIC_LIMIT, SOURCE_LIMITS[review_source], ADOPTION_LIMIT]
 
 
-class Recommendation(BaseModel):
+class RecommendationSummary(BaseModel):
     finding_id: str
     locator: str
     proposed_text: str
@@ -121,6 +121,11 @@ class PilotSummary(BaseModel):
     corrected_rate: float | None = None
     rejected_rate: float | None = None
     mean_usefulness: float | None = None
+    # The scale has no neutral point, so the mean hides its ends. These two shares
+    # show them: scored 3 or 4 (usable, perhaps after correction) and scored 1
+    # (misleading).
+    usable_rate: float | None = None
+    misleading_rate: float | None = None
     median_review_minutes: float | None = None
     # Review time is the reviewer's declared figure where one was given. These two
     # fields keep the measured figure and the number of declared ones in view.
@@ -128,6 +133,7 @@ class PilotSummary(BaseModel):
     sessions_with_declared_review_time: int = 0
     median_minutes_to_reviewable_draft: float | None = None
     material_omissions: int = 0
+    material_omissions_per_session: float | None = None
 
 
 class AcceptanceResult(BaseModel):
@@ -139,6 +145,9 @@ class AcceptanceResult(BaseModel):
 
 class PilotAcceptance(BaseModel):
     status: Literal["not_measured", "criteria_not_set", "met", "not_met"]
+    # Who stands behind the thresholds. A result against criteria the reviewers have
+    # not agreed is a rehearsal of the test, not the test.
+    basis: Literal["proposed_by_author", "agreed_with_reviewers"] = "proposed_by_author"
     results: list[AcceptanceResult] = Field(default_factory=list)
 
 
@@ -155,7 +164,7 @@ class PilotRecord(BaseModel):
     review_source: ReviewSource
     review_sha256: str
     documents: list[DocumentVerificationRecord]
-    recommendations: list[Recommendation]
+    recommendations: list[RecommendationSummary]
     sessions: list[PilotSessionRecord]
     summary: PilotSummary
     acceptance: PilotAcceptance
@@ -165,19 +174,19 @@ class PilotRecord(BaseModel):
 
 def _outcomes(session: PilotReviewSession) -> list[RecommendationOutcome]:
     return [
-        # Validated from a mapping: a closed session has no pending change, and a
+        # Validated from a mapping: a closed session has nothing pending, and a
         # missing usefulness score must fail here rather than reach the record.
         RecommendationOutcome.model_validate(
             {
-                "finding_id": change.id,
-                "decision": change.decision,
-                "usefulness": change.usefulness,
-                "reason": change.reason,
-                "proposed_text": change.proposed_text,
-                "corrected_text": change.corrected_text,
+                "finding_id": item.id,
+                "decision": item.decision,
+                "usefulness": item.usefulness,
+                "reason": item.reason,
+                "proposed_text": item.proposed_text,
+                "corrected_text": item.corrected_text,
             }
         )
-        for change in session.change_set.changes
+        for item in session.recommendation_set.recommendations
     ]
 
 
@@ -268,6 +277,8 @@ def summarise_sessions(sessions: list[PilotSessionRecord]) -> PilotSummary:
         corrected_rate=rate("corrected"),
         rejected_rate=rate("rejected"),
         mean_usefulness=round(statistics.fmean(d["usefulness"] for d in decisions), 2),
+        usable_rate=round(sum(d["usefulness"] >= 3 for d in decisions) / total, 4),
+        misleading_rate=round(sum(d["usefulness"] == 1 for d in decisions) / total, 4),
         median_review_minutes=statistics.median(fields["review_minutes"] for fields in counted),
         # Every counted session is closed, so each has an elapsed time.
         median_elapsed_review_minutes=statistics.median(
@@ -278,27 +289,68 @@ def summarise_sessions(sessions: list[PilotSessionRecord]) -> PilotSummary:
         ),
         median_minutes_to_reviewable_draft=statistics.median(drafts) if drafts else None,
         material_omissions=sum(len(fields["material_omissions"]) for fields in counted),
+        material_omissions_per_session=round(
+            sum(len(fields["material_omissions"]) for fields in counted) / len(counted), 2
+        ),
     )
 
 
+# Thresholds proposed by the pilot's author. They become the pilot's criteria only
+# once the reviewers have agreed them, before the first session, and this flag is set
+# in the same commit. No time threshold is set: without an unassisted baseline a
+# review time shows effort, and cannot show a saving.
+CRITERIA_AGREED_WITH_REVIEWERS = False
+MIN_REVIEWERS = 3
+MIN_USABLE_RATE = 0.60
+MAX_MISLEADING_RATE = 0.10
+MAX_OMISSIONS_PER_SESSION = 1.0
+
+
 def evaluate_acceptance(summary: PilotSummary) -> list[AcceptanceResult]:
-    """Judge a measured summary against the criteria agreed with reviewers beforehand.
+    """Judge a measured summary against the criteria set before the first session."""
 
-    Returning no results means no criteria are set, and the record says so.
-    """
-
-    # TODO(human): return one AcceptanceResult per criterion agreed with the reviewers.
-    return []
+    usable = summary.usable_rate or 0.0
+    misleading = summary.misleading_rate if summary.misleading_rate is not None else 1.0
+    omissions = summary.material_omissions_per_session
+    return [
+        AcceptanceResult(
+            criterion="distinct practising lawyers",
+            threshold=f">= {MIN_REVIEWERS}",
+            observed=str(summary.reviewers),
+            met=summary.reviewers >= MIN_REVIEWERS,
+        ),
+        AcceptanceResult(
+            criterion="recommendations scored 3 or 4",
+            threshold=f">= {MIN_USABLE_RATE:.0%}",
+            observed=f"{usable:.0%}",
+            met=usable >= MIN_USABLE_RATE,
+        ),
+        AcceptanceResult(
+            criterion="recommendations scored 1 (misleading)",
+            threshold=f"<= {MAX_MISLEADING_RATE:.0%}",
+            observed=f"{misleading:.0%}",
+            met=misleading <= MAX_MISLEADING_RATE,
+        ),
+        AcceptanceResult(
+            criterion="material omissions per session",
+            threshold=f"<= {MAX_OMISSIONS_PER_SESSION:g}",
+            observed="not recorded" if omissions is None else f"{omissions:g}",
+            met=omissions is not None and omissions <= MAX_OMISSIONS_PER_SESSION,
+        ),
+    ]
 
 
 def _acceptance(summary: PilotSummary) -> PilotAcceptance:
+    basis: Literal["proposed_by_author", "agreed_with_reviewers"] = (
+        "agreed_with_reviewers" if CRITERIA_AGREED_WITH_REVIEWERS else "proposed_by_author"
+    )
     if not summary.measured:
-        return PilotAcceptance(status="not_measured")
+        return PilotAcceptance(status="not_measured", basis=basis)
     results = evaluate_acceptance(summary)
     if not results:
-        return PilotAcceptance(status="criteria_not_set")
+        return PilotAcceptance(status="criteria_not_set", basis=basis)
     status: Literal["met", "not_met"] = "met" if all(item.met for item in results) else "not_met"
-    return PilotAcceptance(status=status, results=results)
+    return PilotAcceptance(status=status, basis=basis, results=results)
 
 
 def _claim(summary: PilotSummary) -> str:
@@ -340,14 +392,14 @@ def build_pilot_record(
         review_sha256=draft.review_sha256,
         documents=draft.assessment.document_verifications,
         recommendations=[
-            Recommendation(
-                finding_id=change.id,
-                locator=change.locator,
-                proposed_text=change.proposed_text,
-                rationale=change.rationale,
-                evidence=change.original_text,
+            RecommendationSummary(
+                finding_id=item.id,
+                locator=item.locator,
+                proposed_text=item.proposed_text,
+                rationale=item.rationale,
+                evidence=item.original_text,
             )
-            for change in draft.change_set.changes
+            for item in draft.recommendation_set.recommendations
         ],
         sessions=records,
         summary=summary,
@@ -411,7 +463,8 @@ def render_pilot_record_markdown(record: PilotRecord) -> str:
             f"- Recommendations rated: {summary.findings_rated}",
             f"- Accepted / corrected / rejected: {summary.accepted_rate:.0%} / "
             f"{summary.corrected_rate:.0%} / {summary.rejected_rate:.0%}",
-            f"- Mean usefulness (1 to 4): {summary.mean_usefulness}",
+            f"- Mean usefulness (1 to 4): {summary.mean_usefulness}; scored 3 or 4: "
+            f"{summary.usable_rate:.0%}; scored 1: {summary.misleading_rate:.0%}",
             f"- Median review time: {_minutes(summary.median_review_minutes)} "
             f"(elapsed {_minutes(summary.median_elapsed_review_minutes)}; "
             f"{summary.sessions_with_declared_review_time} session(s) declared their own figure)",
@@ -424,7 +477,11 @@ def render_pilot_record_markdown(record: PilotRecord) -> str:
             f"- Not measured: {summary.reason}.",
             f"- Sessions excluded (author or synthetic example): {summary.sessions_excluded}",
         ]
-    lines += ["", f"- Acceptance criteria: `{record.acceptance.status}`"]
+    lines += [
+        "",
+        f"- Acceptance criteria: `{record.acceptance.status}` "
+        f"(thresholds: {record.acceptance.basis.replace('_', ' ')})",
+    ]
     lines += [
         f"  - {'met' if item.met else 'not met'}: {item.criterion} "
         f"(threshold {item.threshold}, observed {item.observed})"
@@ -472,12 +529,16 @@ def render_pilot_record_markdown(record: PilotRecord) -> str:
 def render_reviewed_recommendations(session: PilotReviewSession) -> str:
     """The revised draft: what survives one reviewer's decisions, in their wording."""
 
-    if not (session.assessment.export_allowed and session.change_set.export_allowed):
+    if not (session.assessment.export_allowed and session.recommendation_set.all_decided()):
         raise ValueError(
             "the revised draft is exported only from a closed session that approved the matter"
         )
-    kept = [change for change in session.change_set.changes if change.reviewed_text() is not None]
-    rejected = len(session.change_set.changes) - len(kept)
+    kept = [
+        item
+        for item in session.recommendation_set.recommendations
+        if item.reviewed_text() is not None
+    ]
+    rejected = len(session.recommendation_set.recommendations) - len(kept)
     lines = [
         f"# Reviewed recommendations: {session.assessment.matter.title}",
         "",
@@ -487,13 +548,13 @@ def render_reviewed_recommendations(session: PilotReviewSession) -> str:
         f"- Rejected and left out: {rejected}",
         "",
     ]
-    for change in kept:
+    for item in kept:
         lines += [
-            f"## {change.id} ({change.decision})",
+            f"## {item.id} ({item.decision})",
             "",
-            change.reviewed_text() or "",
+            item.reviewed_text() or "",
             "",
-            f"Basis: {change.rationale}",
+            f"Basis: {item.rationale}",
             "",
         ]
     return "\n".join(lines)
@@ -506,7 +567,7 @@ def render_recommendations(draft: PilotReviewDraft) -> str:
         "They are the output of a model, captured by contract-review-eval-harness. "
         "Nothing here says which model or setup produced them."
         if draft.review_source == "harness_review"
-        else "They are this agent's rule-based workflow recommendations."
+        else "They are the actions this agent's rules recommend for each finding."
     )
     lines = [
         f"# Recommendations for review: {draft.assessment.matter.title}",
@@ -519,11 +580,11 @@ def render_recommendations(draft: PilotReviewDraft) -> str:
         f"{origin} Decide each one as accepted, corrected or rejected.",
         "",
     ]
-    for change in draft.change_set.changes:
-        lines += [f"## {change.id}", "", change.proposed_text, "", f"Basis: {change.rationale}", ""]
-        lines += [f"Scope: {change.locator}", ""]
-        if change.original_text:
-            lines += [*(f"> {quote}" for quote in change.original_text.splitlines()), ""]
+    for item in draft.recommendation_set.recommendations:
+        lines += [f"## {item.id}", "", item.proposed_text, "", f"Basis: {item.rationale}", ""]
+        lines += [f"Scope: {item.locator}", ""]
+        if item.original_text:
+            lines += [*(f"> {quote}" for quote in item.original_text.splitlines()), ""]
     return "\n".join(lines)
 
 

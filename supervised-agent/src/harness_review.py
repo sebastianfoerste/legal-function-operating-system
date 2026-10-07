@@ -21,7 +21,7 @@ from typing import Any, Final, Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from models import MatterIntake
-from src.collaboration_workspace import DocumentChange, DocumentChangeSet
+from src.recommendations import SET_SCHEMA, Recommendation, RecommendationSet
 
 REVIEW_SCHEMA: Final = "contract-review-eval.matter-review.v1"
 CAPTURE_SCHEMA = "contract-review-eval.matter-capture.v1"
@@ -154,9 +154,9 @@ def template_differences(
     return differences
 
 
-def change_set_from_harness_review(
+def recommendations_from_harness_review(
     review: HarnessMatterReview, matter: MatterIntake
-) -> DocumentChangeSet:
+) -> RecommendationSet:
     """One recommendation per finding, under the finding's id, with its quoted evidence."""
 
     if not (matter.matter_id and matter.round_id):
@@ -164,9 +164,9 @@ def change_set_from_harness_review(
     citations = {citation.citation_id: citation for citation in review.citations}
     source_refs = {document.document_id: document.source_ref for document in matter.documents}
 
-    def change(
+    def recommendation(
         finding_id: str, kind: str, statement: str, basis: str, evidence: list[str]
-    ) -> DocumentChange:
+    ) -> Recommendation:
         cited = [citations[citation_id] for citation_id in evidence]
         documents = list(dict.fromkeys(citation.document_id for citation in cited))
         # A document the round does not hold is named as such: a reviewer should
@@ -175,7 +175,7 @@ def change_set_from_harness_review(
             document if document in source_refs else f"{document} (not on the file)"
             for document in documents
         ]
-        return DocumentChange(
+        return Recommendation(
             id=finding_id,
             locator=f"{kind} | documents: {', '.join(labelled) or 'none cited'}",
             original_text="\n".join(
@@ -188,9 +188,9 @@ def change_set_from_harness_review(
             ],
         )
 
-    changes = [
+    recommendations = [
         *(
-            change(
+            recommendation(
                 item.finding_id,
                 "conflict",
                 item.summary,
@@ -200,7 +200,7 @@ def change_set_from_harness_review(
             for item in review.conflicts
         ),
         *(
-            change(
+            recommendation(
                 item.finding_id,
                 "position",
                 item.summary,
@@ -211,16 +211,12 @@ def change_set_from_harness_review(
             for item in review.positions
         ),
         *(
-            change(item.finding_id, "escalation", item.question, item.reason, item.evidence)
+            recommendation(item.finding_id, "escalation", item.question, item.reason, item.evidence)
             for item in review.escalations
         ),
     ]
-    return DocumentChangeSet(
-        schema="document.change-set.v1",
+    return RecommendationSet(
+        schema=SET_SCHEMA,
         source_digest=review.canonical_sha256(),
-        # No playbook of this repository is applied to an ingested review.
-        playbook_version=0,
-        changes=changes,
-        sourcePreserved=True,
-        exportAllowed=False,
+        recommendations=recommendations,
     )

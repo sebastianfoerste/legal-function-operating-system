@@ -17,7 +17,7 @@ from src.pilot_record import (
     render_reviewed_recommendations,
 )
 from src.pilot_session import start_review_session
-from tests.pilot_support import closed_session, harness_root, prepared_draft, write_documents
+from tests.evidence_support import closed_session, harness_root, prepared_draft, write_documents
 
 
 def test_record_lists_decisions_reasons_omissions_and_timings_per_session(tmp_path):
@@ -31,10 +31,10 @@ def test_record_lists_decisions_reasons_omissions_and_timings_per_session(tmp_pa
     session = record.sessions[0]
     assert session.accepted == []
     assert [(item.finding_id, item.corrected_text) for item in session.corrected] == [
-        ("change-1", "Fabricated replacement wording.")
+        ("finding-1", "Fabricated replacement wording.")
     ]
     assert [(item.finding_id, item.reason) for item in session.rejected] == [
-        ("change-2", "Fabricated reason for a rejection.")
+        ("finding-2", "Fabricated reason for a rejection.")
     ]
     assert session.material_omissions == ["Fabricated omission."]
     assert session.timing.minutes_to_reviewable_draft == 20.0
@@ -102,6 +102,28 @@ def test_acceptance_reports_the_agreed_criteria(tmp_path, monkeypatch):
     assert (acceptance.status, len(acceptance.results)) == ("not_met", 2)
 
 
+def test_proposed_criteria_are_reported_as_proposed_until_reviewers_agree(tmp_path, monkeypatch):
+    draft = prepared_draft(tmp_path)
+    # One reviewer; one recommendation scored 3, one scored 1; one omission.
+    record = build_pilot_record(draft, [closed_session(draft, "R01")])
+
+    summary, acceptance = record.summary, record.acceptance
+    assert (summary.usable_rate, summary.misleading_rate) == (0.5, 0.5)
+    assert summary.material_omissions_per_session == 1.0
+    assert (acceptance.status, acceptance.basis) == ("not_met", "proposed_by_author")
+    assert {item.criterion: item.met for item in acceptance.results} == {
+        "distinct practising lawyers": False,
+        "recommendations scored 3 or 4": False,
+        "recommendations scored 1 (misleading)": False,
+        "material omissions per session": True,
+    }
+    assert "thresholds: proposed by author" in render_pilot_record_markdown(record)
+
+    monkeypatch.setattr(pilot_record, "CRITERIA_AGREED_WITH_REVIEWERS", True)
+    agreed = build_pilot_record(draft, [closed_session(draft, "R01")]).acceptance
+    assert agreed.basis == "agreed_with_reviewers"
+
+
 def test_record_refuses_open_tampered_and_duplicate_sessions(tmp_path):
     draft = prepared_draft(tmp_path)
     session = closed_session(draft)
@@ -114,7 +136,7 @@ def test_record_refuses_open_tampered_and_duplicate_sessions(tmp_path):
     with pytest.raises(ValueError, match="more than one session for reviewers"):
         build_pilot_record(draft, [session, session])
     tampered = session.model_copy(deep=True)
-    tampered.change_set.changes[1].usefulness = 4
+    tampered.recommendation_set.recommendations[1].usefulness = 4
     with pytest.raises(ValueError, match="failed verification"):
         build_pilot_record(draft, [tampered])
 
@@ -155,7 +177,7 @@ def test_revised_draft_is_exported_only_after_approval(tmp_path):
 
     revised = render_reviewed_recommendations(closed_session(draft))
     assert "Fabricated replacement wording." in revised
-    assert "## change-2" not in revised
+    assert "## finding-2" not in revised
     assert "Rejected and left out: 1" in revised
 
 
@@ -222,7 +244,7 @@ def test_cli_carries_a_matter_from_intake_to_export(tmp_path, monkeypatch, capsy
     start_args = ("start", "--draft", draft, "--session", session, "--reviewer", "R01")
     assert run(*start_args, "--evidence-class", "practising_lawyer") == 0
     assert run(*start_args, "--evidence-class", "practising_lawyer") == 1
-    decide = ("decide", "--session", session, "--change", "change-1", "--usefulness", "3")
+    decide = ("decide", "--session", session, "--recommendation", "finding-1", "--usefulness", "3")
     corrected = (*decide, "--decision", "corrected", "--reason", "Fabricated reason.")
     close = ("close", "--session", session, "--state", "approved")
     assert run(*decide, "--decision", "rejected") == 1

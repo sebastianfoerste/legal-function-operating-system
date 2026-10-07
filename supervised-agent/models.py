@@ -5,7 +5,15 @@ import json
 from pathlib import PurePosixPath
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 MatterType = Literal[
     "contract",
@@ -25,7 +33,7 @@ AuditEventType = Literal[
     "review_draft_ready",
     "review_session_started",
     "draft_marked_reviewable",
-    "change_decision_recorded",
+    "recommendation_decision_recorded",
     "material_omission_recorded",
     "review_session_closed",
 ]
@@ -83,6 +91,18 @@ class MatterIntake(BaseModel):
         if repeated:
             raise ValueError(f"duplicate document ids: {repeated}")
         return self
+
+    @model_serializer(mode="wrap")
+    def omit_unused_matter_file_fields(
+        self, handler: SerializerFunctionWrapHandler
+    ) -> dict[str, Any]:
+        # An intake without a matter file serialises exactly as it did before these
+        # fields existed, so every id and digest derived from it stays the same.
+        data: dict[str, Any] = handler(self)
+        for optional in ("matter_id", "round_id", "documents"):
+            if not data.get(optional):
+                data.pop(optional, None)
+        return data
 
 
 class RiskFinding(BaseModel):
