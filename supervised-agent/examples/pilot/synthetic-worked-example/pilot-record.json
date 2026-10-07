@@ -1,0 +1,139 @@
+{
+  "schema": "legal-ops-agent.pilot-record.v1",
+  "generated_at_utc": "2026-01-01T11:00:00Z",
+  "protocol": "docs/REVIEWER_EVIDENCE_PROTOCOL.md",
+  "matter_title": "SaaS MSA deviation review",
+  "matter_id": "synthetic-worked-example",
+  "round_id": "example",
+  "assessment_id": "loa_f24a4bdcd9aa0f21",
+  "review_source": "agent_rules",
+  "review_sha256": "37a6f3d809f50f7d2e5add3c0f200aa07b0b5fe4d114b4abc147812bdbbaa4df",
+  "documents": [],
+  "recommendations": [
+    {
+      "finding_id": "finding-1",
+      "locator": "finding 1 | privacy | severity medium",
+      "proposed_text": "Confirm DPA roles, transfer basis, subprocessors and deletion mechanics.",
+      "rationale": "Personal or customer data categories are in scope.",
+      "evidence": "business contact data, customer workspace metadata"
+    },
+    {
+      "finding_id": "finding-2",
+      "locator": "finding 2 | customer_commitments | severity high",
+      "proposed_text": "Record each commitment in the customer obligations register before approval.",
+      "rationale": "The matter includes bespoke customer commitments.",
+      "evidence": "higher liability cap for security incidents, controlled annual audit right, non-binding roadmap review"
+    }
+  ],
+  "sessions": [
+    {
+      "session_id": "37a6f3d809f5-R00",
+      "assessment_id": "loa_f24a4bdcd9aa0f21",
+      "final_review_state": "revision_requested",
+      "export_allowed": false,
+      "timing": {
+        "started_at_utc": "2026-01-01T10:00:00Z",
+        "reviewable_at_utc": "2026-01-01T10:15:00Z",
+        "closed_at_utc": "2026-01-01T10:30:00Z",
+        "draft_preparation_seconds": 1.0,
+        "minutes_to_reviewable_draft": 15.0,
+        "elapsed_review_minutes": 30.0,
+        "declared_review_minutes": null,
+        "review_minutes": 30.0,
+        "review_minutes_source": "audit_timestamps"
+      },
+      "audit_chain": {
+        "verified": true,
+        "event_count": 9,
+        "chain_root_hash": "36e3d1c7f7912fef5d5072f6189382603c20a152e3360b5a4073d46006d6bddf",
+        "broken_at_seq": null,
+        "reason": "chain intact"
+      },
+      "accepted": [],
+      "corrected": [
+        {
+          "finding_id": "finding-1",
+          "decision": "corrected",
+          "usefulness": 3,
+          "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a correction requires.",
+          "proposed_text": "Confirm DPA roles, transfer basis, subprocessors and deletion mechanics.",
+          "corrected_text": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reviewer's replacement wording."
+        }
+      ],
+      "rejected": [
+        {
+          "finding_id": "finding-2",
+          "decision": "rejected",
+          "usefulness": 2,
+          "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a rejection requires.",
+          "proposed_text": "Record each commitment in the customer obligations register before approval.",
+          "corrected_text": null
+        }
+      ],
+      "material_omissions": [
+        "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for an issue the draft missed."
+      ],
+      "harness_fields": {
+        "matter_id": "synthetic-worked-example",
+        "round_id": "example",
+        "review_sha256": "37a6f3d809f50f7d2e5add3c0f200aa07b0b5fe4d114b4abc147812bdbbaa4df",
+        "reviewer_id": "R00",
+        "reviewer_profile": "SYNTHETIC EXAMPLE, not a reviewer's view. No person reviewed anything.",
+        "evidence_class": "synthetic_example",
+        "minutes_to_reviewable_draft": 15.0,
+        "review_minutes": 30.0,
+        "decisions": [
+          {
+            "finding_id": "finding-1",
+            "decision": "corrected",
+            "usefulness": 3,
+            "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a correction requires."
+          },
+          {
+            "finding_id": "finding-2",
+            "decision": "rejected",
+            "usefulness": 2,
+            "reason": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for the reason a rejection requires."
+          }
+        ],
+        "material_omissions": [
+          "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for an issue the draft missed."
+        ],
+        "workflow_feedback": "SYNTHETIC EXAMPLE, not a reviewer's view. Placeholder for feedback on the workflow."
+      },
+      "harness_session": null
+    }
+  ],
+  "summary": {
+    "measured": false,
+    "reason": "no session by a practising lawyer other than the author is recorded",
+    "sessions": 0,
+    "reviewers": 0,
+    "sessions_excluded": 1,
+    "findings_rated": 0,
+    "accepted_rate": null,
+    "corrected_rate": null,
+    "rejected_rate": null,
+    "mean_usefulness": null,
+    "usable_rate": null,
+    "misleading_rate": null,
+    "median_review_minutes": null,
+    "median_elapsed_review_minutes": null,
+    "sessions_with_declared_review_time": 0,
+    "median_minutes_to_reviewable_draft": null,
+    "material_omissions": 0,
+    "material_omissions_per_session": null
+  },
+  "acceptance": {
+    "status": "not_measured",
+    "basis": "proposed_by_author",
+    "plan_sha256": "f23e1b1a9e3845d8209a47dc2a3ff4b9d9e7eb845009c07ddd850cfee6c70fc8",
+    "results": []
+  },
+  "claim": "No reviewer pilot is evidenced: no session by a practising lawyer other than the author is recorded.",
+  "claim_limits": [
+    "Synthetic documents only. No client, matter or confidential material was reviewed.",
+    "One matter. The recommendations rated are this agent's rule-based workflow recommendations; the agent does not read contract text.",
+    "Not an enterprise implementation. No adoption inside an organisation is recorded."
+  ]
+}

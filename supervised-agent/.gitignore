@@ -24,6 +24,10 @@ build/
 dist/
 *.egg-info/
 
+# Reviewer pilot working files: drafts and session records hold reviewers' words.
+# Publishing one is a deliberate copy into examples/pilot/, never a stray `git add`.
+/pilot/
+
 # Runtime outputs
 *.log
 .companion/

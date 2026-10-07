@@ -69,6 +69,18 @@ def _lines_for_sources(assessment: LegalOpsAssessment) -> list[str]:
     return lines
 
 
+def _lines_for_documents(assessment: LegalOpsAssessment) -> list[str]:
+    titles = {document.document_id: document.title for document in assessment.matter.documents}
+    return [
+        (
+            f"- {record.status}: {record.document_id} | {record.kind} | "
+            f"{titles.get(record.document_id, record.document_id)} | {record.path} | "
+            f"sha256 {record.expected_sha256}"
+        )
+        for record in assessment.document_verifications
+    ]
+
+
 def _audit_events_for_packet(assessment: LegalOpsAssessment) -> list[AuditEvent]:
     return append_audit_event(
         assessment.audit_events,
@@ -128,6 +140,11 @@ def build_review_packet(assessment: LegalOpsAssessment) -> str:
         "",
         *_lines_for_commitments(assessment),
         "",
+        *(
+            ["## Matter Documents", "", *_lines_for_documents(assessment), ""]
+            if assessment.document_verifications
+            else []
+        ),
         "## Audit Trail",
         "",
         *_lines_for_audit(_audit_events_for_packet(assessment)),

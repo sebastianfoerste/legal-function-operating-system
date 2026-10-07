@@ -20,6 +20,16 @@ python -m pytest -q tests/test_mcp_tools.py tests/test_source_verification.py
 python -m pytest -q tests/test_cli.py tests/test_review_packet.py
 ```
 
+## Document And Pilot Checks
+
+```bash
+python -m pytest -q tests/test_matter_documents.py tests/test_evidence_session.py tests/test_evidence_record.py tests/test_harness_review.py
+```
+
+Three of these tests compare the Northwind intakes and the session format with a
+`contract-review-eval-harness` checkout. They are skipped unless
+`CONTRACT_EVAL_HARNESS_ROOT` names one, so they do not run in CI.
+
 ## Runtime Check
 
 ```bash
