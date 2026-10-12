@@ -9,3 +9,8 @@ dist/
 .pytest_cache/
 .gstack/
 site/
+
+# Environment files. Real values stay local; only example files are tracked.
+.env
+.env.*
+!.env.example
