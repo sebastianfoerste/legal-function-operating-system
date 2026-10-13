@@ -53,9 +53,27 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "pinpoint": "Articles 6, 9 to 15, 17, 43, and 113",
         "legal_effect": "directly_applicable_regulation",
         "timing": (
-            "Generally applies from 2 August 2026. Article 6(1) and the corresponding "
-            "product-linked high-risk obligations apply from 2 August 2027. Earlier "
-            "phases under Article 113 must be checked separately."
+            "Generally applies from 2 August 2026. As amended by Regulation (EU) "
+            "2026/1744 (EU-AI-ACT-AMENDMENT), the Annex III high-risk obligations "
+            "apply from 2 December 2027, and Article 6(1) and the corresponding "
+            "product-linked (Annex I) high-risk obligations apply from 2 August 2028. "
+            "Earlier phases under Article 113 must be checked separately."
+        ),
+    },
+    {
+        "id": "EU-AI-ACT-AMENDMENT",
+        "title": (
+            "Regulation (EU) 2026/1744 amending Regulation (EU) 2024/1689 "
+            "(Digital Omnibus on AI)"
+        ),
+        "url": "https://eur-lex.europa.eu/eli/reg/2026/1744/oj/eng",
+        "pinpoint": "Amendments to Article 113 of Regulation (EU) 2024/1689",
+        "legal_effect": "directly_applicable_regulation",
+        "timing": (
+            "Published in the Official Journal on 24 July 2026 and in force from "
+            "27 July 2026. Defers the Annex III high-risk obligations to "
+            "2 December 2027 and the Article 6(1) (Annex I) high-risk obligations "
+            "to 2 August 2028."
         ),
     },
     {

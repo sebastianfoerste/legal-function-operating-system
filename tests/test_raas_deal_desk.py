@@ -114,7 +114,18 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("transpose", product_liability["timing"])
         ai_act = next(item for item in SOURCE_MANIFEST if item["id"] == "EU-AI-ACT")
         self.assertIn("2 August 2026", ai_act["timing"])
-        self.assertIn("2 August 2027", ai_act["timing"])
+        # Regulation (EU) 2026/1744 deferred the high-risk dates in Article 113.
+        self.assertIn("2 December 2027", ai_act["timing"])
+        self.assertIn("2 August 2028", ai_act["timing"])
+        self.assertNotIn("2 August 2027", ai_act["timing"])
+        self.assertIn("EU-AI-ACT-AMENDMENT", ai_act["timing"])
+        amendment = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-AI-ACT-AMENDMENT"
+        )
+        self.assertEqual(
+            amendment["url"], "https://eur-lex.europa.eu/eli/reg/2026/1744/oj/eng"
+        )
+        self.assertIn("27 July 2026", amendment["timing"])
 
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())
