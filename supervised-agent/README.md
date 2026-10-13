@@ -142,9 +142,7 @@ manifestable with SHA-256 digests.
 
 ## Committed trust-cockpit run
 
-The Trust Cockpit is a reviewer-facing evidence surface added after comparative
-research across GitHub, mobile app stores and relevant app marketplaces. The
-research note is here: [`docs/competitive-research-2026-06-30.md`](docs/competitive-research-2026-06-30.md).
+The Trust Cockpit is a reviewer-facing evidence surface.
 
 - [`examples/trust-cockpit-saas-msa-2026-06-30.md`](examples/trust-cockpit-saas-msa-2026-06-30.md)
 - [`examples/trust-cockpit-saas-msa-2026-06-30.json`](examples/trust-cockpit-saas-msa-2026-06-30.json)
@@ -166,14 +164,11 @@ The snapshot is generated from the same synthetic SaaS MSA fixture after a docum
 human approval, and shows a two-event chain (`assessment_created`,
 `review_decision_applied`) that verifies.
 
-Hash-chained audit logging is an established technique implemented by several open-source
-projects, including at least one MCP-exposed audit tool for general AI agent
-actions. The differentiator here is narrower and specific: pairing that hash chain
-with a legal-matter review workflow: typed intake, deterministic risk triage,
-reviewer routing, and an export gate the chain itself can block, in one
-reviewer-facing evidence packet. See
-[`docs/competitive-research-2026-06-30.md`](docs/competitive-research-2026-06-30.md#round-2-audit-integrity-chain)
-for the comparison this claim is based on.
+Hash-chained audit logging is an established technique and is not claimed as new
+here. What this repository adds is narrower: pairing that hash chain with a
+legal-matter review workflow (typed intake, deterministic risk triage, reviewer
+routing, and an export gate the chain itself can block) in one reviewer-facing
+evidence packet.
 
 ## Supervised pilot workflow
 
