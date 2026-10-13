@@ -135,6 +135,27 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("20 January 2027", machinery["timing"])
         self.assertNotIn("14 January 2027", machinery["timing"])
 
+    def test_machinery_ai_routing_follows_regulation_2026_1744(self):
+        # Consolidated Regulation (EU) 2024/1689 as of 27 July 2026: Regulation
+        # (EU) 2023/1230 is listed in Annex I Section B, so Article 2(2) limits
+        # the directly applicable provisions for machinery-related high-risk AI,
+        # and Article 8 of Regulation (EU) 2023/1230 carries the requirements.
+        by_id = {item["id"]: item for item in SOURCE_MANIFEST}
+        ai_act = by_id["EU-AI-ACT"]
+        self.assertIn("Annex I Section B", ai_act["timing"])
+        self.assertIn("Article 2(2)", ai_act["timing"])
+        self.assertIn("Article 113(c)", ai_act["timing"])
+        self.assertIn("2(2)", ai_act["pinpoint"])
+        self.assertIn("/2024/1689/2026-07-27/", ai_act["url"])
+        amendment = by_id["EU-AI-ACT-AMENDMENT"]
+        self.assertIn("(EU) 2023/1230", amendment["title"])
+        self.assertIn("Regulation (EU) 2023/1230", amendment["pinpoint"])
+        self.assertIn("Annex I Section B", amendment["timing"])
+        machinery = by_id["EU-MACHINERY-REGULATION"]
+        self.assertIn("Article 8", machinery["timing"])
+        self.assertIn("2 August 2028", machinery["timing"])
+        self.assertIn("EU-AI-ACT-AMENDMENT", machinery["timing"])
+
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())
         self.assertEqual(

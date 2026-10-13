@@ -1,7 +1,7 @@
 {
   "schema": "legal-function-os.source-manifest.v1",
   "verified_on": "2026-07-20",
-  "source_digest": "6b2d2d79c7e3fb4bef50b97451ee1fd45d7f8bfce026db749e095cbaf710f9f4",
+  "source_digest": "eee843895fd578427f345e5bbf01004cb60009af7e364fcc54d05f8343401bf7",
   "sources": [
     {
       "id": "EU-DATA-ACT",
@@ -22,26 +22,26 @@
     {
       "id": "EU-MACHINERY-REGULATION",
       "title": "Regulation (EU) 2023/1230, Machinery Regulation",
-      "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
-      "pinpoint": "Articles 10 to 18 and 54, Annex III",
+      "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/2026-07-27/eng",
+      "pinpoint": "Articles 8, 10 to 18 and 54, Annex III",
       "legal_effect": "directly_applicable_regulation",
-      "timing": "Generally applies from 20 January 2027 (Article 54). Articles 26 to 42 apply from 20 January 2024."
+      "timing": "Generally applies from 20 January 2027 (Article 54). Articles 26 to 42 apply from 20 January 2024. As amended by Regulation (EU) 2026/1744 (EU-AI-ACT-AMENDMENT), Article 8 requires Commission delegated acts adding health and safety requirements to Annex III for AI systems classified as high-risk under Article 6(1) of Regulation (EU) 2024/1689 as a safety component of, or as, a product covered by this Regulation. Those delegated acts are to apply by 2 August 2028."
     },
     {
       "id": "EU-AI-ACT",
       "title": "Regulation (EU) 2024/1689, Artificial Intelligence Act",
-      "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
-      "pinpoint": "Articles 6, 9 to 15, 17, 43, and 113",
+      "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/2026-07-27/eng",
+      "pinpoint": "Articles 2(2), 6, 9 to 15, 17, 43, and 113, Annex I",
       "legal_effect": "directly_applicable_regulation",
-      "timing": "Generally applies from 2 August 2026. As amended by Regulation (EU) 2026/1744 (EU-AI-ACT-AMENDMENT), the Annex III high-risk obligations apply from 2 December 2027, and Article 6(1) and the corresponding product-linked (Annex I) high-risk obligations apply from 2 August 2028. Earlier phases under Article 113 must be checked separately."
+      "timing": "Generally applies from 2 August 2026. As amended by Regulation (EU) 2026/1744 (EU-AI-ACT-AMENDMENT), Chapter III, Sections 1 to 3 (except Article 6(5)) apply from 2 December 2027 for high-risk AI systems under Article 6(2) and Annex III, and from 2 August 2028 for high-risk AI systems under Article 6(1) and Annex I (Article 113(c)). The Machinery Regulation (EU) 2023/1230 is now listed in Annex I Section B. For a high-risk AI system under Article 6(1) related to machinery, only Article 6(1), Article 60a and Articles 102 to 112 apply, and Articles 57 to 59 apply only once the high-risk requirements are integrated into the Machinery Regulation (Article 2(2)); those requirements reach machinery through delegated acts under Article 8 of Regulation (EU) 2023/1230. Other phases under Article 113 must be checked separately."
     },
     {
       "id": "EU-AI-ACT-AMENDMENT",
-      "title": "Regulation (EU) 2026/1744 amending Regulation (EU) 2024/1689 (Digital Omnibus on AI)",
+      "title": "Regulation (EU) 2026/1744 amending Regulations (EU) 2024/1689, (EU) 2018/1139 and (EU) 2023/1230 (Digital Omnibus on AI)",
       "url": "https://eur-lex.europa.eu/eli/reg/2026/1744/oj/eng",
-      "pinpoint": "Amendments to Article 113 of Regulation (EU) 2024/1689",
+      "pinpoint": "Amendments relevant here: Articles 2(2) and 113 and Annex I of Regulation (EU) 2024/1689; Articles 8, 20 and 47 of Regulation (EU) 2023/1230",
       "legal_effect": "directly_applicable_regulation",
-      "timing": "Published in the Official Journal on 24 July 2026 and in force from 27 July 2026. Defers the Annex III high-risk obligations to 2 December 2027 and the Article 6(1) (Annex I) high-risk obligations to 2 August 2028."
+      "timing": "Published in the Official Journal on 24 July 2026 and in force from 27 July 2026. Defers Chapter III, Sections 1 to 3 of Regulation (EU) 2024/1689 to 2 December 2027 (Annex III) and 2 August 2028 (Article 6(1), Annex I), removes the Machinery Directive 2006/42/EC from Annex I Section A and lists the Machinery Regulation (EU) 2023/1230 in Annex I Section B, and adds AI-specific delegated acts to Article 8 of Regulation (EU) 2023/1230. Effects checked against the consolidated texts of both Regulations as of 27 July 2026; confirm against the Official Journal text before external use."
     },
     {
       "id": "EU-CRA",
