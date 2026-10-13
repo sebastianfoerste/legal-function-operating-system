@@ -127,6 +127,14 @@ class RaaSDealDeskTests(unittest.TestCase):
         )
         self.assertIn("27 July 2026", amendment["timing"])
 
+    def test_machinery_regulation_application_date_follows_article_54(self):
+        # Article 54 of Regulation (EU) 2023/1230: applies from 20 January 2027.
+        machinery = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-MACHINERY-REGULATION"
+        )
+        self.assertIn("20 January 2027", machinery["timing"])
+        self.assertNotIn("14 January 2027", machinery["timing"])
+
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())
         self.assertEqual(

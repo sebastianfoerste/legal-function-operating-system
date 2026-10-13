@@ -44,7 +44,10 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
         "pinpoint": "Articles 10 to 18 and 54, Annex III",
         "legal_effect": "directly_applicable_regulation",
-        "timing": "Generally applies from 14 January 2027.",
+        "timing": (
+            "Generally applies from 20 January 2027 (Article 54). Articles 26 to 42 "
+            "apply from 20 January 2024."
+        ),
     },
     {
         "id": "EU-AI-ACT",

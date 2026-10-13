@@ -748,7 +748,7 @@
       "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
       "pinpoint": "Articles 10 to 18 and 54, Annex III",
       "legal_effect": "directly_applicable_regulation",
-      "timing": "Generally applies from 14 January 2027."
+      "timing": "Generally applies from 20 January 2027 (Article 54). Articles 26 to 42 apply from 20 January 2024."
     },
     {
       "id": "EU-AI-ACT",
@@ -791,7 +791,7 @@
       "timing": "In force and directly applicable. The concrete obligations depend on the roles, data, purposes, and transfer path."
     }
   ],
-  "source_digest": "116e39a419285de3b5a7e1529bb6ca2bf05bb3b3e8bbdb1acb77f6342f3a9505",
+  "source_digest": "6b2d2d79c7e3fb4bef50b97451ee1fd45d7f8bfce026db749e095cbaf710f9f4",
   "disclaimer": "This public-safe demonstration uses synthetic facts and illustrative internal guardrails. It is legal-operations and deal-structuring support. It is not legal or accounting advice. Qualified Legal, Finance, Tax, Security, Product, and Safety reviewers must validate the analysis before any external use.",
   "external_action_allowed": false
 }
