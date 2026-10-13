@@ -18,7 +18,9 @@ Verification guide: [`docs/verification-guide.md`](docs/verification-guide.md).
 
 > **If you don't code:** scroll to [What the demo produces](#what-the-demo-produces). This repo ships a sample output you can read in the browser. The point isn't the code; it's whether the legal work is structured, cited, reviewable, and testable.
 
-![demo](docs/demo.png)
+![Terminal output: the synthetic SaaS MSA matter is assessed as needs_review with export blocked, then approved by General Counsel with export allowed](docs/demo.png)
+
+_Actual output of the two commands in [Run it](#run-it-90-seconds), each filtered through `jq` to the key fields, rendered as an image. The full JSON adds controls, source verifications, commitments and audit hashes._
 
 ![Architecture](docs/architecture.svg)
 
