@@ -11,6 +11,7 @@ from legal_function_os.raas_cli import main as raas_cli_main
 from legal_function_os.raas_deal_desk import (
     RAAS_INPUT_SCHEMA,
     SOURCE_MANIFEST,
+    VERIFIED_ON,
     build_raas_deal_pack,
     render_raas_html,
     render_raas_markdown,
@@ -155,6 +156,19 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("Article 8", machinery["timing"])
         self.assertIn("2 August 2028", machinery["timing"])
         self.assertIn("EU-AI-ACT-AMENDMENT", machinery["timing"])
+
+    def test_each_source_carries_a_verification_date_not_before_its_law(self):
+        for source in SOURCE_MANIFEST:
+            self.assertRegex(source["verified_on"], r"^\d{4}-\d{2}-\d{2}$")
+        self.assertEqual(
+            VERIFIED_ON, max(source["verified_on"] for source in SOURCE_MANIFEST)
+        )
+        self.assertEqual(self.pack.verified_on, VERIFIED_ON)
+        # Regulation (EU) 2026/1744 entered into force on 27 July 2026. An entry
+        # that describes the amended law cannot have been verified earlier.
+        for source_id in ("EU-AI-ACT", "EU-AI-ACT-AMENDMENT", "EU-MACHINERY-REGULATION"):
+            source = next(item for item in SOURCE_MANIFEST if item["id"] == source_id)
+            self.assertGreaterEqual(source["verified_on"], "2026-07-27", source_id)
 
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())

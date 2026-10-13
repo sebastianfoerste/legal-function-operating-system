@@ -18,7 +18,7 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
         "",
         f"**Deal:** {pack.deal_id}",
         f"**Input contract:** `{pack.input_schema}`",
-        f"**Verified legal-source snapshot:** {pack.verified_on}",
+        f"**Legal sources last verified:** {pack.verified_on} (date per source below)",
         f"**Signing decision:** {gate['answer']}",
         "",
         "## Executive signing gate",
@@ -183,7 +183,7 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
         lines.append(
             f"- **[{source['id']}]({source['url']}):** {source['title']}, "
             f"{source['pinpoint']}. Legal effect: `{source['legal_effect']}`. "
-            f"{source['timing']}"
+            f"{source['timing']} Verified on {source['verified_on']}."
         )
     lines.extend(
         [

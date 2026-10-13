@@ -5,7 +5,14 @@ from __future__ import annotations
 import hashlib
 import json
 
-VERIFIED_ON = "2026-07-20"
+# Each source records the date its entry was last checked against the
+# primary text. VERIFIED_ON, defined below the manifest, is the most recent
+# of those dates; it does not mean every entry was re-checked on that day.
+INITIAL_SNAPSHOT_ON = "2026-07-20"
+# The AI Act, its amending Regulation (EU) 2026/1744 and the Machinery Regulation
+# were re-checked against the consolidated texts of Regulations (EU) 2024/1689
+# and (EU) 2023/1230 as of 27 July 2026, which incorporate that amendment.
+RECHECKED_ON = "2026-10-13"
 
 DISCLAIMER = (
     "This public-safe demonstration uses synthetic facts and illustrative internal "
@@ -21,6 +28,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2023/2854/oj/eng",
         "pinpoint": "Articles 3 to 5, 13, and 50",
         "legal_effect": "directly_applicable_regulation",
+        "verified_on": INITIAL_SNAPSHOT_ON,
         "timing": (
             "Generally applies from 12 September 2025. Article 3(1) applies to "
             "connected products and related services placed on the market after "
@@ -33,6 +41,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/dir/2006/42/oj/eng",
         "pinpoint": "Articles 5 and 12, Annex I",
         "legal_effect": "directive_implemented_in_national_law",
+        "verified_on": INITIAL_SNAPSHOT_ON,
         "timing": (
             "Current EU machinery framework during the synthetic 2026 review, "
             "implemented through national law."
@@ -44,6 +53,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/2026-07-27/eng",
         "pinpoint": "Articles 8, 10 to 18 and 54, Annex III",
         "legal_effect": "directly_applicable_regulation",
+        "verified_on": RECHECKED_ON,
         "timing": (
             "Generally applies from 20 January 2027 (Article 54). Articles 26 to 42 "
             "apply from 20 January 2024. As amended by Regulation (EU) 2026/1744 "
@@ -60,6 +70,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/2026-07-27/eng",
         "pinpoint": "Articles 2(2), 6, 9 to 15, 17, 43, and 113, Annex I",
         "legal_effect": "directly_applicable_regulation",
+        "verified_on": RECHECKED_ON,
         "timing": (
             "Generally applies from 2 August 2026. As amended by Regulation (EU) "
             "2026/1744 (EU-AI-ACT-AMENDMENT), Chapter III, Sections 1 to 3 (except "
@@ -88,6 +99,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
             "2023/1230"
         ),
         "legal_effect": "directly_applicable_regulation",
+        "verified_on": RECHECKED_ON,
         "timing": (
             "Published in the Official Journal on 24 July 2026 and in force from "
             "27 July 2026. Defers Chapter III, Sections 1 to 3 of Regulation (EU) "
@@ -106,6 +118,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
         "pinpoint": "Articles 13, 14, 32, and 71",
         "legal_effect": "directly_applicable_regulation",
+        "verified_on": INITIAL_SNAPSHOT_ON,
         "timing": (
             "Chapter IV applies from 11 June 2026. Article 14 applies from "
             "11 September 2026. The Regulation generally applies from "
@@ -118,6 +131,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng",
         "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
         "legal_effect": "directive_requires_national_implementation",
+        "verified_on": INITIAL_SNAPSHOT_ON,
         "timing": (
             "Member States must transpose the Directive by 9 December 2026. "
             "The resulting national rules apply to products placed on the market "
@@ -130,12 +144,15 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng",
         "pinpoint": "Articles 5, 6, 13, 28, 32, 35, and 44 to 49",
         "legal_effect": "directly_applicable_regulation",
+        "verified_on": INITIAL_SNAPSHOT_ON,
         "timing": (
             "In force and directly applicable. The concrete obligations depend on "
             "the roles, data, purposes, and transfer path."
         ),
     },
 )
+
+VERIFIED_ON = max(source["verified_on"] for source in SOURCE_MANIFEST)
 
 
 def source_url(source_id: str) -> str:
