@@ -43,7 +43,7 @@ demo_output/
 .env
 .env.local
 
-# CODEx_HYGIENE_BLOCK
+# Tool caches and logs
 __pycache__/
 .pytest_cache/
 .ruff_cache/
