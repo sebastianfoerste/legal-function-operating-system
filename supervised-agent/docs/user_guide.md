@@ -50,6 +50,6 @@ Approval, rejection, revision requests and escalation require written review not
 
 ## Data boundary
 
-Use synthetic or approved public data only. External model calls remain disabled unless `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED=true` is set deliberately.
+Use synthetic or approved public data only. External model calls remain disabled unless `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED=true` and `ANTHROPIC_API_KEY` are both set deliberately. When enabled, `src/claude_client.py` sends the request to Claude Opus 5.5 (`claude-opus-5-5`) through the Anthropic API and returns the deterministic local response if the call fails or is refused.
 
 Source references beginning with `client:`, `candidate:`, `privileged:` or `confidential:` are treated as blockers.
