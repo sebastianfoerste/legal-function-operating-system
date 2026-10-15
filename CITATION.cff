@@ -1,0 +1,26 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "Legal Function Operating System"
+type: software
+authors:
+  - family-names: "Förste"
+    given-names: "Sebastian"
+repository-code: "https://github.com/sebastianfoerste/legal-function-operating-system"
+url: "https://sebastianfoerste.github.io/legal-function-operating-system/"
+abstract: >-
+  Deterministic, tested rules for an in-house legal function: intake, risk,
+  priority, routing, service levels, approval tiers, external-counsel decisions,
+  escalation and a board-ready pack, with an Art. 28(3) GDPR clause-coverage
+  check. No language model is in the decision path, and all bundled data is
+  synthetic.
+keywords:
+  - legal operations
+  - legal intake
+  - legal front door
+  - legal engineering
+  - approval matrix
+  - GDPR
+  - DSGVO
+license: MIT
+version: 0.3.0
+date-released: 2026-08-28
