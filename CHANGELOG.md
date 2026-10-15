@@ -27,6 +27,7 @@ All notable changes to this project are recorded here. The format follows
 ### Fixed
 
 - A mistyped value band such as `">1M"` was read as "no value", which turned a board-attention matter into a low-risk, reviewer-only one. It is now rejected with a suggestion.
+- The workspace, agent-run and shared-space outputs counted `"awaiting_business_input": "no"` as true and split a string in `facts` or `dependencies` into characters. These optional fields are now type-checked and listed in the request schema.
 - The README's DPA command printed no DPA rows; it now names the output file.
 - The Pages site's "DPA clause review" card linked to a missing file.
 - The CLI docstring promised a non-zero exit for board-attention items.

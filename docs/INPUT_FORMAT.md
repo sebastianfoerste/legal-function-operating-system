@@ -95,9 +95,20 @@ rationale says the request needs manual triage.
 
 ## Other fields
 
-Fields not listed above pass through unchanged. Some optional outputs read a few of
-them: `description`, `summary`, `facts` (array of strings), `deadline`,
-`dependencies` (array) and `awaiting_business_input` (boolean).
+Fields not listed above pass through unchanged. The optional workspace,
+agent-run and shared-space outputs read six more, which never change a decision:
+
+| Field | Type |
+| --- | --- |
+| `description`, `summary` | string |
+| `deadline` | string, for example `2026-12-01` |
+| `facts` | array of strings |
+| `dependencies` | array, for example of request ids |
+| `awaiting_business_input` | `true` / `false` |
+
+They are checked like the request fields, because a wrong type would be misread
+there: the string `"no"` would count as true, and a single string of facts would be
+split into characters.
 
 A field whose name is close to a request field, such as `valueBand` or
 `uncapped_liabilty`, is rejected, because its value would otherwise be ignored

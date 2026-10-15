@@ -102,6 +102,51 @@
         "null"
       ],
       "description": "The response SLA has already been missed. Default false."
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Free-text description. Read by the operational list and knowledge portal outputs; not used in decisions."
+    },
+    "summary": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Short summary for the knowledge portal. Not used in decisions."
+    },
+    "facts": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "description": "Known facts, one string each. Read by the agent-run and operational list outputs; not used in decisions."
+    },
+    "deadline": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Due date as text, for example 2026-12-01. Shown in the operational list and the shared space; not used in decisions."
+    },
+    "dependencies": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "What the request waits on, for example other request ids. Shown in the operational list; not used in decisions."
+    },
+    "awaiting_business_input": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "The business still owes legal an answer. Counted in the operational list and shown to the requester in the shared space. Default false."
     }
   },
   "additionalProperties": true

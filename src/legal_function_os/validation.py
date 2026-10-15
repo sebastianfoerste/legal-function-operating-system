@@ -43,7 +43,9 @@ REQUEST_FIELDS = (
     "requested_by",
     "sla_breached",
 )
-# Optional fields read by the workspace, agent-run and shared-space outputs.
+# Optional fields read by the workspace, agent-run and shared-space outputs. They
+# never change a decision, but a value of the wrong type would be misread there:
+# the string "no" counts as true, and a string of facts is split into characters.
 AUXILIARY_FIELDS = (
     "description",
     "summary",
@@ -52,6 +54,8 @@ AUXILIARY_FIELDS = (
     "dependencies",
     "awaiting_business_input",
 )
+AUXILIARY_TEXT_FIELDS = ("description", "summary", "deadline")
+AUXILIARY_BOOLEAN_FIELDS = ("awaiting_business_input",)
 # Your own fields pass through untouched. These prefixes also exempt them from the
 # check for misspelled field names.
 EXTENSION_PREFIXES = ("x_", "_")
@@ -242,7 +246,26 @@ def validate_request(request: Any, index: int | None = None) -> list[Issue]:
                 f"use one of {', '.join(URGENCIES)}",
             )
 
-    for field in BOOLEAN_FIELDS:
+    for field in AUXILIARY_TEXT_FIELDS:
+        value = request.get(field)
+        if value is not None and not isinstance(value, str):
+            add("error", field, f"expected a string, got {_kind(value)}")
+
+    facts = request.get("facts")
+    if facts is not None:
+        if not isinstance(facts, list):
+            add("error", "facts", f"expected an array of strings, got {_kind(facts)}")
+        else:
+            for position, fact in enumerate(facts, start=1):
+                if not isinstance(fact, str):
+                    add("error", "facts", f"expected an array of strings; item {position} is {_kind(fact)}")
+                    break
+
+    dependencies = request.get("dependencies")
+    if dependencies is not None and not isinstance(dependencies, list):
+        add("error", "dependencies", f"expected an array, got {_kind(dependencies)}")
+
+    for field in (*BOOLEAN_FIELDS, *AUXILIARY_BOOLEAN_FIELDS):
         value = request.get(field)
         if value is not None and not isinstance(value, bool):
             intended = BOOLEAN_WORDS.get(str(value).strip().lower())
@@ -367,6 +390,46 @@ def request_schema() -> dict[str, Any]:
             "sla_breached": {
                 **nullable_flag,
                 "description": "The response SLA has already been missed. Default false.",
+            },
+            "description": {
+                "type": ["string", "null"],
+                "description": (
+                    "Free-text description. Read by the operational list and knowledge "
+                    "portal outputs; not used in decisions."
+                ),
+            },
+            "summary": {
+                "type": ["string", "null"],
+                "description": "Short summary for the knowledge portal. Not used in decisions.",
+            },
+            "facts": {
+                "type": ["array", "null"],
+                "items": {"type": "string"},
+                "description": (
+                    "Known facts, one string each. Read by the agent-run and operational "
+                    "list outputs; not used in decisions."
+                ),
+            },
+            "deadline": {
+                "type": ["string", "null"],
+                "description": (
+                    "Due date as text, for example 2026-12-01. Shown in the operational "
+                    "list and the shared space; not used in decisions."
+                ),
+            },
+            "dependencies": {
+                "type": ["array", "null"],
+                "description": (
+                    "What the request waits on, for example other request ids. Shown in "
+                    "the operational list; not used in decisions."
+                ),
+            },
+            "awaiting_business_input": {
+                **nullable_flag,
+                "description": (
+                    "The business still owes legal an answer. Counted in the operational "
+                    "list and shown to the requester in the shared space. Default false."
+                ),
             },
         },
         "additionalProperties": True,

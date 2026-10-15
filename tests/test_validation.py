@@ -13,7 +13,9 @@ from unittest import mock
 from legal_function_os.cli import main as cli_main
 from legal_function_os.rules import ROUTING, URGENCIES, VALUE_BANDS, decide
 from legal_function_os.validation import (
+    AUXILIARY_FIELDS,
     BOOLEAN_FIELDS,
+    REQUEST_FIELDS,
     request_schema,
     suggest,
     validate_request,
@@ -130,6 +132,43 @@ class FieldChecks(unittest.TestCase):
         )
 
 
+class AuxiliaryFields(unittest.TestCase):
+    """The workspace outputs misread a wrong type: "no" counts as true, a string splits into characters."""
+
+    def test_wrong_types_are_errors(self):
+        cases = {
+            "awaiting_business_input": ("no", "expected true or false, got 'no' (write false"),
+            "facts": ("Vendor: HelpDeskCo", "expected an array of strings, got a string"),
+            "dependencies": ("REQ-1001", "expected an array, got a string"),
+            "deadline": (20261201, "expected a string, got a number"),
+            "description": (["text"], "expected a string, got an array"),
+            "summary": (True, "expected a string, got a boolean"),
+        }
+        for field, (value, message) in cases.items():
+            with self.subTest(field=field):
+                [issue] = issues_for(**{field: value})
+                self.assertEqual((issue.severity, issue.field), ("error", field))
+                self.assertIn(message, issue.message)
+
+    def test_every_fact_must_be_a_string(self):
+        [issue] = issues_for(facts=["Vendor: HelpDeskCo", 3])
+        self.assertIn("item 2 is a number", issue.message)
+
+    def test_values_of_the_right_type_and_nulls_pass(self):
+        self.assertEqual(
+            issues_for(
+                description="New sub-processor",
+                summary="DPA review",
+                facts=["Vendor: HelpDeskCo"],
+                deadline="2026-12-01",
+                dependencies=["REQ-0999"],
+                awaiting_business_input=False,
+            ),
+            [],
+        )
+        self.assertEqual(issues_for(**dict.fromkeys(AUXILIARY_FIELDS)), [])
+
+
 class UnknownTypes(unittest.TestCase):
     def test_unknown_type_is_a_warning_and_needs_manual_triage(self):
         [issue] = issues_for(type="Fundraising")
@@ -224,7 +263,10 @@ class PublishedContract(unittest.TestCase):
         for field in BOOLEAN_FIELDS:
             self.assertEqual(properties[field]["type"], ["boolean", "null"])
         sample_keys = {key for request in json.loads(SAMPLE.read_text(encoding="utf-8")) for key in request}
-        self.assertEqual(sample_keys, set(properties))
+        self.assertEqual(sample_keys, set(REQUEST_FIELDS))
+        self.assertEqual(set(properties), {*REQUEST_FIELDS, *AUXILIARY_FIELDS})
+        self.assertEqual(properties["awaiting_business_input"]["type"], ["boolean", "null"])
+        self.assertEqual(properties["facts"]["items"], {"type": "string"})
 
 
 if __name__ == "__main__":
