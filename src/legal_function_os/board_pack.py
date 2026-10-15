@@ -13,6 +13,10 @@ DISCLAIMER = (
     "requests. It is a management and triage artifact, not legal advice, and does not "
     "establish a lawyer-client relationship."
 )
+TRIAGE_NOTE = (
+    "Triage generated from deterministic legal-operations rules. It is a management and "
+    "triage artifact, not legal advice, and every consequential decision requires human review."
+)
 
 
 @dataclass
@@ -177,5 +181,36 @@ def render_markdown(pack: BoardPack) -> str:
     lines.append("---")
     lines.append("")
     lines.append(f"_{DISCLAIMER}_")
+    lines.append("")
+    return "\n".join(lines)
+
+
+def render_triage_markdown(decisions: list[Decision]) -> str:
+    """Render per-request decisions: the outcome, then the reasons behind it."""
+
+    noun = "request" if len(decisions) == 1 else "requests"
+    lines = [f"# Legal request triage: {len(decisions)} {noun}", ""]
+    for d in decisions:
+        lines.append(f"## {d.request_id}: {d.title}")
+        lines.append("")
+        lines.append(f"- **Risk** {d.risk} · **Priority** {d.priority} · **Queue** {d.queue}")
+        lines.append(
+            f"- **SLA** respond within {d.sla_response_hours} business hours, "
+            f"resolve within {d.sla_resolution_days} business days"
+        )
+        lines.append(f"- **Approval chain** {' → '.join(d.approval_chain)}")
+        lines.append(f"- **External counsel** {d.external_counsel}")
+        if d.escalations:
+            lines.append(f"- **Escalations** {' '.join(d.escalations)}")
+        if d.board_attention:
+            lines.append("- **Board attention** yes")
+        lines.append("")
+        lines.append("Why:")
+        lines.append("")
+        lines.extend(f"- {reason}" for reason in d.rationale)
+        lines.append("")
+    lines.append("---")
+    lines.append("")
+    lines.append(f"_{TRIAGE_NOTE}_")
     lines.append("")
     return "\n".join(lines)
