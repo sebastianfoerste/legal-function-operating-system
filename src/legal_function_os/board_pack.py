@@ -6,6 +6,7 @@ from collections import Counter
 from dataclasses import dataclass
 from typing import Any
 
+from legal_function_os.policy import Policy
 from legal_function_os.rules import Decision, decide
 
 DISCLAIMER = (
@@ -53,8 +54,10 @@ class BoardPack:
         return d
 
 
-def build_board_pack(requests: list[dict], period: str = "current period") -> BoardPack:
-    decisions = [decide(r) for r in requests]
+def build_board_pack(
+    requests: list[dict], period: str = "current period", policy: Policy | None = None
+) -> BoardPack:
+    decisions = [decide(r, policy) for r in requests]
 
     by_type = dict(Counter(d.type for d in decisions))
     by_priority = dict(Counter(d.priority for d in decisions))
@@ -185,11 +188,13 @@ def render_markdown(pack: BoardPack) -> str:
     return "\n".join(lines)
 
 
-def render_triage_markdown(decisions: list[Decision]) -> str:
+def render_triage_markdown(decisions: list[Decision], policy: str | None = None) -> str:
     """Render per-request decisions: the outcome, then the reasons behind it."""
 
     noun = "request" if len(decisions) == 1 else "requests"
     lines = [f"# Legal request triage: {len(decisions)} {noun}", ""]
+    if policy:
+        lines.extend([f"_Policy: {policy}_", ""])
     for d in decisions:
         lines.append(f"## {d.request_id}: {d.title}")
         lines.append("")

@@ -1,0 +1,49 @@
+{
+  "schema": "legal-function-os.policy.v1",
+  "name": "Default illustrative policy",
+  "description": "The value bands, queues, service levels and thresholds the rules shipped with. Illustrative internal guardrails for synthetic requests, not a recommendation: run legal-function-os init to write your own.",
+  "value_bands": ["none", "<50k", "50k-250k", "250k-1m", ">1m"],
+  "routing": {
+    "by_type": {
+      "commercial_contract": "Commercial",
+      "vendor_review": "Commercial",
+      "dpa": "Privacy",
+      "privacy_query": "Privacy",
+      "ai_governance": "Legal Ops (AI)",
+      "corporate": "Corporate / GC",
+      "fundraising": "Corporate / GC",
+      "employment": "Employment",
+      "dispute": "Litigation",
+      "ip": "Commercial"
+    },
+    "unknown_type": "General",
+    "non_eea_transfer": "Privacy"
+  },
+  "sla": {
+    "P1_blocker": {"response_hours": 4, "resolution_days": 1},
+    "P2_high": {"response_hours": 8, "resolution_days": 3},
+    "P3_standard": {"response_hours": 16, "resolution_days": 5},
+    "P4_low": {"response_hours": 40, "resolution_days": 10}
+  },
+  "approval": {
+    "legal_ops_lead_from": "50k-250k",
+    "general_counsel_from": "250k-1m",
+    "board_note_from": ">1m"
+  },
+  "risk": {
+    "high_from": {"value_band": ">1m", "reason": "Contract value above €1m."},
+    "medium_from": {"value_band": "250k-1m", "reason": "Contract value between EUR 250k and EUR 1m."},
+    "dispute_high_from": {"value_band": "250k-1m", "reason": "Dispute above €250k."},
+    "elevated_types": ["corporate", "fundraising", "ai_governance"]
+  },
+  "external_counsel": {
+    "dispute_from": "250k-1m"
+  },
+  "escalation": {
+    "board_awareness_from": {
+      "value_band": ">1m",
+      "message": "Value above EUR 1m: add to board awareness list."
+    },
+    "dispute_board_attention_from": "250k-1m"
+  }
+}

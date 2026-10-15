@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass
 from typing import Any, Literal
 
 from legal_function_os.board_pack import BoardPack, build_board_pack
+from legal_function_os.policy import Policy
 
 
 @dataclass(frozen=True)
@@ -43,8 +44,9 @@ def build_legal_function_workspace(
     requests: list[dict[str, Any]],
     *,
     period: str = "current period",
+    policy: Policy | None = None,
 ) -> dict[str, Any]:
-    pack = build_board_pack(requests, period=period)
+    pack = build_board_pack(requests, period=period, policy=policy)
     request_by_id = {str(request.get("id", "REQ-?")): request for request in requests}
     records = [
         RequestVaultRecord(

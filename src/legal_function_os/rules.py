@@ -5,6 +5,10 @@ decision: how it is routed, its SLA, who must approve it, whether it escalates, 
 whether external counsel is indicated. The rules are intentionally legible. A lawyer
 should be able to read them and agree or disagree. Nothing here is legal advice;
 all bundled data is synthetic.
+
+The value bands, queues, SLAs and thresholds come from a policy (see policy.py).
+Every function takes an optional ``policy``; without one it applies the bundled
+default policy, which holds the values these rules have always used.
 """
 
 from __future__ import annotations
@@ -12,34 +16,26 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
-# --- Reference data ----------------------------------------------------------
+from legal_function_os.policy import Policy, default_policy
 
-VALUE_BANDS = ["none", "<50k", "50k-250k", "250k-1m", ">1m"]
+# --- Reference data ----------------------------------------------------------
 
 # Requester urgency, most urgent first. A request without one is "standard".
 URGENCIES = ("blocker", "high", "standard", "low")
 
+# The default policy's values, kept under their old names for existing imports.
+VALUE_BANDS = list(default_policy().value_bands)
 # Which internal queue owns each request type.
-ROUTING = {
-    "commercial_contract": "Commercial",
-    "vendor_review": "Commercial",
-    "dpa": "Privacy",
-    "privacy_query": "Privacy",
-    "ai_governance": "Legal Ops (AI)",
-    "corporate": "Corporate / GC",
-    "fundraising": "Corporate / GC",
-    "employment": "Employment",
-    "dispute": "Litigation",
-    "ip": "Commercial",
-}
-
+ROUTING = dict(default_policy().routing)
 # Response / resolution targets by priority (business hours / business days).
 SLA = {
-    "P1_blocker": {"response_hours": 4, "resolution_days": 1},
-    "P2_high": {"response_hours": 8, "resolution_days": 3},
-    "P3_standard": {"response_hours": 16, "resolution_days": 5},
-    "P4_low": {"response_hours": 40, "resolution_days": 10},
+    priority: {"response_hours": target.response_hours, "resolution_days": target.resolution_days}
+    for priority, target in default_policy().sla.items()
 }
+
+
+def _policy(policy: Policy | None) -> Policy:
+    return policy if policy is not None else default_policy()
 
 
 @dataclass
@@ -62,27 +58,21 @@ class Decision:
         return asdict(self)
 
 
-def _value_index(band: str | None) -> int:
+def _value_index(band: str | None, policy: Policy | None = None) -> int:
     """Position of a value band. A missing band is the lowest; an unknown one is an error.
 
     Unknown bands used to count as "none", so a typo such as ">1M" silently turned a
     board-level matter into a low-risk one. Validate input first for a friendly message.
     """
-    if band is None:
-        return 0
-    try:
-        return VALUE_BANDS.index(band)
-    except ValueError:
-        raise ValueError(
-            f"unknown value_band {band!r}; expected one of {', '.join(VALUE_BANDS)}"
-        ) from None
+    return _policy(policy).band_index(band)
 
 
 # --- Risk -------------------------------------------------------------------
 
-def assess_risk(req: dict) -> tuple[str, list[str]]:
+def assess_risk(req: dict, policy: Policy | None = None) -> tuple[str, list[str]]:
+    rules = _policy(policy)
     reasons: list[str] = []
-    value_idx = _value_index(req.get("value_band"))
+    band = req.get("value_band")
     personal_data = bool(req.get("personal_data", False))
     non_eea = bool(req.get("non_eea_transfer", False))
     uncapped = bool(req.get("uncapped_liability", False))
@@ -92,26 +82,26 @@ def assess_risk(req: dict) -> tuple[str, list[str]]:
     if non_eea and personal_data:
         high = True
         reasons.append("Personal data transferred outside the EEA.")
-    if value_idx >= VALUE_BANDS.index(">1m"):
+    if rules.reaches(band, rules.high_risk_from.value_band):
         high = True
-        reasons.append("Contract value above €1m.")
+        reasons.append(rules.high_risk_from.text)
     if uncapped:
         high = True
         reasons.append("Uncapped liability exposure.")
-    if rtype == "dispute" and value_idx >= VALUE_BANDS.index("250k-1m"):
+    if rtype == "dispute" and rules.reaches(band, rules.dispute_high_risk_from.value_band):
         high = True
-        reasons.append("Dispute above €250k.")
+        reasons.append(rules.dispute_high_risk_from.text)
     if high:
         return "HIGH", reasons
 
     medium = False
-    if value_idx == VALUE_BANDS.index("250k-1m"):
+    if rules.reaches(band, rules.medium_risk_from.value_band):
         medium = True
-        reasons.append("Contract value between EUR 250k and EUR 1m.")
+        reasons.append(rules.medium_risk_from.text)
     if personal_data:
         medium = True
         reasons.append("Personal data processed.")
-    if rtype in {"corporate", "fundraising", "ai_governance"}:
+    if rtype in rules.elevated_types:
         medium = True
         reasons.append(f"Type '{rtype}' carries elevated baseline risk.")
     if medium:
@@ -141,25 +131,28 @@ def assess_priority(req: dict, risk: str) -> str:
 
 # --- Routing ----------------------------------------------------------------
 
-def route(req: dict) -> str:
-    # Privacy concerns override the default type routing.
-    if req.get("non_eea_transfer") or req.get("personal_data") and req.get("type") == "privacy_query":
-        return "Privacy"
-    return ROUTING.get(req.get("type", ""), "General")
+def route(req: dict, policy: Policy | None = None) -> str:
+    rules = _policy(policy)
+    # A cross-border transfer overrides the default type routing.
+    if req.get("non_eea_transfer"):
+        return rules.non_eea_transfer_queue
+    return rules.routing.get(req.get("type", ""), rules.unknown_type_queue)
 
 
 # --- Approval matrix --------------------------------------------------------
 
-def approval_chain(req: dict, risk: str) -> list[str]:
+def approval_chain(req: dict, risk: str, policy: Policy | None = None) -> list[str]:
     """Who must sign off before the request can close. Always ends with a human."""
-    value_idx = _value_index(req.get("value_band"))
+    rules = _policy(policy)
+    band = req.get("value_band")
+    rules.band_index(band)  # an unknown band is an error, even below every threshold
     chain: list[str] = ["Reviewer"]
 
-    if value_idx >= VALUE_BANDS.index("50k-250k"):
+    if rules.reaches(band, rules.legal_ops_lead_from):
         chain.append("Legal Ops Lead")
-    if value_idx >= VALUE_BANDS.index("250k-1m") or risk == "HIGH":
+    if rules.reaches(band, rules.general_counsel_from) or risk == "HIGH":
         chain.append("General Counsel")
-    if value_idx >= VALUE_BANDS.index(">1m"):
+    if rules.reaches(band, rules.board_note_from):
         chain.append("Board note")
     # De-duplicate while preserving order.
     return list(dict.fromkeys(chain))
@@ -167,10 +160,10 @@ def approval_chain(req: dict, risk: str) -> list[str]:
 
 # --- External counsel decision tree -----------------------------------------
 
-def external_counsel(req: dict, risk: str) -> str:
+def external_counsel(req: dict, risk: str, policy: Policy | None = None) -> str:
+    rules = _policy(policy)
     rtype = req.get("type", "")
-    value_idx = _value_index(req.get("value_band"))
-    if rtype == "dispute" and value_idx >= VALUE_BANDS.index("250k-1m"):
+    if rtype == "dispute" and rules.reaches(req.get("value_band"), rules.dispute_counsel_from):
         # Material disputes need litigation capacity and procedural expertise.
         return "External: litigation counsel"
     if rtype in {"corporate", "fundraising"}:
@@ -184,7 +177,11 @@ def external_counsel(req: dict, risk: str) -> str:
 
 # --- Escalation rules -------------------------------------------------------
 
-def escalations(req: dict, risk: str, priority: str) -> tuple[list[str], bool]:
+def escalations(
+    req: dict, risk: str, priority: str, policy: Policy | None = None
+) -> tuple[list[str], bool]:
+    rules = _policy(policy)
+    band = req.get("value_band")
     items: list[str] = []
     board_attention = False
 
@@ -192,26 +189,27 @@ def escalations(req: dict, risk: str, priority: str) -> tuple[list[str], bool]:
         items.append("SLA breached: escalate to Legal Ops Lead.")
     if risk == "HIGH" and priority == "P1_blocker":
         items.append("High-risk blocker: escalate to General Counsel immediately.")
-    if _value_index(req.get("value_band")) >= VALUE_BANDS.index(">1m"):
-        items.append("Value above EUR 1m: add to board awareness list.")
+    if rules.reaches(band, rules.board_awareness_from.value_band):
+        items.append(rules.board_awareness_from.text)
         board_attention = True
     if req.get("type") == "dispute":
         items.append("Active dispute: notify General Counsel.")
-        if _value_index(req.get("value_band")) >= VALUE_BANDS.index("250k-1m"):
+        if rules.reaches(band, rules.dispute_board_attention_from):
             board_attention = True
     return items, board_attention
 
 
 # --- Top-level decision ------------------------------------------------------
 
-def decide(req: dict) -> Decision:
-    risk, risk_reasons = assess_risk(req)
+def decide(req: dict, policy: Policy | None = None) -> Decision:
+    rules = _policy(policy)
+    risk, risk_reasons = assess_risk(req, rules)
     priority = assess_priority(req, risk)
-    queue = route(req)
-    sla = SLA[priority]
-    chain = approval_chain(req, risk)
-    counsel = external_counsel(req, risk)
-    esc, board = escalations(req, risk, priority)
+    queue = route(req, rules)
+    sla = rules.sla[priority]
+    chain = approval_chain(req, risk, rules)
+    counsel = external_counsel(req, risk, rules)
+    esc, board = escalations(req, risk, priority, rules)
 
     rationale = list(risk_reasons)
     rationale.append(f"Priority {priority} from urgency '{req.get('urgency', 'standard')}' and risk {risk}.")
@@ -219,7 +217,7 @@ def decide(req: dict) -> Decision:
     rtype = req.get("type")
     if not rtype:
         rationale.append("No request type given: needs manual triage.")
-    elif rtype not in ROUTING:
+    elif rtype not in rules.routing:
         rationale.append(f"Request type '{rtype}' is not in the routing table: needs manual triage.")
     if counsel != "in-house":
         rationale.append(counsel + " indicated.")
@@ -231,8 +229,8 @@ def decide(req: dict) -> Decision:
         risk=risk,
         priority=priority,
         queue=queue,
-        sla_response_hours=sla["response_hours"],
-        sla_resolution_days=sla["resolution_days"],
+        sla_response_hours=sla.response_hours,
+        sla_resolution_days=sla.resolution_days,
         approval_chain=chain,
         external_counsel=counsel,
         escalations=esc,

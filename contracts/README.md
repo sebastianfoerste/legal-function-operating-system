@@ -28,3 +28,13 @@ legal request as the CLI reads it. It is generated from the same constants the
 validator and the rules use (`python scripts/build_contracts.py`), and a test fails if
 the committed file drifts. The human-readable version is
 [`docs/INPUT_FORMAT.md`](../docs/INPUT_FORMAT.md).
+
+## Policy contract
+
+[`legal-function-policy.v1.schema.json`](legal-function-policy.v1.schema.json) is the
+JSON Schema for a policy file: the value bands, queues, service levels and thresholds
+the rules apply. It is generated from the policy checks in
+`src/legal_function_os/policy.py` by the same script, and a test fails if the
+committed file drifts. The checks a schema cannot express, such as a threshold
+naming one of the file's own value bands, are described in
+[`docs/CUSTOMIZE.md`](../docs/CUSTOMIZE.md).

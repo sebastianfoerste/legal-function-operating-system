@@ -19,6 +19,7 @@ from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import Any, Literal
 
+from legal_function_os.policy import Policy, default_policy
 from legal_function_os.rules import ROUTING, URGENCIES, VALUE_BANDS
 
 SCHEMA_ID = "legal-function-os.legal-request.v1"
@@ -188,9 +189,17 @@ def _kind(value: Any) -> str:
     }.get(type(value), type(value).__name__)
 
 
-def validate_request(request: Any, index: int | None = None) -> list[Issue]:
-    """Return the problems with one request, in field order."""
+def validate_request(
+    request: Any, index: int | None = None, policy: Policy | None = None
+) -> list[Issue]:
+    """Return the problems with one request, in field order.
 
+    Value bands and request types are checked against ``policy`` (default: the
+    bundled default policy).
+    """
+
+    rules = policy if policy is not None else default_policy()
+    bands, routing = list(rules.value_bands), list(rules.routing)
     if not isinstance(request, dict):
         return [Issue("error", index, None, None, f"expected a JSON object, got {_kind(request)}")]
 
@@ -214,24 +223,24 @@ def validate_request(request: Any, index: int | None = None) -> list[Issue]:
     request_type = request.get("type")
     if request_type is None or (isinstance(request_type, str) and not request_type.strip()):
         add("warning", "type", "missing; the request needs manual triage")
-    elif isinstance(request_type, str) and request_type not in ROUTING:
+    elif isinstance(request_type, str) and request_type not in routing:
         add(
             "warning",
             "type",
             f"{request_type!r} is not a request type in the routing table; the request "
-            f"needs manual triage{_hint(request_type, list(ROUTING))}",
+            f"needs manual triage{_hint(request_type, routing)}",
         )
 
     band = request.get("value_band")
     if band is not None:
         if not isinstance(band, str):
             add("error", "value_band", f"expected a string, got {_kind(band)}")
-        elif band not in VALUE_BANDS:
+        elif band not in bands:
             add(
                 "error",
                 "value_band",
-                f"{band!r} is not a value band{_hint(band, VALUE_BANDS)}; "
-                f"use one of {', '.join(VALUE_BANDS)}",
+                f"{band!r} is not a value band{_hint(band, bands)}; "
+                f"use one of {', '.join(bands)}",
             )
 
     urgency = request.get("urgency")
@@ -284,7 +293,7 @@ def validate_request(request: Any, index: int | None = None) -> list[Issue]:
     return issues
 
 
-def validate_requests(requests: Any) -> ValidationReport:
+def validate_requests(requests: Any, policy: Policy | None = None) -> ValidationReport:
     """Validate a whole input: a JSON array of request objects with unique ids."""
 
     if not isinstance(requests, list):
@@ -298,7 +307,7 @@ def validate_requests(requests: Any) -> ValidationReport:
         issues.append(Issue("warning", None, None, None, "the input contains no requests"))
     first_seen: dict[str, int] = {}
     for index, request in enumerate(requests):
-        issues.extend(validate_request(request, index))
+        issues.extend(validate_request(request, index, policy))
         request_id = request.get("id") if isinstance(request, dict) else None
         if isinstance(request_id, str) and request_id.strip():
             if request_id in first_seen:

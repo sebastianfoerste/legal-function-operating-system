@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from legal_function_os.policy import Policy
 from legal_function_os.rules import decide
 
 _MIN_NOTE_LENGTH = 20
@@ -22,11 +23,12 @@ def build_shared_space(
     approvals: dict[str, dict[str, Any]],
     *,
     period: str = "current period",
+    policy: Policy | None = None,
 ) -> dict[str, Any]:
     entries: list[dict[str, Any]] = []
     for request in requests:
         request_id = str(request.get("id", "REQ-?"))
-        decision = decide(request)
+        decision = decide(request, policy)
         shared = _documented(approvals.get(request_id))
         blocked = decision.priority == "P1_blocker" or bool(request.get("sla_breached"))
         entries.append({

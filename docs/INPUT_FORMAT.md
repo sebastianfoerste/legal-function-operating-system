@@ -52,6 +52,10 @@ suggestion, because it used to be read as "no value" and turned a board-level
 matter into a low-risk one. Booleans are JSON `true` and `false`, not the strings
 `"yes"` or `"false"`.
 
+The value bands, request types, queues and thresholds below are the bundled
+default policy. A policy file can set your own; requests are then checked against
+it. See [Make the rules your own](CUSTOMIZE.md).
+
 ### Value bands
 
 With the shipped thresholds (illustrative, not a recommendation):
