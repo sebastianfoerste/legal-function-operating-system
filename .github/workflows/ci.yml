@@ -3,14 +3,23 @@ on:
   push:
     branches: [ main ]
   pull_request:
+
+permissions:
+  contents: read
+
 jobs:
   test:
+    name: test (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: ${{ matrix.python-version }}
       - run: make install
       - run: make test
       - name: Regenerate committed artifacts
@@ -27,6 +36,29 @@ jobs:
         run: make site-check
       - name: Check patch whitespace
         run: git diff --check
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install the pinned lint tools
+        run: python -m pip install -r requirements-dev.txt
+      - name: Ruff and mypy on the core package
+        run: make lint PYTHON=python
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # The oldest Python the package promises to support.
+          python-version: "3.10"
+      - name: Build the wheel, install it in a clean environment and run it
+        run: make package-check PYTHON=python
 
   agent:
     runs-on: ubuntu-latest

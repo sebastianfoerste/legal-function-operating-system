@@ -6,8 +6,8 @@ includes a synthetic RaaS deal desk with negotiation guardrails, Finance handoff
 regulatory readiness, and human approval gates. Not legal advice; data is synthetic.
 """
 
-from legal_function_os.rules import decide, Decision
-from legal_function_os.board_pack import build_board_pack, render_markdown, BoardPack
+from legal_function_os.board_pack import BoardPack, build_board_pack, render_markdown
+from legal_function_os.rules import Decision, decide
 
 __all__ = ["decide", "Decision", "build_board_pack", "render_markdown", "BoardPack"]
-__version__ = "0.2.0"
+__version__ = "0.3.0"

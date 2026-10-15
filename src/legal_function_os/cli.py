@@ -14,22 +14,23 @@ import json
 import sys
 from pathlib import Path
 
+from legal_function_os import __version__
 from legal_function_os.agent_run import build_agent_runs
 from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.capacity_simulator import (
     build_capacity_simulation,
     render_capacity_markdown,
 )
+from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
 from legal_function_os.contract_intelligence import build_dpa_review
 from legal_function_os.intake import InputError, load_requests
-from legal_function_os.shared_space import build_shared_space
-from legal_function_os.workspace import build_legal_function_workspace
-from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
 from legal_function_os.outcome_control_tower import (
     build_outcome_control_tower,
     write_outcome_artifacts,
 )
+from legal_function_os.shared_space import build_shared_space
 from legal_function_os.validation import validate_requests
+from legal_function_os.workspace import build_legal_function_workspace
 
 INPUT_FORMAT_URL = (
     "https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/"
@@ -39,6 +40,7 @@ INPUT_FORMAT_URL = (
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Legal function operating system: board pack.")
+    parser.add_argument("--version", action="version", version=f"legal-function-os {__version__}")
     parser.add_argument(
         "--input",
         default=None,

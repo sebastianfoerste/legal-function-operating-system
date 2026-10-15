@@ -83,7 +83,7 @@ def _scenario_result(
         row["request_count"] += 1
 
     all_queues = sorted(set(queue_rows) | set(scenario.queue_capacity_points))
-    queue_capacity = []
+    queue_capacity: list[dict[str, Any]] = []
     for queue in all_queues:
         demand = int(queue_rows.get(queue, {}).get("demand_points", 0))
         request_count = int(queue_rows.get(queue, {}).get("request_count", 0))
@@ -107,7 +107,7 @@ def _scenario_result(
     gc_overflow = max(0, gc_demand - scenario.gc_approval_slots)
     counsel_overflow = max(0, counsel_demand - scenario.external_counsel_slots)
     constrained = bool(backlog_points or gc_overflow or counsel_overflow)
-    binding_constraints = [
+    binding_constraints: list[dict[str, Any]] = [
         {
             "constraint_id": f"queue:{row['queue']}",
             "constraint_type": "queue_capacity",

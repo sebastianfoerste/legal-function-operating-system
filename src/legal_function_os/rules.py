@@ -9,7 +9,7 @@ all bundled data is synthetic.
 
 from __future__ import annotations
 
-from dataclasses import dataclass, asdict
+from dataclasses import asdict, dataclass
 from typing import Any
 
 # --- Reference data ----------------------------------------------------------
@@ -162,8 +162,7 @@ def approval_chain(req: dict, risk: str) -> list[str]:
     if value_idx >= VALUE_BANDS.index(">1m"):
         chain.append("Board note")
     # De-duplicate while preserving order.
-    seen: set[str] = set()
-    return [c for c in chain if not (c in seen or seen.add(c))]
+    return list(dict.fromkeys(chain))
 
 
 # --- External counsel decision tree -----------------------------------------

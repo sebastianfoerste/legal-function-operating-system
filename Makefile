@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PYTHONPATH := src
 
-.PHONY: install test demo board-demo raas-demo contracts site site-check check-generated manifest-check contract-check agent-check agent-export check clean
+.PHONY: install test lint package-check demo board-demo raas-demo contracts site site-check check-generated manifest-check contract-check agent-check agent-export check clean
 
 install:
 	@echo "No third-party dependencies. Pure standard library."
@@ -9,6 +9,15 @@ install:
 
 test:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m unittest discover -s tests -t . -q
+
+# Needs the pinned tools: $(PYTHON) -m pip install -r requirements-dev.txt
+lint:
+	@$(PYTHON) -m ruff check src/legal_function_os scripts
+	@$(PYTHON) -m mypy
+
+# Builds the wheel, installs it in a fresh virtual environment and runs it there.
+package-check:
+	@$(PYTHON) scripts/check_package.py
 
 demo: board-demo raas-demo
 

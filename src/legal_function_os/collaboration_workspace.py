@@ -16,7 +16,7 @@ ALLOWED_STEPS = {"validate_intake", "risk_triage", "assign_owner", "check_sla", 
 def build_operational_list(requests: list[dict[str, Any]], period: str) -> dict[str, Any]:
     pack = build_board_pack(requests, period=period)
     by_id = {str(item.get("id")): item for item in requests}
-    rows = []
+    rows: list[dict[str, Any]] = []
     for decision in pack.decisions:
         source = by_id.get(decision.request_id, {})
         rows.append({
