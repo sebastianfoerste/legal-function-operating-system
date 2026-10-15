@@ -11,6 +11,7 @@ All notable changes to this project are recorded here. The format follows
 - A published request format: [`contracts/legal-request.v1.schema.json`](contracts/legal-request.v1.schema.json) and [`docs/INPUT_FORMAT.md`](docs/INPUT_FORMAT.md).
 - `--version` on `legal-function-os`.
 - CI runs the core on Python 3.10 to 3.13, lints it with Ruff and mypy, and checks that the built wheel installs and runs (`make lint`, `make package-check`).
+- A release workflow for PyPI trusted publishing. It stays inactive until the repository variable `PYPI_PUBLISH` is `true`.
 - An offline link check for the Pages site and the Markdown docs (`make site-check`).
 - A code of conduct, a root security policy, issue and pull request templates, CODEOWNERS, Dependabot, this changelog and `CITATION.cff`.
 - A verification manifest in place of the portfolio proof (#11).
