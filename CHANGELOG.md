@@ -9,6 +9,7 @@ All notable changes to this project are recorded here. The format follows
 ### Added
 
 - A published request format: [`contracts/legal-request.v1.schema.json`](contracts/legal-request.v1.schema.json) and [`docs/INPUT_FORMAT.md`](docs/INPUT_FORMAT.md).
+- CSV intake: `--input requests.csv` reads a request log saved from a spreadsheet, one request per row. Headers are matched loosely, yes/no answers become booleans, and Excel's comma, semicolon, tab, UTF-16 and Windows-1252 exports all work. [`examples/requests-template.csv`](examples/requests-template.csv) is a template.
 - `--version` on `legal-function-os`.
 - CI runs the core on Python 3.10 to 3.13, lints it with Ruff and mypy, and checks that the built wheel installs and runs (`make lint`, `make package-check`).
 - A release workflow for PyPI trusted publishing. It stays inactive until the repository variable `PYPI_PUBLISH` is `true`.

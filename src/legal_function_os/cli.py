@@ -45,8 +45,9 @@ def main(argv: list[str] | None = None) -> int:
         "--input",
         default=None,
         help=(
-            "Path to a JSON array of legal requests (see docs/INPUT_FORMAT.md); - reads "
-            "standard input. Defaults to the bundled synthetic set."
+            "Path to a JSON array of legal requests, or a .csv file with one request per "
+            "row (see docs/INPUT_FORMAT.md); - reads JSON from standard input. Defaults to "
+            "the bundled synthetic set."
         ),
     )
     parser.add_argument("--out", default=None, help="Output directory for the board pack.")
@@ -124,6 +125,8 @@ def main(argv: list[str] | None = None) -> int:
     except InputError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
+    for note in loaded.notes:
+        print(f"note: {note}", file=sys.stderr)
     report = validate_requests(loaded.requests)
     for line in report.lines(loaded.locate):
         print(line, file=sys.stderr)

@@ -25,7 +25,8 @@ is a complete example.
 ```
 
 Every input is checked before any decision is made. Use `--input -` to read the
-array from standard input.
+array from standard input. A request log kept in a spreadsheet works too: save it
+as CSV ([Spreadsheets (CSV)](#spreadsheets-csv)).
 
 ## Fields
 
@@ -102,6 +103,36 @@ A field whose name is close to a request field, such as `valueBand` or
 `uncapped_liabilty`, is rejected, because its value would otherwise be ignored
 without a word. Prefix your own fields with `x_` (for example `x_matter_number`) to
 keep them out of that check.
+
+## Spreadsheets (CSV)
+
+Save the sheet as CSV and pass the file: `legal-function-os --input requests.csv`.
+A file ending in `.csv` or `.tsv` is read as a table with one request per row.
+[`examples/requests-template.csv`](../examples/requests-template.csv) holds the
+bundled synthetic requests and gives the same board pack as the JSON set.
+
+| Part of the sheet | How it is read |
+| --- | --- |
+| Header row | Names the fields. Spelling is relaxed: `Value band`, `value-band` and `valueBand` all mean `value_band`, and `Request ID`, `Request type` and `Requester` mean `id`, `type` and `requested_by` |
+| Empty cell | The field was not given, so its default applies |
+| Yes/no columns | `personal_data`, `non_eea_transfer`, `uncapped_liability`, `sla_breached` and `awaiting_business_input` accept yes/no, true/false, ja/nein, wahr/falsch, 1/0 and x, in any case |
+| `facts`, `dependencies` | One item per line of the cell (Alt+Enter in Excel) |
+| Every other cell | Text, checked exactly as in JSON, so `>1M` is still rejected |
+| Delimiter | Comma, semicolon or tab, recognised from the header row. Excel in a German locale writes semicolons |
+| Encoding | UTF-8 with or without a byte order mark, or UTF-16 with one. Anything else is read as Windows-1252, Excel's plain CSV default, and the run says so |
+
+Problems name the row a spreadsheet shows, counting the header as row 1:
+
+```text
+error: row 3 (REQ-2): value_band: '>1M' is not a value band (did you mean '>1m'?); use one of none, <50k, 50k-250k, 250k-1m, >1m
+```
+
+A header that looks like a misspelled field, such as `Value bnad`, stops the run
+with one message for the column. Any other column, such as `Notes`, is carried
+along unused, and the run prints a note naming it, so a column like
+`Value band (EUR)` is never ignored without a word. Prefix your own columns with
+`x_` to leave them out of the note. Workbooks (`.xlsx`, `.ods`, `.numbers`) are
+not read: save the sheet as CSV first (in Excel, *CSV UTF-8*).
 
 ## What happens on bad input
 

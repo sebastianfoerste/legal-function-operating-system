@@ -58,10 +58,12 @@ EXTENSION_PREFIXES = ("x_", "_")
 
 Severity = Literal["error", "warning"]
 
-# Spreadsheet-style answers that were meant as a JSON boolean.
-_BOOLEAN_WORDS = {
-    **dict.fromkeys(("true", "yes", "y", "1", "ja", "x"), "true"),
-    **dict.fromkeys(("false", "no", "n", "0", "nein"), "false"),
+# Spreadsheet-style answers, lower case. CSV intake reads them as booleans; in JSON
+# they are an error whose hint names the boolean that was meant. "wahr" and
+# "falsch" are how a German Excel writes TRUE and FALSE to CSV.
+BOOLEAN_WORDS = {
+    **dict.fromkeys(("true", "yes", "y", "1", "ja", "x", "wahr"), True),
+    **dict.fromkeys(("false", "no", "n", "0", "nein", "falsch"), False),
 }
 
 
@@ -134,7 +136,9 @@ class ValidationReport:
         }
 
 
-def _normalise(name: str) -> str:
+def normalise_field_name(name: str) -> str:
+    """Spell a field or column name the way the request format does: "Value band" -> value_band."""
+
     name = re.sub(r"(?<=[a-z0-9])(?=[A-Z])", "_", name.strip())
     return re.sub(r"[\s\-.]+", "_", name).lower()
 
@@ -145,9 +149,9 @@ def suggest(value: str, choices: Sequence[str]) -> str | None:
     folded = {choice.lower(): choice for choice in choices}
     if value.lower() in folded:
         return folded[value.lower()]
-    normalised = {_normalise(choice): choice for choice in choices}
-    if _normalise(value) in normalised:
-        return normalised[_normalise(value)]
+    normalised = {normalise_field_name(choice): choice for choice in choices}
+    if normalise_field_name(value) in normalised:
+        return normalised[normalise_field_name(value)]
     close = difflib.get_close_matches(value.lower(), list(folded), n=1, cutoff=0.6)
     return folded[close[0]] if close else None
 
@@ -157,10 +161,12 @@ def _hint(value: str, choices: Sequence[str]) -> str:
     return f" (did you mean {guess!r}?)" if guess else ""
 
 
-def _misspelled_field(key: str) -> str | None:
+def misspelled_field(key: str) -> str | None:
+    """Return the request field an unknown field name was most likely meant to be."""
+
     if key in REQUEST_FIELDS or key in AUXILIARY_FIELDS or key.startswith(EXTENSION_PREFIXES):
         return None
-    normalised = _normalise(key)
+    normalised = normalise_field_name(key)
     if normalised in REQUEST_FIELDS:
         return normalised
     close = difflib.get_close_matches(normalised, REQUEST_FIELDS, n=1, cutoff=0.85)
@@ -239,12 +245,12 @@ def validate_request(request: Any, index: int | None = None) -> list[Issue]:
     for field in BOOLEAN_FIELDS:
         value = request.get(field)
         if value is not None and not isinstance(value, bool):
-            meant = _BOOLEAN_WORDS.get(str(value).strip().lower())
-            hint = f" (write {meant}, without quotes)" if meant else ""
+            intended = BOOLEAN_WORDS.get(str(value).strip().lower())
+            hint = f" (write {str(intended).lower()}, without quotes)" if intended is not None else ""
             add("error", field, f"expected true or false, got {value!r}{hint}")
 
     for key in request:
-        meant = _misspelled_field(str(key))
+        meant = misspelled_field(str(key))
         if meant:
             add(
                 "error",
