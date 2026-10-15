@@ -24,7 +24,7 @@ uvx --from git+https://github.com/sebastianfoerste/legal-function-operating-syst
 ```
 
 A PyPI package (`legal-function-os`) is coming; it is not published yet, so use the git form above.
-`raas-deal-desk` is the second entry point (deal decision pack). Both accept `--input` for your own JSON.
+`raas-deal-desk` is the second entry point (deal decision pack). Both accept `--input` for your own JSON: see the [request input format](docs/INPUT_FORMAT.md).
 
 ## Example output
 

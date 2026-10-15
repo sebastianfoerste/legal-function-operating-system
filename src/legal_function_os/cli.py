@@ -15,19 +15,25 @@ import sys
 from pathlib import Path
 
 from legal_function_os.agent_run import build_agent_runs
-from legal_function_os.bundled import bundled_path
 from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.capacity_simulator import (
     build_capacity_simulation,
     render_capacity_markdown,
 )
 from legal_function_os.contract_intelligence import build_dpa_review
+from legal_function_os.intake import InputError, load_requests
 from legal_function_os.shared_space import build_shared_space
 from legal_function_os.workspace import build_legal_function_workspace
 from legal_function_os.collaboration_workspace import build_collaboration_workspace, render_portal
 from legal_function_os.outcome_control_tower import (
     build_outcome_control_tower,
     write_outcome_artifacts,
+)
+from legal_function_os.validation import validate_requests
+
+INPUT_FORMAT_URL = (
+    "https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/"
+    "docs/INPUT_FORMAT.md"
 )
 
 
@@ -36,7 +42,10 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--input",
         default=None,
-        help="Path to a JSON array of legal requests. Defaults to the bundled synthetic set.",
+        help=(
+            "Path to a JSON array of legal requests (see docs/INPUT_FORMAT.md); - reads "
+            "standard input. Defaults to the bundled synthetic set."
+        ),
     )
     parser.add_argument("--out", default=None, help="Output directory for the board pack.")
     parser.add_argument("--period", default="current period", help="Reporting period label.")
@@ -108,11 +117,21 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    source = Path(args.input) if args.input else bundled_path("sample_requests.json")
-    requests = json.loads(source.read_text(encoding="utf-8"))
-    if not isinstance(requests, list):
-        print("Input must be a JSON array of requests.", file=sys.stderr)
+    try:
+        loaded = load_requests(args.input)
+    except InputError as exc:
+        print(f"error: {exc}", file=sys.stderr)
         return 2
+    report = validate_requests(loaded.requests)
+    for line in report.lines(loaded.locate):
+        print(line, file=sys.stderr)
+    if not report.ok:
+        print(
+            f"{report.summary()}. Nothing was written. Request format: {INPUT_FORMAT_URL}",
+            file=sys.stderr,
+        )
+        return 2
+    requests = loaded.requests
 
     if args.dpa_output and not args.dpa_input:
         print("error: --dpa-output requires --dpa-input", file=sys.stderr)

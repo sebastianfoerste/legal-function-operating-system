@@ -20,3 +20,11 @@ The contract keeps external actions disabled. Export can become allowed only aft
 The contract does not create legal conclusions and does not authorize publication, filing, delivery or outreach.
 
 The pilot workflow in `supervised-agent/src/pilot` consumes this repository's own contracts instead of defining new ones. It takes queue, service levels and the approval tier from `legal_function_os.rules.decide`, exports its events in `legal-function-os.service-event-ledger.v1` for the outcome control tower, and exports each matter in this shared contract.
+
+## Request input contract
+
+[`legal-request.v1.schema.json`](legal-request.v1.schema.json) is the JSON Schema for one
+legal request as the CLI reads it. It is generated from the same constants the
+validator and the rules use (`python scripts/build_contracts.py`), and a test fails if
+the committed file drifts. The human-readable version is
+[`docs/INPUT_FORMAT.md`](../docs/INPUT_FORMAT.md).

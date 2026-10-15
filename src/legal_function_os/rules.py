@@ -16,6 +16,9 @@ from typing import Any
 
 VALUE_BANDS = ["none", "<50k", "50k-250k", "250k-1m", ">1m"]
 
+# Requester urgency, most urgent first. A request without one is "standard".
+URGENCIES = ("blocker", "high", "standard", "low")
+
 # Which internal queue owns each request type.
 ROUTING = {
     "commercial_contract": "Commercial",
@@ -59,18 +62,27 @@ class Decision:
         return asdict(self)
 
 
-def _value_index(band: str) -> int:
+def _value_index(band: str | None) -> int:
+    """Position of a value band. A missing band is the lowest; an unknown one is an error.
+
+    Unknown bands used to count as "none", so a typo such as ">1M" silently turned a
+    board-level matter into a low-risk one. Validate input first for a friendly message.
+    """
+    if band is None:
+        return 0
     try:
         return VALUE_BANDS.index(band)
     except ValueError:
-        return 0
+        raise ValueError(
+            f"unknown value_band {band!r}; expected one of {', '.join(VALUE_BANDS)}"
+        ) from None
 
 
 # --- Risk -------------------------------------------------------------------
 
 def assess_risk(req: dict) -> tuple[str, list[str]]:
     reasons: list[str] = []
-    value_idx = _value_index(req.get("value_band", "none"))
+    value_idx = _value_index(req.get("value_band"))
     personal_data = bool(req.get("personal_data", False))
     non_eea = bool(req.get("non_eea_transfer", False))
     uncapped = bool(req.get("uncapped_liability", False))
@@ -113,6 +125,11 @@ def assess_risk(req: dict) -> tuple[str, list[str]]:
 
 def assess_priority(req: dict, risk: str) -> str:
     urgency = (req.get("urgency", "standard") or "standard").lower()
+    if urgency not in URGENCIES:
+        # Unknown urgencies used to fall through to P3 without a word.
+        raise ValueError(
+            f"unknown urgency {req.get('urgency')!r}; expected one of {', '.join(URGENCIES)}"
+        )
     if urgency == "blocker":
         return "P1_blocker"
     if urgency == "high" or risk == "HIGH":
@@ -135,7 +152,7 @@ def route(req: dict) -> str:
 
 def approval_chain(req: dict, risk: str) -> list[str]:
     """Who must sign off before the request can close. Always ends with a human."""
-    value_idx = _value_index(req.get("value_band", "none"))
+    value_idx = _value_index(req.get("value_band"))
     chain: list[str] = ["Reviewer"]
 
     if value_idx >= VALUE_BANDS.index("50k-250k"):
@@ -153,7 +170,7 @@ def approval_chain(req: dict, risk: str) -> list[str]:
 
 def external_counsel(req: dict, risk: str) -> str:
     rtype = req.get("type", "")
-    value_idx = _value_index(req.get("value_band", "none"))
+    value_idx = _value_index(req.get("value_band"))
     if rtype == "dispute" and value_idx >= VALUE_BANDS.index("250k-1m"):
         # Material disputes need litigation capacity and procedural expertise.
         return "External: litigation counsel"
@@ -176,12 +193,12 @@ def escalations(req: dict, risk: str, priority: str) -> tuple[list[str], bool]:
         items.append("SLA breached: escalate to Legal Ops Lead.")
     if risk == "HIGH" and priority == "P1_blocker":
         items.append("High-risk blocker: escalate to General Counsel immediately.")
-    if _value_index(req.get("value_band", "none")) >= VALUE_BANDS.index(">1m"):
+    if _value_index(req.get("value_band")) >= VALUE_BANDS.index(">1m"):
         items.append("Value above EUR 1m: add to board awareness list.")
         board_attention = True
     if req.get("type") == "dispute":
         items.append("Active dispute: notify General Counsel.")
-        if _value_index(req.get("value_band", "none")) >= VALUE_BANDS.index("250k-1m"):
+        if _value_index(req.get("value_band")) >= VALUE_BANDS.index("250k-1m"):
             board_attention = True
     return items, board_attention
 
@@ -200,6 +217,11 @@ def decide(req: dict) -> Decision:
     rationale = list(risk_reasons)
     rationale.append(f"Priority {priority} from urgency '{req.get('urgency', 'standard')}' and risk {risk}.")
     rationale.append(f"Routed to {queue}; approval chain: {' -> '.join(chain)}.")
+    rtype = req.get("type")
+    if not rtype:
+        rationale.append("No request type given: needs manual triage.")
+    elif rtype not in ROUTING:
+        rationale.append(f"Request type '{rtype}' is not in the routing table: needs manual triage.")
     if counsel != "in-house":
         rationale.append(counsel + " indicated.")
 

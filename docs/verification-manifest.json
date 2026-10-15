@@ -19,6 +19,8 @@
     { "path": "examples/raas-deal-room.html", "label": "RaaS reviewer deal room" },
     { "path": "examples/raas-source-manifest.json", "label": "Dated primary-source manifest" },
     { "path": "contracts/legal-workflow-controls.v1.schema.json", "label": "Shared workflow control contract" },
+    { "path": "contracts/legal-request.v1.schema.json", "label": "Legal request input contract" },
+    { "path": "docs/INPUT_FORMAT.md", "label": "Request input format and validation behaviour" },
     { "path": "src/legal_function_os/data/dpa_documents.json", "label": "Synthetic Art. 28 GDPR processing agreements" },
     { "path": "RAAS_CASE_STUDY.md", "label": "Industrial robotics case study" },
     { "path": "supervised-agent/docs/pilot/CASE_STUDY.md", "label": "Supervised pilot workflow case study" },
