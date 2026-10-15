@@ -23,6 +23,8 @@ jobs:
         run: make manifest-check
       - name: Validate shared workflow control contract
         run: make contract-check
+      - name: Build the Pages site and check its links
+        run: make site-check
       - name: Check patch whitespace
         run: git diff --check
 

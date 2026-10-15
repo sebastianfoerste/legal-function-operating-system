@@ -56,7 +56,15 @@ Full pack: [`examples/board-pack.md`](examples/board-pack.md).
 
 ### Cited DPA clause review (AVV, Art. 28 GDPR / DSGVO)
 
-Real rows from `legal_function_os.cli --dpa-input src/legal_function_os/data/dpa_documents.json` (synthetic agreement DPA-002):
+From a clone, this writes the review to `dpa-review.json`:
+
+```bash
+PYTHONPATH=src python -m legal_function_os.cli --quiet \
+  --dpa-input src/legal_function_os/data/dpa_documents.json \
+  --dpa-output dpa-review.json
+```
+
+Real rows from that file (synthetic agreement DPA-002):
 
 ```json
 { "citation": "Art. 28 Abs. 3 lit. c DSGVO", "status": "review",

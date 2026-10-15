@@ -2,8 +2,9 @@
 
     python -m legal_function_os.cli --out examples
 
-Writes board-pack.md and board-pack.json. Exits non-zero when there are open
-board-attention items or SLA breaches, so it can gate a reporting pipeline.
+Writes board-pack.md and board-pack.json. Board-attention items are reported, not
+treated as failures: the exit status is 0 unless --fail-on-breach is given and
+there are SLA breaches (status 1), or the input is invalid (status 2).
 """
 
 from __future__ import annotations
@@ -115,6 +116,12 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.dpa_output and not args.dpa_input:
         print("error: --dpa-output requires --dpa-input", file=sys.stderr)
+        return 2
+    if args.dpa_input and not args.dpa_output:
+        print(
+            "error: --dpa-input requires --dpa-output PATH (the review is written as JSON)",
+            file=sys.stderr,
+        )
         return 2
 
     pack = build_board_pack(requests, period=args.period)
