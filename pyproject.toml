@@ -1,24 +1,93 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "legal-function-os"
-version = "0.3.0"
-description = "Deterministic legal function operating system with review-gated deal-desk workflows."
+dynamic = ["version"]
+description = "How an in-house legal team runs: intake, risk bands, routing, SLAs, approvals and a board-ready report, from tested rules with no LLM in the decision path. Synthetic data only."
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
+license-files = ["LICENSE"]
 authors = [{ name = "Sebastian Förste" }]
-keywords = ["legal-ops", "legal-engineering", "governance", "gc", "deal-desk", "commercial-contracts"]
+keywords = [
+  "legal-ops",
+  "legal-engineering",
+  "legal-intake",
+  "legal-front-door",
+  "governance",
+  "gc",
+  "gdpr",
+  "dsgvo",
+  "deal-desk",
+  "commercial-contracts",
+]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: Legal Industry",
+  "Natural Language :: English",
+  "Natural Language :: German",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Office/Business",
+]
 dependencies = []
+
+[project.optional-dependencies]
+# Optional MCP server; the core stays standard-library-only.
+mcp = ["mcp>=1.9,<2"]
+
+[project.urls]
+Homepage = "https://sebastianfoerste.github.io/legal-function-operating-system/"
+Repository = "https://github.com/sebastianfoerste/legal-function-operating-system"
+Documentation = "https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/docs/MODULES.md"
+Issues = "https://github.com/sebastianfoerste/legal-function-operating-system/issues"
+Changelog = "https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/CHANGELOG.md"
 
 [project.scripts]
 legal-function-os = "legal_function_os.cli:main"
 raas-deal-desk = "legal_function_os.raas_cli:main"
+legal-function-os-mcp = "legal_function_os.mcp_server:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "legal_function_os.__version__" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
 legal_function_os = ["data/*.json"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src"]
+
+[tool.ruff.lint]
+# An explicit list, so a new Ruff release cannot change what CI enforces.
+select = ["E", "F", "W", "I", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/legal_function_os"]
+warn_unused_configs = true
+
+[[tool.mypy.overrides]]
+# One loop variable is reused across row types in this module. It stays excluded
+# until those loops get their own names.
+module = "legal_function_os.raas_renderers"
+ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Optional extra; not installed in the lint job.
+module = ["mcp.*"]
+ignore_missing_imports = true

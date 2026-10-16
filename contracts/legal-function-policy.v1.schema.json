@@ -1,0 +1,401 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/contracts/legal-function-policy.v1.schema.json",
+  "title": "Legal function policy (legal-function-os, v1)",
+  "description": "The value bands, queues, service levels and thresholds legal-function-os applies. Write one with legal-function-os init and apply it with --policy. Keys starting with x_ or _ are yours and are ignored.",
+  "type": "object",
+  "required": [
+    "schema",
+    "name",
+    "value_bands",
+    "routing",
+    "sla",
+    "approval",
+    "risk",
+    "external_counsel",
+    "escalation"
+  ],
+  "properties": {
+    "schema": {
+      "const": "legal-function-os.policy.v1",
+      "description": "Format version."
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Whose policy this is, shown when it is applied."
+    },
+    "description": {
+      "type": "string",
+      "description": "What the policy is for."
+    },
+    "value_bands": {
+      "type": "array",
+      "minItems": 2,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "pattern": "\\S"
+      },
+      "description": "Contract or claim value bands, lowest first. A request's value_band must be one of these; a request without one is in the first band."
+    },
+    "routing": {
+      "type": "object",
+      "description": "Which queue owns a request.",
+      "required": [
+        "by_type",
+        "unknown_type",
+        "non_eea_transfer"
+      ],
+      "properties": {
+        "by_type": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S"
+          },
+          "description": "Queue that owns each request type."
+        },
+        "unknown_type": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Queue for a request whose type is not listed; it is flagged for manual triage."
+        },
+        "non_eea_transfer": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Queue for any request with a non-EEA data transfer, whatever its type."
+        }
+      },
+      "patternProperties": {
+        "^(x_|_)": {}
+      },
+      "additionalProperties": false
+    },
+    "sla": {
+      "type": "object",
+      "description": "Response and resolution targets by priority.",
+      "required": [
+        "P1_blocker",
+        "P2_high",
+        "P3_standard",
+        "P4_low"
+      ],
+      "properties": {
+        "P1_blocker": {
+          "type": "object",
+          "description": "Service level for one priority.",
+          "required": [
+            "response_hours",
+            "resolution_days"
+          ],
+          "properties": {
+            "response_hours": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business hours to respond."
+            },
+            "resolution_days": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business days to resolve."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        },
+        "P2_high": {
+          "type": "object",
+          "description": "Service level for one priority.",
+          "required": [
+            "response_hours",
+            "resolution_days"
+          ],
+          "properties": {
+            "response_hours": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business hours to respond."
+            },
+            "resolution_days": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business days to resolve."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        },
+        "P3_standard": {
+          "type": "object",
+          "description": "Service level for one priority.",
+          "required": [
+            "response_hours",
+            "resolution_days"
+          ],
+          "properties": {
+            "response_hours": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business hours to respond."
+            },
+            "resolution_days": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business days to resolve."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        },
+        "P4_low": {
+          "type": "object",
+          "description": "Service level for one priority.",
+          "required": [
+            "response_hours",
+            "resolution_days"
+          ],
+          "properties": {
+            "response_hours": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business hours to respond."
+            },
+            "resolution_days": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Business days to resolve."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        }
+      },
+      "patternProperties": {
+        "^(x_|_)": {}
+      },
+      "additionalProperties": false
+    },
+    "approval": {
+      "type": "object",
+      "description": "Approval tiers. Each tier starts at or above the one before it.",
+      "required": [
+        "legal_ops_lead_from",
+        "general_counsel_from",
+        "board_note_from"
+      ],
+      "properties": {
+        "legal_ops_lead_from": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "Legal Ops Lead signs off from this band. Must be one of value_bands."
+        },
+        "general_counsel_from": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "General Counsel signs off from this band, and on every high-risk request. Must be one of value_bands."
+        },
+        "board_note_from": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "A board note is required from this band. Must be one of value_bands."
+        }
+      },
+      "patternProperties": {
+        "^(x_|_)": {}
+      },
+      "additionalProperties": false
+    },
+    "risk": {
+      "type": "object",
+      "description": "Value thresholds for risk. Personal data, non-EEA transfers and uncapped liability are fixed rules.",
+      "required": [
+        "high_from",
+        "medium_from",
+        "dispute_high_from",
+        "elevated_types"
+      ],
+      "properties": {
+        "high_from": {
+          "type": "object",
+          "description": "Value from which a request is high risk.",
+          "required": [
+            "value_band",
+            "reason"
+          ],
+          "properties": {
+            "value_band": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "The lowest value band the rule applies to. Must be one of value_bands."
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Reason given."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        },
+        "medium_from": {
+          "type": "object",
+          "description": "Value from which a request is at least medium risk.",
+          "required": [
+            "value_band",
+            "reason"
+          ],
+          "properties": {
+            "value_band": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "The lowest value band the rule applies to. Must be one of value_bands."
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Reason given."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        },
+        "dispute_high_from": {
+          "type": "object",
+          "description": "Value from which a dispute is high risk.",
+          "required": [
+            "value_band",
+            "reason"
+          ],
+          "properties": {
+            "value_band": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "The lowest value band the rule applies to. Must be one of value_bands."
+            },
+            "reason": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Reason given."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        },
+        "elevated_types": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "Request types that are at least medium risk."
+        }
+      },
+      "patternProperties": {
+        "^(x_|_)": {}
+      },
+      "additionalProperties": false
+    },
+    "external_counsel": {
+      "type": "object",
+      "description": "When external counsel is indicated.",
+      "required": [
+        "dispute_from"
+      ],
+      "properties": {
+        "dispute_from": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "A dispute goes to external litigation counsel from this band. Must be one of value_bands."
+        }
+      },
+      "patternProperties": {
+        "^(x_|_)": {}
+      },
+      "additionalProperties": false
+    },
+    "escalation": {
+      "type": "object",
+      "description": "Escalations and board attention.",
+      "required": [
+        "board_awareness_from",
+        "dispute_board_attention_from"
+      ],
+      "properties": {
+        "board_awareness_from": {
+          "type": "object",
+          "description": "Value from which a request is escalated to the board's awareness list.",
+          "required": [
+            "value_band",
+            "message"
+          ],
+          "properties": {
+            "value_band": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "The lowest value band the rule applies to. Must be one of value_bands."
+            },
+            "message": {
+              "type": "string",
+              "minLength": 1,
+              "pattern": "\\S",
+              "description": "Escalation message."
+            }
+          },
+          "patternProperties": {
+            "^(x_|_)": {}
+          },
+          "additionalProperties": false
+        },
+        "dispute_board_attention_from": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "\\S",
+          "description": "A dispute is flagged for board attention from this band. Must be one of value_bands."
+        }
+      },
+      "patternProperties": {
+        "^(x_|_)": {}
+      },
+      "additionalProperties": false
+    },
+    "$schema": {
+      "type": "string",
+      "description": "Optional schema reference for editors."
+    }
+  },
+  "patternProperties": {
+    "^(x_|_)": {}
+  },
+  "additionalProperties": false
+}

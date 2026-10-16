@@ -1,0 +1,61 @@
+name: Bug report
+description: A command fails, crashes or produces output that contradicts the documented rules.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting. Please share **synthetic data only**: no real requests, client matters, contracts or personal data, not even redacted.
+
+        If the rules work as documented but you think a threshold or route is wrong, use the rule change form instead.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of `legal-function-os --version`, or the commit you ran.
+      placeholder: "legal-function-os 0.3.0"
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Python and operating system
+      placeholder: "Python 3.12 on macOS 15"
+    validations:
+      required: true
+  - type: textarea
+    id: command
+    attributes:
+      label: Command
+      description: The exact command you ran.
+      render: shell
+    validations:
+      required: true
+  - type: textarea
+    id: input
+    attributes:
+      label: Synthetic input
+      description: The smallest request file (JSON or CSV) that shows the problem.
+      render: json
+  - type: textarea
+    id: actual
+    attributes:
+      label: What happened
+      description: The output, error message or exit status you got.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+      description: Point to the documentation or rule you relied on, if you can.
+    validations:
+      required: true
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data boundary
+      options:
+        - label: Everything in this issue is synthetic and contains no client, employer or personal data.
+          required: true

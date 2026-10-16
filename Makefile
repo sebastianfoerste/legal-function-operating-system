@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PYTHONPATH := src
 
-.PHONY: install test demo board-demo raas-demo site check-generated manifest-check contract-check agent-check agent-export check clean
+.PHONY: install test lint package-check demo board-demo raas-demo contracts site site-check check-generated manifest-check contract-check agent-check agent-export check clean
 
 install:
 	@echo "No third-party dependencies. Pure standard library."
@@ -9,6 +9,15 @@ install:
 
 test:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m unittest discover -s tests -t . -q
+
+# Needs the pinned tools: $(PYTHON) -m pip install -r requirements-dev.txt
+lint:
+	@$(PYTHON) -m ruff check src/legal_function_os scripts
+	@$(PYTHON) -m mypy
+
+# Builds the wheel, installs it in a fresh virtual environment and runs it there.
+package-check:
+	@$(PYTHON) scripts/check_package.py
 
 demo: board-demo raas-demo
 
@@ -19,8 +28,14 @@ raas-demo:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m legal_function_os.raas_cli --input src/legal_function_os/data/raas_deal.json --out examples --quiet
 	@echo "Wrote examples/raas-deal-pack.md, .json, reviewer HTML, visual SVG, and source manifest."
 
+contracts:
+	@$(PYTHON) scripts/build_contracts.py
+
 site:
 	@$(PYTHON) scripts/build_site.py
+
+site-check: site
+	@$(PYTHON) scripts/check_site_links.py
 
 check-generated:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) scripts/check_generated.py
@@ -37,7 +52,7 @@ agent-check:
 agent-export:
 	@scripts/export-supervised-agent.sh
 
-check: test check-generated manifest-check contract-check agent-check
+check: test check-generated manifest-check contract-check site-check agent-check
 	@git diff --check
 
 clean:

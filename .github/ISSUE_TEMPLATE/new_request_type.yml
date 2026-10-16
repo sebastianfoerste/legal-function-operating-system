@@ -1,0 +1,46 @@
+name: New request type
+description: Propose a request type the routing table does not know yet, with its queue and rules.
+title: "[type] "
+labels: ["request-type"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A request whose `type` is not in the routing table goes to the General queue and is flagged for manual triage. Use this form to propose a type that deserves its own route.
+
+        Use synthetic examples only.
+  - type: input
+    id: name
+    attributes:
+      label: Type name
+      description: Lower case with underscores, as it would appear in the `type` field.
+      placeholder: "regulatory_inquiry"
+    validations:
+      required: true
+  - type: input
+    id: queue
+    attributes:
+      label: Owning queue
+      description: An existing queue (Commercial, Privacy, Legal Ops (AI), Corporate / GC, Employment, Litigation) or a new one.
+    validations:
+      required: true
+  - type: textarea
+    id: rules
+    attributes:
+      label: Type-specific rules
+      description: Should the type carry an elevated baseline risk, trigger external counsel, or escalate at a value? Say why.
+  - type: textarea
+    id: examples
+    attributes:
+      label: Synthetic example requests
+      description: Two or three requests of this type.
+      render: json
+    validations:
+      required: true
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data boundary
+      options:
+        - label: Everything in this issue is synthetic and contains no client, employer or personal data.
+          required: true

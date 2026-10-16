@@ -1,0 +1,9 @@
+id,title,type,counterparty,value_band,personal_data,non_eea_transfer,uncapped_liability,urgency,requested_by,sla_breached
+REQ-1001,Enterprise MSA: Globex (synthetic),commercial_contract,Globex Inc. (synthetic),>1m,yes,no,yes,high,sales,
+REQ-1002,DPA: US support sub-processor (synthetic),dpa,Support Tools LLC (synthetic),50k-250k,yes,yes,,standard,product,
+REQ-1003,NDA: design agency (synthetic),commercial_contract,Initech Design (synthetic),<50k,no,no,,low,sales,
+REQ-1004,AI feature governance review: agent autonomy (synthetic),ai_governance,,none,yes,yes,,high,product,
+REQ-1005,Series B financing: term sheet (synthetic),fundraising,,>1m,no,no,,standard,exec,
+REQ-1006,Vendor security questionnaire: analytics tool (synthetic),vendor_review,,50k-250k,yes,no,,standard,finance,yes
+REQ-1007,Customer dispute: SLA credits claim (synthetic),dispute,Hooli GmbH (synthetic),250k-1m,no,no,,blocker,exec,
+REQ-1008,Employment offer: senior engineer (synthetic),employment,,none,yes,no,,standard,people,

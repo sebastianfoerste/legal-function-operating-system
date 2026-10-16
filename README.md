@@ -24,7 +24,7 @@ uvx --from git+https://github.com/sebastianfoerste/legal-function-operating-syst
 ```
 
 A PyPI package (`legal-function-os`) is coming; it is not published yet, so use the git form above.
-`raas-deal-desk` is the second entry point (deal decision pack). Both accept `--input` for your own JSON.
+`raas-deal-desk` is the second entry point (deal decision pack). Both accept `--input` for your own JSON, and `legal-function-os` also reads a request log saved from a spreadsheet as CSV ([template](examples/requests-template.csv)): see the [request input format](docs/INPUT_FORMAT.md).
 
 ## Example output
 
@@ -56,7 +56,15 @@ Full pack: [`examples/board-pack.md`](examples/board-pack.md).
 
 ### Cited DPA clause review (AVV, Art. 28 GDPR / DSGVO)
 
-Real rows from `legal_function_os.cli --dpa-input src/legal_function_os/data/dpa_documents.json` (synthetic agreement DPA-002):
+From a clone, this writes the review to `dpa-review.json`:
+
+```bash
+PYTHONPATH=src python -m legal_function_os.cli --quiet \
+  --dpa-input src/legal_function_os/data/dpa_documents.json \
+  --dpa-output dpa-review.json
+```
+
+Real rows from that file (synthetic agreement DPA-002):
 
 ```json
 { "citation": "Art. 28 Abs. 3 lit. c DSGVO", "status": "review",
@@ -74,6 +82,21 @@ Details: [docs/MODULES.md](docs/MODULES.md#dpa-clause-review-avv--auftragsverarb
 The rules are code, tests gate them, and the output is the same every run. The
 supervised agent sits behind review gates and takes routing, SLAs and approval
 tiers from these rules rather than guessing them.
+
+## Use it next to claude-for-legal (MCP server and Claude Code plugin)
+
+LLM legal skills describe escalation and approval rules in prose. This repo ships the same decisions as tested code, and an MCP server lets an agent call them:
+
+```bash
+# Claude Code: add the plugin marketplace from this repo, then install the plugin
+/plugin marketplace add sebastianfoerste/legal-function-operating-system
+/plugin install legal-function-os@legal-function-os
+
+# Any MCP client (stdio). The extra needs Python 3.13 when run with uvx:
+uvx --python 3.13 --from "legal-function-os[mcp] @ git+https://github.com/sebastianfoerste/legal-function-operating-system" legal-function-os-mcp
+```
+
+Tools (all read-only): `triage_requests`, `board_pack`, `dpa_review`, `legal_request_schema`. Input that breaks the request contract is rejected rather than decided. The core package stays standard-library-only; `mcp` is an optional extra.
 
 ## Demo and links
 

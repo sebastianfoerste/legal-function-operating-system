@@ -1,0 +1,7 @@
+{
+  "name": "legal-function-os",
+  "description": "Call a tested legal approval matrix instead of interpreting a prose one.",
+  "author": {"name": "Sebastian Förste"},
+  "repository": "https://github.com/sebastianfoerste/legal-function-operating-system",
+  "license": "MIT"
+}

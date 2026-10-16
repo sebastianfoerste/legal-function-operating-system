@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately, not in a public issue.
+  - name: Request input format
+    url: https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/docs/INPUT_FORMAT.md
+    about: The fields a request takes, their allowed values and what each one drives.

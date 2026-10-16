@@ -1,0 +1,61 @@
+name: Rule change
+description: Propose a different value band, route, SLA target, approval tier, risk rule or escalation.
+title: "[rule] "
+labels: ["rule-change"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        The shipped thresholds are illustrative defaults, so challenges to them are welcome. Explain the change in terms of how a legal function operates; this is not a place for advice on a live matter.
+
+        Use synthetic examples only.
+  - type: dropdown
+    id: rule
+    attributes:
+      label: Which rule?
+      options:
+        - Value bands
+        - Risk (HIGH, MEDIUM, LOW)
+        - Priority and urgency
+        - Routing to a queue
+        - SLA targets
+        - Approval chain
+        - External-counsel referral
+        - Escalation and board attention
+        - DPA clause review (Art. 28(3) GDPR)
+        - Something else
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behaviour
+      description: What the rule does today. Quote the output for a synthetic request if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Why
+      description: The operating reason, and any public source (statute, regulator guidance, published benchmark) that supports it.
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Synthetic example request
+      description: A request whose outcome would change.
+      render: json
+  - type: checkboxes
+    id: data
+    attributes:
+      label: Data boundary
+      options:
+        - label: Everything in this issue is synthetic and contains no client, employer or personal data.
+          required: true

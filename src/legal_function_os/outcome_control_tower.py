@@ -12,6 +12,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from legal_function_os.capacity_simulator import _effort_points
+from legal_function_os.policy import Policy
 from legal_function_os.rules import decide
 
 LEDGER_SCHEMA = "legal-function-os.service-event-ledger.v1"
@@ -222,6 +223,7 @@ def build_outcome_control_tower(
     requests: list[dict[str, Any]],
     ledger: dict[str, Any],
     config: dict[str, Any],
+    policy: Policy | None = None,
 ) -> dict[str, Any]:
     """Build a deterministic outcome and value-control snapshot."""
 
@@ -259,7 +261,7 @@ def build_outcome_control_tower(
     for request in sorted(requests, key=lambda item: str(item["id"])):
         request_id = str(request["id"])
         events = grouped[request_id]
-        decision = decide(request)
+        decision = decide(request, policy)
         state_events = [event for event in events if event["event_type"] in STATE_EVENTS]
         first_by_type: dict[str, dict[str, Any]] = {}
         for event in state_events:

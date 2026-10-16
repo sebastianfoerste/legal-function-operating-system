@@ -24,6 +24,10 @@ class CliNewOutputsTests(unittest.TestCase):
             code = main(["--input", SAMPLE, "--quiet", "--dpa-output", str(Path(tmp) / "dpa.json")])
             self.assertEqual(code, 2)
 
+    def test_dpa_input_without_output_is_rejected_instead_of_ignored(self):
+        code = main(["--input", SAMPLE, "--quiet", "--dpa-input", SAMPLE])
+        self.assertEqual(code, 2)
+
     def test_dpa_review_roundtrip(self):
         with tempfile.TemporaryDirectory() as tmp:
             dpa_in = Path(tmp) / "dpas.json"
