@@ -83,6 +83,21 @@ The rules are code, tests gate them, and the output is the same every run. The
 supervised agent sits behind review gates and takes routing, SLAs and approval
 tiers from these rules rather than guessing them.
 
+## Use it next to claude-for-legal (MCP server and Claude Code plugin)
+
+LLM legal skills describe escalation and approval rules in prose. This repo ships the same decisions as tested code, and an MCP server lets an agent call them:
+
+```bash
+# Claude Code: add the plugin marketplace from this repo, then install the plugin
+/plugin marketplace add sebastianfoerste/legal-function-operating-system
+/plugin install legal-function-os@legal-function-os
+
+# Any MCP client (stdio). The extra needs Python 3.13 when run with uvx:
+uvx --python 3.13 --from "legal-function-os[mcp] @ git+https://github.com/sebastianfoerste/legal-function-operating-system" legal-function-os-mcp
+```
+
+Tools (all read-only): `triage_requests`, `board_pack`, `dpa_review`, `legal_request_schema`. Input that breaks the request contract is rejected rather than decided. The core package stays standard-library-only; `mcp` is an optional extra.
+
 ## Demo and links
 
 - [Artifacts in a browser](https://sebastianfoerste.github.io/legal-function-operating-system/): deal room, outcome control tower, decision cockpit, architecture flow

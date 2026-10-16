@@ -37,6 +37,20 @@ jobs:
       - name: Check patch whitespace
         run: git diff --check
 
+  mcp:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install with the optional MCP extra and test the server
+        run: |
+          python -m pip install -e ".[mcp]"
+          python -m unittest tests.test_mcp_server -v
+      - name: Check the plugin manifests parse
+        run: python -c "import json,glob; [json.load(open(f)) for f in glob.glob('.claude-plugin/*.json')+glob.glob('plugins/*/.claude-plugin/*.json')+glob.glob('plugins/*/.mcp.json')]"
+
   lint:
     runs-on: ubuntu-latest
     steps:

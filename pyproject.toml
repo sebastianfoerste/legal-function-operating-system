@@ -41,6 +41,10 @@ classifiers = [
 ]
 dependencies = []
 
+[project.optional-dependencies]
+# Optional MCP server; the core stays standard-library-only.
+mcp = ["mcp>=1.9,<2"]
+
 [project.urls]
 Homepage = "https://sebastianfoerste.github.io/legal-function-operating-system/"
 Repository = "https://github.com/sebastianfoerste/legal-function-operating-system"
@@ -51,6 +55,7 @@ Changelog = "https://github.com/sebastianfoerste/legal-function-operating-system
 [project.scripts]
 legal-function-os = "legal_function_os.cli:main"
 raas-deal-desk = "legal_function_os.raas_cli:main"
+legal-function-os-mcp = "legal_function_os.mcp_server:main"
 
 [tool.setuptools.dynamic]
 version = { attr = "legal_function_os.__version__" }
@@ -81,3 +86,8 @@ warn_unused_configs = true
 # until those loops get their own names.
 module = "legal_function_os.raas_renderers"
 ignore_errors = true
+
+[[tool.mypy.overrides]]
+# Optional extra; not installed in the lint job.
+module = ["mcp.*"]
+ignore_missing_imports = true
