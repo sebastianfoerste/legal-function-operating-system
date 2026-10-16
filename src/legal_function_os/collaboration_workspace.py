@@ -9,14 +9,17 @@ from pathlib import Path
 from typing import Any
 
 from legal_function_os.board_pack import build_board_pack
+from legal_function_os.policy import Policy
 
 ALLOWED_STEPS = {"validate_intake", "risk_triage", "assign_owner", "check_sla", "collect_evidence", "human_approval", "board_pack"}
 
 
-def build_operational_list(requests: list[dict[str, Any]], period: str) -> dict[str, Any]:
-    pack = build_board_pack(requests, period=period)
+def build_operational_list(
+    requests: list[dict[str, Any]], period: str, policy: Policy | None = None
+) -> dict[str, Any]:
+    pack = build_board_pack(requests, period=period, policy=policy)
     by_id = {str(item.get("id")): item for item in requests}
-    rows = []
+    rows: list[dict[str, Any]] = []
     for decision in pack.decisions:
         source = by_id.get(decision.request_id, {})
         rows.append({
@@ -179,8 +182,10 @@ def render_portal(portal: dict[str, Any], output: Path) -> Path:
     return output
 
 
-def build_collaboration_workspace(requests: list[dict[str, Any]], period: str) -> dict[str, Any]:
-    operational_list = build_operational_list(requests, period)
+def build_collaboration_workspace(
+    requests: list[dict[str, Any]], period: str, policy: Policy | None = None
+) -> dict[str, Any]:
+    operational_list = build_operational_list(requests, period, policy)
     workflows = build_workflow_library()
     portal = build_knowledge_portal(requests, workflows)
     return {"schema": "legal-function-os.collaboration-workspace.v1", "operational_list": operational_list, "workflow_definitions": workflows, "workflow_runs": [dry_run_workflow(workflows[0], operational_list)], "knowledge_portal": portal, "portal_answer": answer_portal(portal, "Which workflow requires human approval?"), "external_action_allowed": False}

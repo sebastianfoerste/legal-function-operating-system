@@ -8,6 +8,7 @@ where they already render, and are linked rather than copied.
 
 from __future__ import annotations
 
+import argparse
 import shutil
 from pathlib import Path
 
@@ -77,7 +78,7 @@ CARDS = (
     ),
     (
         "DPA clause review",
-        f"{BLOB}/data/dpa_documents.json",
+        f"{BLOB}/src/legal_function_os/data/dpa_documents.json",
         "Art. 28 Abs. 3 lit. a to h DSGVO coverage across two synthetic agreements, "
         "returning pass, review or missing per requirement with pinpoint citations.",
         "GitHub",
@@ -176,26 +177,33 @@ CARD = """    <a class="card" href="{href}">
     </a>"""
 
 
-def main() -> int:
-    if SITE.exists():
-        shutil.rmtree(SITE)
-    SITE.mkdir(parents=True)
+def build(site: Path = SITE) -> None:
+    if site.exists():
+        shutil.rmtree(site)
+    site.mkdir(parents=True)
 
     missing = [str(src.relative_to(ROOT)) for src, _ in HOSTED if not src.exists()]
     if missing:
         raise SystemExit(f"missing artifact, run make demo first: {', '.join(missing)}")
 
     for src, name in HOSTED:
-        shutil.copyfile(src, SITE / name)
+        shutil.copyfile(src, site / name)
 
     cards = "\n".join(
         CARD.format(href=href, kind=kind, title=title, blurb=blurb)
         for title, href, blurb, kind in CARDS
     )
-    (SITE / "index.html").write_text(
+    (site / "index.html").write_text(
         PAGE.format(cards=cards, repo=REPO), encoding="utf-8"
     )
-    (SITE / ".nojekyll").write_text("", encoding="utf-8")
+    (site / ".nojekyll").write_text("", encoding="utf-8")
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="Assemble the published site.")
+    parser.add_argument("--out", type=Path, default=SITE, help="Output directory (default: site/).")
+    args = parser.parse_args(argv)
+    build(args.out)
 
     print(f"site built with {len(HOSTED)} hosted artifacts and {len(CARDS)} cards")
     return 0

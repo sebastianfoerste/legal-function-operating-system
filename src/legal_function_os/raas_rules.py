@@ -5,12 +5,12 @@ from __future__ import annotations
 from typing import Any
 
 from legal_function_os.raas_models import (
-    ClauseSeverity,
+    RAAS_INPUT_SCHEMA,
     ClauseReview,
+    ClauseSeverity,
     CounselBrief,
     FinanceIssue,
     HundredDayPhase,
-    RAAS_INPUT_SCHEMA,
     RaaSDealPack,
     RegulatoryItem,
     validate_raas_deal,

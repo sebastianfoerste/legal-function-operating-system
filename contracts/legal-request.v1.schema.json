@@ -1,0 +1,153 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/sebastianfoerste/legal-function-operating-system/blob/main/contracts/legal-request.v1.schema.json",
+  "title": "Legal request (legal-function-os, v1)",
+  "description": "One legal request as read by legal-function-os. An input file is a JSON array of these objects, and each id must be unique within it. Omitted and null optional fields take their default. Fields not listed here pass through unchanged; prefix your own fields with x_ so they are never mistaken for a misspelled request field.",
+  "type": "object",
+  "required": [
+    "id",
+    "title"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Unique request identifier, for example REQ-1001."
+    },
+    "title": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S",
+      "description": "Short title shown in the board pack and request register."
+    },
+    "type": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Request type, which selects the owning queue: commercial_contract (Commercial), vendor_review (Commercial), dpa (Privacy), privacy_query (Privacy), ai_governance (Legal Ops (AI)), corporate (Corporate / GC), fundraising (Corporate / GC), employment (Employment), dispute (Litigation), ip (Commercial). A non-EEA transfer routes to Privacy whatever the type. Any other value, or none, goes to General and is flagged for manual triage.",
+      "examples": [
+        "commercial_contract",
+        "vendor_review",
+        "dpa",
+        "privacy_query",
+        "ai_governance",
+        "corporate",
+        "fundraising",
+        "employment",
+        "dispute",
+        "ip"
+      ]
+    },
+    "counterparty": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "The other party, for the register. Not used in decisions."
+    },
+    "value_band": {
+      "enum": [
+        "none",
+        "<50k",
+        "50k-250k",
+        "250k-1m",
+        ">1m",
+        null
+      ],
+      "description": "Contract or claim value band, lowest first. Matched exactly, so '>1m' is valid and '>1M' is rejected. Omitted means 'none'."
+    },
+    "personal_data": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Personal data is processed. Default false."
+    },
+    "non_eea_transfer": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "Data is transferred outside the EEA. Default false."
+    },
+    "uncapped_liability": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "The counterparty asks for uncapped liability. Default false."
+    },
+    "urgency": {
+      "enum": [
+        "blocker",
+        "high",
+        "standard",
+        "low",
+        null
+      ],
+      "description": "How soon the requester needs an answer. Omitted means 'standard'."
+    },
+    "requested_by": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Requesting team, for example sales or product."
+    },
+    "sla_breached": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "The response SLA has already been missed. Default false."
+    },
+    "description": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Free-text description. Read by the operational list and knowledge portal outputs; not used in decisions."
+    },
+    "summary": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Short summary for the knowledge portal. Not used in decisions."
+    },
+    "facts": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "items": {
+        "type": "string"
+      },
+      "description": "Known facts, one string each. Read by the agent-run and operational list outputs; not used in decisions."
+    },
+    "deadline": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Due date as text, for example 2026-12-01. Shown in the operational list and the shared space; not used in decisions."
+    },
+    "dependencies": {
+      "type": [
+        "array",
+        "null"
+      ],
+      "description": "What the request waits on, for example other request ids. Shown in the operational list; not used in decisions."
+    },
+    "awaiting_business_input": {
+      "type": [
+        "boolean",
+        "null"
+      ],
+      "description": "The business still owes legal an answer. Counted in the operational list and shown to the requester in the shared space. Default false."
+    }
+  },
+  "additionalProperties": true
+}

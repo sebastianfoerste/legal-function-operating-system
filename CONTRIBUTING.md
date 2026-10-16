@@ -4,6 +4,10 @@ A personal, public-safe prototype. Issues and corrections are welcome, especiall
 the rule thresholds (value bands, SLA targets, approval tiers), which are illustrative
 defaults.
 
+Everyone taking part follows the [code of conduct](CODE_OF_CONDUCT.md). Report
+security issues privately, as described in [SECURITY.md](SECURITY.md). The issue
+forms cover bugs, rule changes and new request types.
+
 ## Ground rules
 
 1. **Synthetic data only.** Never add real requests, client data, or personal data.
@@ -15,11 +19,16 @@ defaults.
 ## Working on it
 
 ```bash
-make install   # standard library only
-make test      # must pass before any PR
-make demo      # regenerate the board pack and synthetic RaaS reviewer artifacts
-make check     # verify deterministic outputs, proof paths, and patch hygiene
+make install         # standard library only
+make test            # must pass before any PR
+make demo            # regenerate the board pack and synthetic RaaS reviewer artifacts
+make check           # verify deterministic outputs, proof paths, and patch hygiene
+make lint            # Ruff and mypy; needs: python3 -m pip install -r requirements-dev.txt
+make package-check   # build the wheel, install it in a clean environment and run it
 ```
+
+CI runs all of these, the core tests on Python 3.10 to 3.13. Record user-facing
+changes under "Unreleased" in [CHANGELOG.md](CHANGELOG.md).
 
 ## Adding or changing a rule
 

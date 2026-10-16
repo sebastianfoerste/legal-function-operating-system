@@ -1,0 +1,3 @@
+# Tools for `make lint` only. The package itself has no dependencies.
+mypy==2.4.0
+ruff==0.17.1

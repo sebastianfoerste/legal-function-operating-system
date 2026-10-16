@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from legal_function_os.policy import Policy
 from legal_function_os.rules import decide
 
 
@@ -11,8 +12,8 @@ def _step(key: str, label: str, status: str, evidence: str, next_action: str) ->
     return {"key": key, "label": label, "status": status, "evidence": evidence, "next_action": next_action}
 
 
-def _run_for(request: dict[str, Any]) -> dict[str, Any]:
-    decision = decide(request)
+def _run_for(request: dict[str, Any], policy: Policy | None = None) -> dict[str, Any]:
+    decision = decide(request, policy)
     request_id = str(request.get("id", "REQ-?"))
     provenance = f"synthetic-request:{request_id}"
     facts = list(request.get("facts", []))
@@ -56,8 +57,10 @@ def _run_for(request: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_agent_runs(requests: list[dict[str, Any]], *, period: str = "current period") -> dict[str, Any]:
-    runs = [_run_for(request) for request in requests]
+def build_agent_runs(
+    requests: list[dict[str, Any]], *, period: str = "current period", policy: Policy | None = None
+) -> dict[str, Any]:
+    runs = [_run_for(request, policy) for request in requests]
     return {
         "schema": "legal-function-os.agent-runs.v1",
         "period": period,

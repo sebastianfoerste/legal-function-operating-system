@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # Workflow actions for the whole repository.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+  # The core package has no dependencies; this keeps the pinned lint tools current.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+  # The supervised agent's locked runtime dependencies.
+  - package-ecosystem: pip
+    directory: /supervised-agent
+    schedule:
+      interval: weekly

@@ -1,0 +1,11 @@
+{
+  "name": "legal-function-os",
+  "owner": {"name": "Sebastian Förste"},
+  "plugins": [
+    {
+      "name": "legal-function-os",
+      "source": "./plugins/legal-function-os",
+      "description": "Deterministic legal intake triage, approval matrix, board pack and DPA coverage as MCP tools. Synthetic data only; no LLM in the decision path."
+    }
+  ]
+}
