@@ -11,6 +11,7 @@ from legal_function_os.raas_cli import main as raas_cli_main
 from legal_function_os.raas_deal_desk import (
     RAAS_INPUT_SCHEMA,
     SOURCE_MANIFEST,
+    VERIFIED_ON,
     build_raas_deal_pack,
     render_raas_html,
     render_raas_markdown,
@@ -114,7 +115,60 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("transpose", product_liability["timing"])
         ai_act = next(item for item in SOURCE_MANIFEST if item["id"] == "EU-AI-ACT")
         self.assertIn("2 August 2026", ai_act["timing"])
-        self.assertIn("2 August 2027", ai_act["timing"])
+        # Regulation (EU) 2026/1744 deferred the high-risk dates in Article 113.
+        self.assertIn("2 December 2027", ai_act["timing"])
+        self.assertIn("2 August 2028", ai_act["timing"])
+        self.assertNotIn("2 August 2027", ai_act["timing"])
+        self.assertIn("EU-AI-ACT-AMENDMENT", ai_act["timing"])
+        amendment = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-AI-ACT-AMENDMENT"
+        )
+        self.assertEqual(
+            amendment["url"], "https://eur-lex.europa.eu/eli/reg/2026/1744/oj/eng"
+        )
+        self.assertIn("27 July 2026", amendment["timing"])
+
+    def test_machinery_regulation_application_date_follows_article_54(self):
+        # Article 54 of Regulation (EU) 2023/1230: applies from 20 January 2027.
+        machinery = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-MACHINERY-REGULATION"
+        )
+        self.assertIn("20 January 2027", machinery["timing"])
+        self.assertNotIn("14 January 2027", machinery["timing"])
+
+    def test_machinery_ai_routing_follows_regulation_2026_1744(self):
+        # Consolidated Regulation (EU) 2024/1689 as of 27 July 2026: Regulation
+        # (EU) 2023/1230 is listed in Annex I Section B, so Article 2(2) limits
+        # the directly applicable provisions for machinery-related high-risk AI,
+        # and Article 8 of Regulation (EU) 2023/1230 carries the requirements.
+        by_id = {item["id"]: item for item in SOURCE_MANIFEST}
+        ai_act = by_id["EU-AI-ACT"]
+        self.assertIn("Annex I Section B", ai_act["timing"])
+        self.assertIn("Article 2(2)", ai_act["timing"])
+        self.assertIn("Article 113(c)", ai_act["timing"])
+        self.assertIn("2(2)", ai_act["pinpoint"])
+        self.assertIn("/2024/1689/2026-07-27/", ai_act["url"])
+        amendment = by_id["EU-AI-ACT-AMENDMENT"]
+        self.assertIn("(EU) 2023/1230", amendment["title"])
+        self.assertIn("Regulation (EU) 2023/1230", amendment["pinpoint"])
+        self.assertIn("Annex I Section B", amendment["timing"])
+        machinery = by_id["EU-MACHINERY-REGULATION"]
+        self.assertIn("Article 8", machinery["timing"])
+        self.assertIn("2 August 2028", machinery["timing"])
+        self.assertIn("EU-AI-ACT-AMENDMENT", machinery["timing"])
+
+    def test_each_source_carries_a_verification_date_not_before_its_law(self):
+        for source in SOURCE_MANIFEST:
+            self.assertRegex(source["verified_on"], r"^\d{4}-\d{2}-\d{2}$")
+        self.assertEqual(
+            VERIFIED_ON, max(source["verified_on"] for source in SOURCE_MANIFEST)
+        )
+        self.assertEqual(self.pack.verified_on, VERIFIED_ON)
+        # Regulation (EU) 2026/1744 entered into force on 27 July 2026. An entry
+        # that describes the amended law cannot have been verified earlier.
+        for source_id in ("EU-AI-ACT", "EU-AI-ACT-AMENDMENT", "EU-MACHINERY-REGULATION"):
+            source = next(item for item in SOURCE_MANIFEST if item["id"] == source_id)
+            self.assertGreaterEqual(source["verified_on"], "2026-07-27", source_id)
 
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())

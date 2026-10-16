@@ -29,7 +29,9 @@ Recorded on 6 October 2026 for the supervised agent after the pilot workflow was
 | --- | --- |
 | `render_review_room` in `src/collaboration_workspace.py` | A read-only HTML snapshot. It used to carry Accept and Reject buttons and a comment box that changed the page and saved nothing. Those controls are removed and the page now says that nothing on it is saved. |
 | Trust cockpit Markdown and JSON | A report rendered from one assessment. |
-| Architecture and demo images under `docs/` | Illustrations. |
+| `docs/architecture.svg` and `docs/architecture.png` | Illustrations. |
+| `docs/review-gate.svg` | A terminal-style summary. Its findings, routing, review state and review-gate control match the output of the first README command, but the layout, the window title and the shortened command line are not verbatim CLI output. |
+| `docs/demo.png` | A rendering of the actual output of the two README commands, each filtered through `jq`. Nothing regenerates it, so it can fall behind the CLI. |
 | `SharedReviewRoom` in `src/matter_workspace.py` | A description of intended permissions and audit events. Nothing in that module enforces it. The pilot service enforces the same three role names plus the final approver. |
 | `WorkflowAgentLibrary` in `src/matter_workspace.py` | A description of three workflow steps, not a runner. |
 | Customer package HTML | A rendered view of stored data. It has no controls. |
