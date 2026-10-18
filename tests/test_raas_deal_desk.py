@@ -5,6 +5,7 @@ import io
 import tempfile
 import unittest
 from contextlib import redirect_stderr
+from dataclasses import replace
 from pathlib import Path
 
 from legal_function_os.raas_cli import main as raas_cli_main
@@ -220,6 +221,23 @@ class RaaSDealDeskTests(unittest.TestCase):
                 payload = json.loads(outputs[name].read_text(encoding="utf-8"))
                 self.assertEqual(payload["verified_on"], VERIFIED_ON)
                 self.assertEqual(payload["last_verified_on"], LAST_VERIFIED_ON)
+
+    def test_pack_wording_covers_both_a_date_span_and_a_single_date(self):
+        # The manifest's own dates select only one branch of the wording, so
+        # both are pinned here on packs with fixed dates.
+        span = replace(self.pack, verified_on="2026-07-20", last_verified_on="2026-10-18")
+        self.assertIn(
+            "**Legal sources verified:** between 2026-07-20 and 2026-10-18; "
+            "each source below shows its own date\n",
+            render_raas_markdown(span),
+        )
+        single = replace(self.pack, verified_on="2026-10-18", last_verified_on="2026-10-18")
+        single_markdown = render_raas_markdown(single)
+        self.assertIn(
+            "**Legal sources verified:** 2026-10-18, every source below on that date\n",
+            single_markdown,
+        )
+        self.assertNotIn("between 2026-10-18 and 2026-10-18", single_markdown)
 
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())
