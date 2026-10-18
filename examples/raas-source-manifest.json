@@ -1,6 +1,7 @@
 {
   "schema": "legal-function-os.source-manifest.v1",
-  "verified_on": "2026-10-13",
+  "verified_on": "2026-07-20",
+  "last_verified_on": "2026-10-13",
   "source_digest": "506bf88b5493017900a56dae00274c9c5bfe1e63bdb177d79f9e233153d2dedb",
   "sources": [
     {

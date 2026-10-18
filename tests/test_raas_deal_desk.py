@@ -9,6 +9,7 @@ from pathlib import Path
 
 from legal_function_os.raas_cli import main as raas_cli_main
 from legal_function_os.raas_deal_desk import (
+    LAST_VERIFIED_ON,
     RAAS_INPUT_SCHEMA,
     SOURCE_MANIFEST,
     VERIFIED_ON,
@@ -160,15 +161,36 @@ class RaaSDealDeskTests(unittest.TestCase):
     def test_each_source_carries_a_verification_date_not_before_its_law(self):
         for source in SOURCE_MANIFEST:
             self.assertRegex(source["verified_on"], r"^\d{4}-\d{2}-\d{2}$")
-        self.assertEqual(
-            VERIFIED_ON, max(source["verified_on"] for source in SOURCE_MANIFEST)
-        )
+        dates = [source["verified_on"] for source in SOURCE_MANIFEST]
+        # The top-level date must not overstate the check: it is the date by
+        # which every entry had been verified, and the latest date is separate.
+        self.assertEqual(VERIFIED_ON, min(dates))
+        self.assertEqual(LAST_VERIFIED_ON, max(dates))
         self.assertEqual(self.pack.verified_on, VERIFIED_ON)
+        self.assertEqual(self.pack.last_verified_on, LAST_VERIFIED_ON)
         # Regulation (EU) 2026/1744 entered into force on 27 July 2026. An entry
         # that describes the amended law cannot have been verified earlier.
         for source_id in ("EU-AI-ACT", "EU-AI-ACT-AMENDMENT", "EU-MACHINERY-REGULATION"):
             source = next(item for item in SOURCE_MANIFEST if item["id"] == source_id)
             self.assertGreaterEqual(source["verified_on"], "2026-07-27", source_id)
+
+    def test_pack_states_the_verification_range_not_a_single_date(self):
+        markdown = render_raas_markdown(self.pack)
+        self.assertNotIn("last verified", markdown)
+        if VERIFIED_ON != LAST_VERIFIED_ON:
+            self.assertIn(
+                f"**Legal sources verified:** between {VERIFIED_ON} and "
+                f"{LAST_VERIFIED_ON}; each source below shows its own date",
+                markdown,
+            )
+        for source in SOURCE_MANIFEST:
+            self.assertIn(f"Verified on {source['verified_on']}.", markdown)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            outputs = write_raas_outputs(self.pack, Path(tmp_dir))
+            for name in ("json", "sources"):
+                payload = json.loads(outputs[name].read_text(encoding="utf-8"))
+                self.assertEqual(payload["verified_on"], VERIFIED_ON)
+                self.assertEqual(payload["last_verified_on"], LAST_VERIFIED_ON)
 
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())

@@ -2,7 +2,8 @@
   "schema": "legal-function-os.raas-deal-pack.v1",
   "input_schema": "legal-function-os.raas-deal-input.v1",
   "generated_from": "synthetic-deal:RAAS-2026-001",
-  "verified_on": "2026-10-13",
+  "verified_on": "2026-07-20",
+  "last_verified_on": "2026-10-13",
   "title": "Industrial Robotics RaaS Deal Decision Pack",
   "deal_id": "RAAS-2026-001",
   "deal_facts": {

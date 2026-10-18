@@ -18,7 +18,7 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
         "",
         f"**Deal:** {pack.deal_id}",
         f"**Input contract:** `{pack.input_schema}`",
-        f"**Legal sources last verified:** {pack.verified_on} (date per source below)",
+        f"**Legal sources verified:** {_verification_range(pack)}",
         f"**Signing decision:** {gate['answer']}",
         "",
         "## Executive signing gate",
@@ -408,6 +408,7 @@ def write_raas_outputs(pack: RaaSDealPack, out_dir: Path) -> dict[str, Path]:
             {
                 "schema": "legal-function-os.source-manifest.v1",
                 "verified_on": pack.verified_on,
+                "last_verified_on": pack.last_verified_on,
                 "source_digest": pack.source_digest,
                 "sources": list(pack.source_manifest),
             },
@@ -418,6 +419,16 @@ def write_raas_outputs(pack: RaaSDealPack, out_dir: Path) -> dict[str, Path]:
         encoding="utf-8",
     )
     return outputs
+
+
+def _verification_range(pack: RaaSDealPack) -> str:
+    """State the span of the per-source verification dates without overstating it."""
+    if pack.verified_on == pack.last_verified_on:
+        return f"{pack.verified_on}, every source below on that date"
+    return (
+        f"between {pack.verified_on} and {pack.last_verified_on}; "
+        "each source below shows its own date"
+    )
 
 
 def _gate_item_lines(items: list[dict[str, Any]]) -> list[str]:

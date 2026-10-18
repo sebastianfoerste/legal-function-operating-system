@@ -2,7 +2,7 @@
 
 **Deal:** RAAS-2026-001
 **Input contract:** `legal-function-os.raas-deal-input.v1`
-**Legal sources last verified:** 2026-10-13 (date per source below)
+**Legal sources verified:** between 2026-07-20 and 2026-10-13; each source below shows its own date
 **Signing decision:** Do not sign the current draft.
 
 ## Executive signing gate

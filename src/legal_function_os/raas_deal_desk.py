@@ -19,6 +19,7 @@ from legal_function_os.raas_renderers import (
 from legal_function_os.raas_rules import build_raas_deal_pack
 from legal_function_os.raas_sources import (
     DISCLAIMER,
+    LAST_VERIFIED_ON,
     SOURCE_MANIFEST,
     VERIFIED_ON,
     source_digest,
@@ -27,6 +28,7 @@ from legal_function_os.raas_sources import (
 __all__ = [
     "RAAS_INPUT_SCHEMA",
     "VERIFIED_ON",
+    "LAST_VERIFIED_ON",
     "DISCLAIMER",
     "SOURCE_MANIFEST",
     "ClauseReview",

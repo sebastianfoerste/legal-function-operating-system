@@ -6,8 +6,9 @@ import hashlib
 import json
 
 # Each source records the date its entry was last checked against the
-# primary text. VERIFIED_ON, defined below the manifest, is the most recent
-# of those dates; it does not mean every entry was re-checked on that day.
+# primary text. Below the manifest, VERIFIED_ON is the earliest of those dates,
+# the date by which every entry had been checked, and LAST_VERIFIED_ON is the
+# latest. Neither date means that every entry was checked on that day.
 INITIAL_SNAPSHOT_ON = "2026-07-20"
 # The AI Act, its amending Regulation (EU) 2026/1744 and the Machinery Regulation
 # were re-checked against the consolidated texts of Regulations (EU) 2024/1689
@@ -152,7 +153,8 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
     },
 )
 
-VERIFIED_ON = max(source["verified_on"] for source in SOURCE_MANIFEST)
+VERIFIED_ON = min(source["verified_on"] for source in SOURCE_MANIFEST)
+LAST_VERIFIED_ON = max(source["verified_on"] for source in SOURCE_MANIFEST)
 
 
 def source_url(source_id: str) -> str:

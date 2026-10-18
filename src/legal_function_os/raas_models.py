@@ -96,6 +96,7 @@ class RaaSDealPack:
     input_schema: str
     generated_from: str
     verified_on: str
+    last_verified_on: str
     title: str
     deal_id: str
     deal_facts: dict[str, Any]
@@ -116,6 +117,7 @@ class RaaSDealPack:
             "input_schema": self.input_schema,
             "generated_from": self.generated_from,
             "verified_on": self.verified_on,
+            "last_verified_on": self.last_verified_on,
             "title": self.title,
             "deal_id": self.deal_id,
             "deal_facts": self.deal_facts,

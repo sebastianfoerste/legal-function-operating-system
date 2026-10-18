@@ -17,6 +17,7 @@ from legal_function_os.raas_models import (
 )
 from legal_function_os.raas_sources import (
     DISCLAIMER,
+    LAST_VERIFIED_ON,
     SOURCE_MANIFEST,
     VERIFIED_ON,
     source_digest,
@@ -57,6 +58,7 @@ def build_raas_deal_pack(deal: dict[str, Any]) -> RaaSDealPack:
         input_schema=RAAS_INPUT_SCHEMA,
         generated_from=f"synthetic-deal:{deal['deal_id']}",
         verified_on=VERIFIED_ON,
+        last_verified_on=LAST_VERIFIED_ON,
         title="Industrial Robotics RaaS Deal Decision Pack",
         deal_id=str(deal["deal_id"]),
         deal_facts=facts,
