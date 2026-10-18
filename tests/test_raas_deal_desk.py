@@ -169,8 +169,9 @@ class RaaSDealDeskTests(unittest.TestCase):
         for source in SOURCE_MANIFEST:
             self.assertRegex(source["verified_on"], r"^\d{4}-\d{2}-\d{2}$")
         dates = [source["verified_on"] for source in SOURCE_MANIFEST]
-        # The top-level date must not overstate the check: it is the date by
-        # which every entry had been verified, and the latest date is separate.
+        # The top-level date must not overstate the check: it is the earliest
+        # per-source date, so every entry was last verified on or after it (the
+        # oldest check still in force). The latest date is carried separately.
         self.assertEqual(VERIFIED_ON, min(dates))
         self.assertEqual(LAST_VERIFIED_ON, max(dates))
         self.assertEqual(self.pack.verified_on, VERIFIED_ON)

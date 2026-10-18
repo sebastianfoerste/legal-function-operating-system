@@ -6,9 +6,10 @@ import hashlib
 import json
 
 # Each source records the date its entry was last checked against the
-# primary text. Below the manifest, VERIFIED_ON is the earliest of those dates,
-# the date by which every entry had been checked, and LAST_VERIFIED_ON is the
-# latest. Neither date means that every entry was checked on that day.
+# primary text. Below the manifest, VERIFIED_ON is the earliest of those dates:
+# every entry was last checked on or after it, so it is the oldest check still
+# in force. LAST_VERIFIED_ON is the latest. Neither date means that every entry
+# was checked on that day.
 INITIAL_SNAPSHOT_ON = "2026-07-20"
 # The AI Act, its amending Regulation (EU) 2026/1744 and the Machinery Regulation
 # were re-checked against the consolidated texts of Regulations (EU) 2024/1689
