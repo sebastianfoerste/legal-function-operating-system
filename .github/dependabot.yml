@@ -8,7 +8,7 @@ updates:
     groups:
       actions:
         patterns: ["*"]
-  # The core package has no dependencies; this keeps the pinned lint tools current.
+  # The core package has no dependencies; this keeps the optional mcp extra and the pinned lint tools current.
   - package-ecosystem: pip
     directory: /
     schedule:
