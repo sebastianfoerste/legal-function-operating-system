@@ -22,6 +22,10 @@ DISCLAIMER = (
     "and Safety reviewers must validate the analysis before any external use."
 )
 
+# `url` is the Official Journal ELI of each act, the authentic text.
+# `consolidated_url`, where present, is the EUR-Lex consolidated version as of the
+# date in the link. A consolidated text has no legal effect; it is linked for
+# information next to the Official Journal text.
 SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
     {
         "id": "EU-DATA-ACT",
@@ -51,7 +55,8 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
     {
         "id": "EU-MACHINERY-REGULATION",
         "title": "Regulation (EU) 2023/1230, Machinery Regulation",
-        "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/2026-07-27/eng",
+        "url": "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng",
+        "consolidated_url": "https://eur-lex.europa.eu/eli/reg/2023/1230/2026-07-27/eng",
         "pinpoint": "Articles 8, 10 to 18 and 54, Annex III",
         "legal_effect": "directly_applicable_regulation",
         "verified_on": RECHECKED_ON,
@@ -68,7 +73,8 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
     {
         "id": "EU-AI-ACT",
         "title": "Regulation (EU) 2024/1689, Artificial Intelligence Act",
-        "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/2026-07-27/eng",
+        "url": "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng",
+        "consolidated_url": "https://eur-lex.europa.eu/eli/reg/2024/1689/2026-07-27/eng",
         "pinpoint": "Articles 2(2), 6, 9 to 15, 17, 43, and 113, Annex I",
         "legal_effect": "directly_applicable_regulation",
         "verified_on": RECHECKED_ON,

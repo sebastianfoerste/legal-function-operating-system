@@ -148,12 +148,19 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("Article 2(2)", ai_act["timing"])
         self.assertIn("Article 113(c)", ai_act["timing"])
         self.assertIn("2(2)", ai_act["pinpoint"])
-        self.assertIn("/2024/1689/2026-07-27/", ai_act["url"])
+        self.assertEqual(
+            ai_act["url"], "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+        )
+        self.assertIn("/2024/1689/2026-07-27/", ai_act["consolidated_url"])
         amendment = by_id["EU-AI-ACT-AMENDMENT"]
         self.assertIn("(EU) 2023/1230", amendment["title"])
         self.assertIn("Regulation (EU) 2023/1230", amendment["pinpoint"])
         self.assertIn("Annex I Section B", amendment["timing"])
         machinery = by_id["EU-MACHINERY-REGULATION"]
+        self.assertEqual(
+            machinery["url"], "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng"
+        )
+        self.assertIn("/2023/1230/2026-07-27/", machinery["consolidated_url"])
         self.assertIn("Article 8", machinery["timing"])
         self.assertIn("2 August 2028", machinery["timing"])
         self.assertIn("EU-AI-ACT-AMENDMENT", machinery["timing"])
@@ -173,6 +180,27 @@ class RaaSDealDeskTests(unittest.TestCase):
         for source_id in ("EU-AI-ACT", "EU-AI-ACT-AMENDMENT", "EU-MACHINERY-REGULATION"):
             source = next(item for item in SOURCE_MANIFEST if item["id"] == source_id)
             self.assertGreaterEqual(source["verified_on"], "2026-07-27", source_id)
+
+    def test_sources_link_the_official_journal_and_label_consolidated_text(self):
+        markdown = render_raas_markdown(self.pack)
+        for source in SOURCE_MANIFEST:
+            # The primary link is the authentic Official Journal text.
+            self.assertRegex(
+                source["url"],
+                r"^https://eur-lex\.europa\.eu/eli/(reg|dir)/\d{4}/\d+/oj/eng$",
+                source["id"],
+            )
+            consolidated = source.get("consolidated_url")
+            if consolidated:
+                self.assertIn(
+                    f"[{source['id']}]({source['url']}):** {source['title']} "
+                    f"([consolidated text, for information only]({consolidated}))",
+                    markdown,
+                )
+        self.assertEqual(
+            {item["id"] for item in SOURCE_MANIFEST if item.get("consolidated_url")},
+            {"EU-AI-ACT", "EU-MACHINERY-REGULATION"},
+        )
 
     def test_pack_states_the_verification_range_not_a_single_date(self):
         markdown = render_raas_markdown(self.pack)

@@ -178,10 +178,24 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
             ]
         )
 
-    lines.extend(["## Primary-source manifest", ""])
+    lines.extend(
+        [
+            "## Primary-source manifest",
+            "",
+            "Each source links to its Official Journal text. Where a consolidated "
+            "version is linked as well, it has no legal effect and is given for "
+            "information only.",
+            "",
+        ]
+    )
     for source in pack.source_manifest:
+        consolidated = (
+            f" ([consolidated text, for information only]({source['consolidated_url']}))"
+            if source.get("consolidated_url")
+            else ""
+        )
         lines.append(
-            f"- **[{source['id']}]({source['url']}):** {source['title']}, "
+            f"- **[{source['id']}]({source['url']}):** {source['title']}{consolidated}, "
             f"{source['pinpoint']}. Legal effect: `{source['legal_effect']}`. "
             f"{source['timing']} Verified on {source['verified_on']}."
         )
