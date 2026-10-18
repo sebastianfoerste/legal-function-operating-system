@@ -13,6 +13,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # The optional MCP server is built on the 1.x SDK; pyproject pins mcp<2.
+      - dependency-name: mcp
+        update-types: ["version-update:semver-major"]
   # The supervised agent's locked runtime dependencies.
   - package-ecosystem: pip
     directory: /supervised-agent
