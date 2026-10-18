@@ -14,6 +14,12 @@ INITIAL_SNAPSHOT_ON = "2026-07-20"
 # were re-checked against the consolidated texts of Regulations (EU) 2024/1689
 # and (EU) 2023/1230 as of 27 July 2026, which incorporate that amendment.
 RECHECKED_ON = "2026-10-13"
+# The Data Act, Cyber Resilience Act and GDPR entries were re-checked against the
+# texts of Regulations (EU) 2023/2854, (EU) 2024/2847 and (EU) 2016/679 in the
+# legalize-eu mirror of EUR-Lex/CELLAR, which holds no consolidated version of
+# any of them after the original publication. The Machinery Directive and the
+# Product Liability Directive are not in that mirror and keep INITIAL_SNAPSHOT_ON.
+MIRROR_RECHECKED_ON = "2026-10-18"
 
 DISCLAIMER = (
     "This public-safe demonstration uses synthetic facts and illustrative internal "
@@ -33,7 +39,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2023/2854/oj/eng",
         "pinpoint": "Articles 3 to 5, 13, and 50",
         "legal_effect": "directly_applicable_regulation",
-        "verified_on": INITIAL_SNAPSHOT_ON,
+        "verified_on": MIRROR_RECHECKED_ON,
         "timing": (
             "Generally applies from 12 September 2025. Article 3(1) applies to "
             "connected products and related services placed on the market after "
@@ -125,7 +131,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
         "pinpoint": "Articles 13, 14, 32, and 71",
         "legal_effect": "directly_applicable_regulation",
-        "verified_on": INITIAL_SNAPSHOT_ON,
+        "verified_on": MIRROR_RECHECKED_ON,
         "timing": (
             "Chapter IV applies from 11 June 2026. Article 14 applies from "
             "11 September 2026. The Regulation generally applies from "
@@ -151,7 +157,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2016/679/oj/eng",
         "pinpoint": "Articles 5, 6, 13, 28, 32, 35, and 44 to 49",
         "legal_effect": "directly_applicable_regulation",
-        "verified_on": INITIAL_SNAPSHOT_ON,
+        "verified_on": MIRROR_RECHECKED_ON,
         "timing": (
             "In force and directly applicable. The concrete obligations depend on "
             "the roles, data, purposes, and transfer path."
