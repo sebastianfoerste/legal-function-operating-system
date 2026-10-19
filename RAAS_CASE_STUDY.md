@@ -107,10 +107,10 @@ timing, legal effect, and primary source for:
 - the revised Product Liability Directive; and
 - GDPR and international transfers.
 
-The source snapshot is dated and hashed. It distinguishes directly applicable
-regulations from directives requiring national implementation. Application and
-classification still depend on verified product facts and the law current at the
-actual review date.
+Each source records the date it was last verified, and the manifest is hashed.
+It distinguishes directly applicable regulations from directives requiring
+national implementation. Application and classification still depend on verified
+product facts and the law current at the actual review date.
 
 ## Controls and limits
 
@@ -120,7 +120,7 @@ actual review date.
 - No legal or accounting conclusion presented as final.
 - No external communication or instruction of counsel.
 - Named human review required for every consequential position.
-- Primary sources recorded with a verification date and digest.
+- Primary sources recorded with a per-source verification date and a digest.
 
 ## Validation
 

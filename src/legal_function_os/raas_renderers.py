@@ -18,7 +18,7 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
         "",
         f"**Deal:** {pack.deal_id}",
         f"**Input contract:** `{pack.input_schema}`",
-        f"**Verified legal-source snapshot:** {pack.verified_on}",
+        f"**Legal sources verified:** {_verification_range(pack)}",
         f"**Signing decision:** {gate['answer']}",
         "",
         "## Executive signing gate",
@@ -178,12 +178,26 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
             ]
         )
 
-    lines.extend(["## Primary-source manifest", ""])
+    lines.extend(
+        [
+            "## Primary-source manifest",
+            "",
+            "Each source links to its Official Journal text. Where a consolidated "
+            "version is linked as well, it has no legal effect and is given for "
+            "information only.",
+            "",
+        ]
+    )
     for source in pack.source_manifest:
+        consolidated = (
+            f" ([consolidated text, for information only]({source['consolidated_url']}))"
+            if source.get("consolidated_url")
+            else ""
+        )
         lines.append(
-            f"- **[{source['id']}]({source['url']}):** {source['title']}, "
+            f"- **[{source['id']}]({source['url']}):** {source['title']}{consolidated}, "
             f"{source['pinpoint']}. Legal effect: `{source['legal_effect']}`. "
-            f"{source['timing']}"
+            f"{source['timing']} Verified on {source['verified_on']}."
         )
     lines.extend(
         [
@@ -408,6 +422,7 @@ def write_raas_outputs(pack: RaaSDealPack, out_dir: Path) -> dict[str, Path]:
             {
                 "schema": "legal-function-os.source-manifest.v1",
                 "verified_on": pack.verified_on,
+                "last_verified_on": pack.last_verified_on,
                 "source_digest": pack.source_digest,
                 "sources": list(pack.source_manifest),
             },
@@ -418,6 +433,16 @@ def write_raas_outputs(pack: RaaSDealPack, out_dir: Path) -> dict[str, Path]:
         encoding="utf-8",
     )
     return outputs
+
+
+def _verification_range(pack: RaaSDealPack) -> str:
+    """State the span of the per-source verification dates without overstating it."""
+    if pack.verified_on == pack.last_verified_on:
+        return f"{pack.verified_on}, every source below on that date"
+    return (
+        f"between {pack.verified_on} and {pack.last_verified_on}; "
+        "each source below shows its own date"
+    )
 
 
 def _gate_item_lines(items: list[dict[str, Any]]) -> list[str]:
