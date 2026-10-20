@@ -34,6 +34,14 @@ REQUIRED_FACTS = (
     "requested_deviations",
     "business_owner",
 )
+# Plain-language labels for the intake form. The keys stay the contract.
+REQUIRED_FACT_LABELS = {
+    "counterparty": "Counterparty (the customer's legal name)",
+    "annual_contract_value_eur": "Annual contract value in EUR",
+    "signature_target_date": "Target signature date",
+    "requested_deviations": "Changes the customer asked for",
+    "business_owner": "Business owner on your side",
+}
 DELIVERABLE_SECTIONS = (
     "executive_summary",
     "issue_and_deviation_list",
@@ -43,6 +51,23 @@ DELIVERABLE_SECTIONS = (
     "approval_record",
 )
 SYSTEM_ACTOR_ID = "system:supervised-agent"
+
+
+def required_fact_checklist(facts: dict[str, str]) -> list[dict[str, Any]]:
+    """The five required facts with their state, in the order the intake asks for them.
+
+    The same blank test as the ``intake_complete`` gate, so the form and the gate agree.
+    """
+
+    return [
+        {
+            "key": key,
+            "label": REQUIRED_FACT_LABELS[key],
+            "value": facts.get(key, ""),
+            "present": bool(facts.get(key, "").strip()),
+        }
+        for key in REQUIRED_FACTS
+    ]
 
 
 class Actor(BaseModel):
