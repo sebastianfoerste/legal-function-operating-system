@@ -133,7 +133,7 @@ async function command(name, args) {
 // One form is open at a time. Fields: {name, label, kind: text|textarea|checkbox|select|checks,
 // min, required, hint, value, options: [[value, label]]}. Nothing is sent until every field passes.
 let openForm = null;
-function closeForm() { if (!openForm) return; const {host, trigger} = openForm; openForm = null; host.replaceChildren(); if (host.dataset.hideEmpty) host.closest("tr").hidden = true; if (trigger && trigger.isConnected) trigger.focus(); }
+function closeForm() { if (!openForm) return; const {host, trigger} = openForm; openForm = null; host.replaceChildren(); if (host.dataset.hideEmpty) host.closest("tr").hidden = true; if (trigger && trigger.isConnected) { trigger.setAttribute("aria-expanded", "false"); trigger.focus(); } }
 function field(spec, id) {
   const hintId = id + "-hint", errorId = id + "-error";
   const describedBy = [spec.hint ? hintId : null, errorId].filter(Boolean).join(" ");
@@ -199,7 +199,11 @@ function showForm(host, trigger, spec) {
     }
     await spec.onsubmit(values);
   });
+  // A field with a hidden(form) test is shown only when it applies (progressive disclosure).
+  const toggle = () => { for (const f of fields) if (f.hidden) form.querySelector("[data-field='" + f.name + "']").hidden = f.hidden(form); };
+  form.addEventListener("change", toggle);
   host.replaceChildren(form);
+  toggle();
   if (host.dataset.hideEmpty) host.closest("tr").hidden = false;
   openForm = {host, trigger};
   const first = form.querySelector("input,select,textarea"); if (first) first.focus();
