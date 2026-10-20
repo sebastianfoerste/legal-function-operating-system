@@ -138,6 +138,17 @@ rules in this package and reports through the outcome control tower's event ledg
 It is ready for a supervised trial with synthetic matters; see
 [`supervised-agent/docs/pilot/CASE_STUDY.md`](../supervised-agent/docs/pilot/CASE_STUDY.md).
 
+The pilot's review room (`/pilot` on 127.0.0.1) takes every decision in an inline
+form that lists what is missing before anything is sent; the server's gates stay the
+authority. Opening a synthetic matter shows the five required facts first, so a first
+intake can be complete. Requesters see a plain stage, their next step and a note of
+what is withheld; reviewers see the playbook's standard and fallback wording beside
+each proposed change. The page uses the shared design tokens in
+`src/legal_function_os/design_tokens.py` (light and dark) and stacks the changes table
+on narrow screens. The reasons and the research behind these choices are in
+[`docs/research/adaptation-plan.md`](research/adaptation-plan.md) and the
+[architecture decision records](adr/README.md).
+
 ## Run from a clone
 
 ```bash
