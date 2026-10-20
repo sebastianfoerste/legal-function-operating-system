@@ -140,7 +140,7 @@ def render_portal(portal: dict[str, Any], output: Path) -> Path:
         for item in portal["resources"]
     )
     document = f"""<!doctype html>
-<html>
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <title>Legal Function Knowledge Portal</title>
