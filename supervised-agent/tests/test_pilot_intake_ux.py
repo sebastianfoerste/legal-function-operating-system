@@ -5,6 +5,7 @@ import pytest
 from src.pilot.api import PilotApi
 from src.pilot.models import REQUIRED_FACTS, required_fact_checklist
 from src.pilot.requester_status import REQUESTER_STAGES, requester_status
+from src.pilot.review_room import REVIEW_ROOM_HTML
 from src.pilot.state_machine import TRANSITIONS
 from tests.pilot_support import OWNER, REQUESTER, make_service, run_until
 
@@ -117,3 +118,15 @@ def test_each_change_shows_the_playbook_wording_it_was_measured_against(tmp_path
         position = change["playbook_position"]
         assert position["rule_id"] == change["rule_id"]
         assert position["standard_position"] and position["fallback_position"]
+
+
+def test_review_room_takes_decisions_in_labelled_inline_forms() -> None:
+    assert "window.prompt" not in REVIEW_ROOM_HTML and "window.confirm" not in REVIEW_ROOM_HTML
+    assert 'aria-live="polite"' in REVIEW_ROOM_HTML and 'aria-label="Matters"' in REVIEW_ROOM_HTML
+    for control in ("assignee", "anchor", "severity", "comment-body", "actor", "effort"):
+        assert f'for: "{control}"' in REVIEW_ROOM_HTML or f'for="{control}"' in REVIEW_ROOM_HTML
+    assert (
+        "There is a problem" in REVIEW_ROOM_HTML
+        and "Evidence cited in this thread" in REVIEW_ROOM_HTML
+    )
+    assert "/*TOKENS*/" not in REVIEW_ROOM_HTML and "--on-accent" in REVIEW_ROOM_HTML
