@@ -116,8 +116,9 @@ Repository discovery (Observed, 2026-10-20):
 ## Products
 
 65 products and projects are in the matrix: 17 direct, 33 adjacent and 15 pattern donors.
-Four rows (Brightflag, Onit, HighQ and GitHub pull request reviews) were not found in any
-search; they carry evidence `unknown` and no capability data, so 61 rows hold data.
+Four rows hold no capability data and carry evidence `unknown`, so 61 rows hold data.
+Brightflag, Onit and HighQ were not found in any search. GitHub pull request reviews was
+not researched this run, because no source for it was reachable.
 These are the findings that matter for this repository.
 
 ### Direct competitors

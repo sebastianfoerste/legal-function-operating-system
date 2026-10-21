@@ -232,7 +232,7 @@ a verdict, and the file the verdict would change.
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Triage queue shows state and version only; no owner or routing reason in the list | Observed | `baseline/room-owner-triage-1280.png` | Adapt, specced with F10 (from H3): queue and approval tier on each list entry |
+| Triage queue shows state and version only; no owner or routing reason in the list | Observed | `baseline/room-owner-triage-1280.png` | Adapt, not yet specced (from H3): queue and approval tier on each list entry. F10 covers only the triage verbs; this would be a separate small item |
 
 ### Approvals
 
