@@ -45,6 +45,7 @@ from src.pilot.models import (
     ParentRouting,
     PilotIntake,
     Role,
+    required_fact_checklist,
 )
 from src.pilot.onboarding import missing_tasks
 from src.pilot.parent_bridge import (
@@ -54,6 +55,7 @@ from src.pilot.parent_bridge import (
     tier_covers,
 )
 from src.pilot.policy import is_substantive_change
+from src.pilot.requester_status import requester_status
 from src.pilot.state_machine import (
     EVIDENCE,
     REASSESSMENT_SOURCES,
@@ -482,7 +484,9 @@ class PilotService:
             coverage_problems=problems,
             document_readable=index is not None,
             document_problem=document_problem,
-            missing_facts=[key for key in REQUIRED_FACTS if not intake.facts.get(key, "").strip()],
+            missing_facts=[
+                item["key"] for item in required_fact_checklist(intake.facts) if not item["present"]
+            ],
         )
         system_ms = round((time.perf_counter() - started) * 1000, 3)
         connection.execute(
@@ -2142,14 +2146,19 @@ class PilotService:
                 "actor": ctx.actor.model_dump(),
                 "matter": matter,
                 "intake": ctx.body.intake.model_dump(mode="json"),
+                "required_facts": required_fact_checklist(ctx.body.intake.facts),
                 "external_delivery_allowed": False,
             }
             if ctx.actor.role == "business_requester":
                 # Requesters see status, questions addressed to them and the approved package.
-                base["clarifications"] = [
-                    c.model_dump() for c in comments if c.addressed_to == "business_requester"
-                ]
+                clarifications = [c for c in comments if c.addressed_to == "business_requester"]
+                base["clarifications"] = [c.model_dump() for c in clarifications]
                 base["delivery"] = [m for m in manifests if m["kind"] == "delivery_package"]
+                base["requester_status"] = requester_status(
+                    ctx.matter["state"],
+                    closed_outcome=ctx.matter["closed_outcome"],
+                    open_questions=sum(c.state == "open" for c in clarifications),
+                )
                 base["view"] = "requester_summary"
                 return base
             changes = self._changes(connection, matter_id, ctx.version)
@@ -2215,7 +2224,10 @@ class PilotService:
                     "findings": [
                         f.model_dump() for f in self._findings(connection, matter_id, ctx.version)
                     ],
-                    "changes": [c.model_dump() for c in changes],
+                    "changes": [
+                        {**c.model_dump(), "playbook_position": self._playbook_position(ctx, c)}
+                        for c in changes
+                    ],
                     "source_support": [self._source_support(ctx, c) for c in changes],
                     "comments": [{**c.model_dump(), "blocking": c.blocking} for c in comments],
                     "assignments": assigned,
@@ -2242,6 +2254,21 @@ class PilotService:
                 }
             )
             return base
+
+    @staticmethod
+    def _playbook_position(ctx: _Ctx, change: StoredChange) -> dict[str, str] | None:
+        """The playbook's own wording for the rule behind a change; nothing is generated."""
+
+        rule = ctx.body.playbook.rule(change.rule_id or "")
+        if rule is None:
+            return None
+        return {
+            "rule_id": rule.rule_id,
+            "topic": rule.topic,
+            "standard_position": rule.standard_position,
+            "fallback_position": rule.fallback_position,
+            "rationale": rule.rationale,
+        }
 
     def history(self, actor_id: str, matter_id: str) -> dict[str, Any]:
         """Every version, decision and event of a matter, for recovery and audit."""

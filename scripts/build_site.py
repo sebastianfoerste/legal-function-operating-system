@@ -10,9 +10,14 @@ from __future__ import annotations
 
 import argparse
 import shutil
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT / "src"))
+
+from legal_function_os.design_tokens import TOKENS_CSS  # noqa: E402
+
 SITE = ROOT / "site"
 REPO = "https://github.com/sebastianfoerste/legal-function-operating-system"
 BLOB = f"{REPO}/blob/main"
@@ -92,20 +97,10 @@ PAGE = """<!doctype html>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legal Function Operating System</title>
 <style>
-:root {{
-  --bg:#fbf9f7; --surface:#ffffff; --ink:#211d1c; --muted:#6e6462;
-  --line:#e2dad4; --accent:#8a2d2b; --accent-soft:#f2e4e2;
-}}
-@media (prefers-color-scheme: dark) {{
-  :root {{
-    --bg:#191413; --surface:#221c1a; --ink:#ede7e4; --muted:#a89c98;
-    --line:#38302d; --accent:#d97d75; --accent-soft:#3a2523;
-  }}
-}}
-* {{ box-sizing:border-box; }}
+{tokens}* {{ box-sizing:border-box; }}
 body {{
   margin:0; background:var(--bg); color:var(--ink);
-  font:16px/1.6 "Public Sans", -apple-system, "Segoe UI", sans-serif;
+  font:16px/1.6 var(--font);
   padding:3.5rem 1.25rem 5rem;
 }}
 main {{ max-width:56rem; margin:0 auto; }}
@@ -113,7 +108,7 @@ main {{ max-width:56rem; margin:0 auto; }}
   font-size:.72rem; text-transform:uppercase; letter-spacing:.14em;
   color:var(--accent); font-weight:700; margin-bottom:.6rem;
 }}
-h1 {{ font:600 2.4rem/1.15 Georgia, serif; margin:0 0 .75rem; text-wrap:balance; }}
+h1 {{ font:600 2.4rem/1.15 var(--font-head); margin:0 0 .75rem; text-wrap:balance; }}
 .lede {{ color:var(--muted); max-width:42rem; margin:0 0 1.5rem; font-size:1.05rem; }}
 .note {{
   border-left:3px solid var(--accent); background:var(--accent-soft);
@@ -140,11 +135,11 @@ footer {{
 }}
 footer a {{ color:var(--accent); }}
 code {{
-  font-family:"IBM Plex Mono", ui-monospace, "SF Mono", monospace;
+  font-family:var(--font-mono);
   font-size:.87em; background:var(--accent-soft); color:var(--ink);
   padding:.1em .35em; border-radius:3px;
 }}
-:focus-visible {{ outline:2px solid var(--accent); outline-offset:3px; }}
+:focus-visible {{ outline:3px solid var(--focus); outline-offset:3px; }}
 </style>
 </head>
 <body>
@@ -194,7 +189,7 @@ def build(site: Path = SITE) -> None:
         for title, href, blurb, kind in CARDS
     )
     (site / "index.html").write_text(
-        PAGE.format(cards=cards, repo=REPO), encoding="utf-8"
+        PAGE.format(cards=cards, repo=REPO, tokens=TOKENS_CSS), encoding="utf-8"
     )
     (site / ".nojekyll").write_text("", encoding="utf-8")
 
