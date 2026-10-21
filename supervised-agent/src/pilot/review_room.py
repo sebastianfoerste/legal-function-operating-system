@@ -234,8 +234,9 @@ async function loadList() {
   }
 }
 async function loadMatter(id) {
-  closeForm();
+  // Set the matter first, so a closing intake form knows a matter is on its way.
   state.matterId = id;
+  closeForm();
   const {status, payload} = await api("GET", "/matters/" + encodeURIComponent(id));
   if (status !== 200) { $("matter").replaceChildren(); flash("error", payload.message); return; }
   state.view = payload; render(); await loadList();
@@ -250,7 +251,7 @@ function renderIntake(scenario, trigger) {
   const fields = scenario.required_facts.map((f) => ({name: f.key, label: f.label, kind: f.key === "requested_deviations" ? "textarea" : "text", value: f.value,
     hint: f.present ? "Pre-filled from the synthetic scenario. Change it if it is wrong." : "Missing in the synthetic scenario. Legal refuses a request without it."}));
   showForm(host, trigger, {title: "Required facts (5)", submit: "Open the matter", fields,
-    onclose: () => { if (!state.view) $("matter").replaceChildren(h("p", {class: "muted"}, "No matter was opened. Choose a scenario or a matter.")); },
+    onclose: () => { if (!state.view && !state.matterId) $("matter").replaceChildren(h("p", {class: "muted"}, "No matter was opened. Choose a scenario or a matter.")); },
     context: h("p", {class: "muted"}, "Legal checks these five facts before triage. " + (missing.length ? missing.length + " of 5 are still empty." : "All five are filled in.") + " The customer's draft and the instructions come from the synthetic scenario."),
     onsubmit: async (values) => {
       const {status, payload: made} = await api("POST", "/matters", {scenario_id: scenario.scenario_id, matter_id: "PM-UI-" + Date.now().toString(36).toUpperCase(), facts: values, effort_minutes: effort()});

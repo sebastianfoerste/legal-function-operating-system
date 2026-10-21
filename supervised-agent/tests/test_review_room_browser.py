@@ -89,6 +89,19 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.paneAfterCancel = await page.locator("#matter").innerText();
   out.focusAfterCancel = (await focused(page)).text;
 
+  // Opening the matter: while its GET is slow, the pane must not claim nothing was opened.
+  await scenario.click();
+  await page.getByLabel("Business owner on your side").fill("Synthetic Account Executive G");
+  await page.route(/\/pilot\/api\/matters\/PM-UI-/, async (route) => {
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Open the matter" }).click();
+  await page.waitForTimeout(500);
+  out.paneDuringLoad = await page.locator("#matter").innerText();
+  await page.waitForTimeout(2000);
+  out.flashAfterOpen = await page.locator("#flash").innerText();
+
   out.errors = errors;
   console.log(JSON.stringify(out));
   await browser.close();
@@ -159,3 +172,5 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
     assert (out["otherBefore"], out["otherAfter"]) == (False, True)
     assert "No matter was opened" in out["paneAfterCancel"]
     assert out["focusAfterCancel"] == "Scenario 2: specialist input and revision"
+    assert "No matter was opened" not in out["paneDuringLoad"]
+    assert "opened" in out["flashAfterOpen"]
