@@ -80,7 +80,7 @@ Sources: <https://help.lawvu.com/en/articles/6824391-conditional-intake-forms>,
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adopt | Forward-only conditions, if branching is added | Specced as F7 |
+  | Adopt | Forward-only conditions, if branching is added | Specced as F9 |
   | Adapt | A requester list of own matters with plain stages | `src/pilot/requester_status.py`, built |
   | Reject | An MCP write surface | Rule 4 |
 
@@ -124,7 +124,7 @@ All Claimed.
   | Verdict | Pattern | Where |
   | --- | --- | --- |
   | Adopt | Pass or fail per rule, each with a reference | Already present: source verification per change |
-  | Adapt | Dashboard drill-down | Specced as F6 |
+  | Adapt | Dashboard drill-down | Specced as F7 |
   | Reject | AI-authored playbooks without a lawyer's sign-off | — |
 
 ### 6. SpotDraft
@@ -141,7 +141,7 @@ All Claimed.
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | Render `rules.approval_chain` as a matrix of value band × risk × flags, with the matched path highlighted | `scripts/build_site.py` + `rules.py` (H8), specced |
+  | Adapt | Render `rules.approval_chain` as a matrix of value band × risk × flags, with the matched path highlighted | `scripts/build_site.py` + `rules.py` (F8, from H8), specced |
   | Adopt | A mandatory Else | Already true: the chain always ends with a human tier |
 
 ### 7. Linear Triage and Plane Intake
@@ -162,7 +162,7 @@ Sources:
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | Triage verbs as new pilot commands, each a hash-chained event; Duplicate and Snooze need new states | `state_machine.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (H3, specced, Effort L) |
+  | Adapt | Triage verbs as new pilot commands, each a hash-chained event; Duplicate and Snooze need new states | `state_machine.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (F10, from H3; specced, Effort L) |
   | Reject | Snooze that silently pauses an SLA | Pause needs a typed reason |
 
 ### 8. Wordsmith and Flank (channel intake)
@@ -182,7 +182,7 @@ All Claimed.
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Specced as F8 |
+  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Specced as F11 |
   | Reject | Posting back to the channel; invisible completion | Rule 4 and rule 1 |
 
 ## Design donors read in source (Observed)
@@ -202,11 +202,11 @@ All Claimed.
   - classification and principal per event;
   - a status legend.
 
-  This is the model for the H8 audit timeline, specced.
+  This is the model for the F6 audit timeline (from H8), specced.
   <https://github.com/temporalio/ui/blob/main/src/lib/types/events.ts>
 - **Evidence** (MIT): the BigValue tile has a title, a formatted value, a comparison with
-  `down_is_good` and a neutral range, and a sparkline. This is the model for the H6 KPI
-  tile, specced.
+  `down_is_good` and a neutral range, and a sparkline. This is the model for the F7 KPI
+  tile (from H6), specced.
   <https://github.com/evidence-dev/evidence/blob/main/core/src/user-components/tags/bigvalue/BigValue.svelte>
 - **Chatwoot** (MIT core; SLA in `enterprise/`):
   - heartbeat presence with a 20-second window;
@@ -226,13 +226,13 @@ a verdict, and the file the verdict would change.
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
 | Opening a scenario created a matter at once; a missing fact surfaced only as a refusal after submit | Observed | `baseline/room-requester-1280.png` | Adapt, built: the intake form with five required facts and an error summary, in `src/pilot/review_room.py` (after: `after/room-intake-form-1280.png`) |
-| Core request schema requires only `id` and `title`, with no branching | Observed (`contracts/legal-request.v1.schema.json`) | — | Adapt, specced (F7): a per-`type` question file and a static intake page that emits JSON for download only |
+| Core request schema requires only `id` and `title`, with no branching | Observed (`contracts/legal-request.v1.schema.json`) | — | Adapt, specced (F9): a per-`type` question file and a static intake page that emits JSON for download only |
 
 ### Triage
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Triage queue shows state and version only; no owner or routing reason in the list | Observed | `baseline/room-owner-triage-1280.png` | Adapt, specced (H3): queue and approval tier on each list entry |
+| Triage queue shows state and version only; no owner or routing reason in the list | Observed | `baseline/room-owner-triage-1280.png` | Adapt, specced with F10 (from H3): queue and approval tier on each list entry |
 
 ### Approvals
 
@@ -254,20 +254,20 @@ a verdict, and the file the verdict would change.
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| History in three `<details>` lists; chain status one line | Observed | `baseline/room-approver-1280.png` | Adapt, specced (H8): a grouped timeline per Temporal UI, with actor, classification and chain position |
+| History in three `<details>` lists; chain status one line | Observed | `baseline/room-approver-1280.png` | Adapt, specced (F6, from H8): a grouped timeline per Temporal UI, with actor, classification and chain position |
 | Export eligibility table clear; pass or fail shown by colour only | Observed | — | Adopt, built: ✓ and ✗ added |
 
 ### KPIs
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Control tower tiles (for example 87.5% response SLA attainment) show a value and a label; the snapshot time is one line for the whole page, and no tile shows a target or delta | Observed (`examples/legal-outcome-control-tower.html`) | `baseline/control-tower-1280.png` | Adapt, specced (H6): Evidence-style tile in `outcome_control_tower.py` |
+| Control tower tiles (for example 87.5% response SLA attainment) show a value and a label; the snapshot time is one line for the whole page, and no tile shows a target or delta | Observed (`examples/legal-outcome-control-tower.html`) | `baseline/control-tower-1280.png` | Adapt, specced (F7, from H6): Evidence-style tile in `outcome_control_tower.py` |
 
 ### Board pack and knowledge portal
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Board pack is Markdown and JSON only | Observed | — | Keep; a print stylesheet waits for the H5 migration |
+| Board pack is Markdown and JSON only | Observed | — | Keep; a print stylesheet is specced as D3 |
 | Portal abstains with "insufficient evidence" | Observed | `baseline/knowledge-portal-1280.png` | Keep |
 | Portal had no `lang` attribute (axe serious) | Observed | — | Fixed |
 

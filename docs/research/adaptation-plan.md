@@ -229,8 +229,27 @@ playbook position next to each change, and the evidence next to each resolution.
   - axe reports no violation on any review-room view at 1280px, in light or dark mode.
   - The page contains no `window.prompt`, `window.confirm`, `innerHTML` or `http(s)://`.
 - **Files.** `src/pilot/review_room.py`.
-- **Tests.** `test_review_room_takes_decisions_in_labelled_inline_forms` and the existing
-  page test.
+- **Tests.**
+  - `test_review_room_takes_decisions_in_labelled_inline_forms`,
+    `test_review_room_guards_the_cases_the_browser_test_covers` and the existing page test.
+  - `supervised-agent/tests/test_review_room_browser.py` drives the page in Chromium through
+    Node Playwright. It is skipped where Node, Playwright or Chromium is missing, as in CI.
+    It checks the zero-comment revision reason, error-summary focus and link, Escape and
+    `aria-expanded`, hidden form rows at 390px, the "another fact" field, and cancelling
+    the intake form.
+- **Manual browser check**, before a release or after changing the page. Serve a rehearsal
+  copy as in `supervised-agent/docs/pilot/RUNBOOK.md`, open `/pilot`, then:
+  1. As the requester, open scenario 2 and press "Open the matter" with the business owner
+     empty. An error summary takes focus, and its link focuses the field. Press Cancel: the
+     pane says no matter was opened, and focus returns to the scenario button.
+  2. Fill the business owner, open the matter and submit it. The status reads "Received by
+     legal" on version 1.
+  3. As the matter owner, complete triage and assign the specialist and an approver. Start
+     the review. "request revision" is disabled and says a comment must exist first.
+  4. Accept a change without ticking the confirmation (refused in the form), then with it
+     (saved). Open "withdraw matter" and press Escape: focus returns to the button.
+  5. At 390px, check that each change is one block, with no empty boxes between changes
+     and no horizontal scroll. Repeat one view in dark mode.
 - **Risk.** Medium for behaviour, since the commands are the same but the input paths are
   new. It was walked through in a browser: open, submit, assign, start review, accept with
   and without confirmation, escape, and resolve.
@@ -366,7 +385,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4; both specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
-| H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; specced as F7 | Evidence (Observed); LawVu, Brightflag (Claimed or unknown) |
+| H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; specced as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
 | H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **parked**: it bundles a 44 MB .NET binary (ADR 0004, Proposed) | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
 | H8. Visual governance views | **Confirmed, specced** as F6 and F8 | Temporal UI (Observed); SpotDraft (Claimed) |
 
@@ -430,3 +449,10 @@ playbook position next to each change, and the evidence next to each resolution.
 9. **PyPI publication.** Still not published. Not touched here.
 10. **Visual migration of committed reviewer artifacts** (D4). It changes the look of
     published pages.
+11. **Candidates found outside the session's repository scope.** The GitHub topic
+    listings came from a search tool that reached beyond the attached repository (see the
+    landscape's Repository discovery). No matrix row depends on it; keep or drop the
+    `legal-operations` topic count that does.
+12. **German coverage.** Only one purely German search ran. A follow-up run should add
+    German queries (for example "Legal Request Management Rechtsabteilung", "Vertragsprüfung
+    Playbook", "Mandatsannahme Software Unternehmensjurist") once vendor sites are reachable.

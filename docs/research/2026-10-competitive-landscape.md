@@ -31,10 +31,15 @@ Companion files:
 - **Clean room.** No accounts, trials, demo bookings, forms, chat widgets or product input.
   No competitor asset, wording or dataset was copied. Screenshots of this repository's own
   surfaces stay in the git-ignored `research/_captures/` folder.
+- **Repository scope.** Searches across GitHub must use only the fallbacks the brief
+  names: `git clone --depth 1`, raw.githubusercontent.com, or attaching a repository
+  read-only. This run broke that once; see Repository discovery below.
 - **Quotes.** At most one phrase of 10 words or fewer per source. Reviews are paraphrased,
   without reviewer identities.
 - **Coverage.**
-  - 43 vendor searches (38 English, 2 German, 2 French, 1 mixed) and one preflight search.
+  - 43 vendor searches (39 English, 1 German, 1 mixed German and English, 2 French) and
+    one English preflight search. German coverage is thin for a DSGVO-focused product;
+    more German queries are listed as a follow-up in the adaptation plan.
   - 17 open-source repositories cloned and read, with no code run.
   - Five curated lists from the repository owner.
   - Review-mining for Ironclad, Checkbox, Juro, LawVu, Streamline AI and Agiloft.
@@ -96,8 +101,10 @@ Repository discovery (Observed, 2026-10-20):
 - GitHub topics `legal-operations`, `legal-tech` and `contract-management` returned 403
   through the REST search API. The research agent then listed them through the GitHub MCP
   search tool. That tool reached beyond this session's repository scope, which the session
-  rules do not allow. The results were used only to name candidates and are logged here
-  for transparency.
+  rules do not allow, and it is not one of the fallbacks the brief names. The access was
+  read-only. No matrix row comes from it; only the `legal-operations` count in the next
+  bullet relies on it. Whether to keep that count is an owner decision, and later runs use
+  only the named fallbacks.
 - `legal-operations` has 22 repositories, all small, which confirms the brief's
   observation: there is little open-source competition for a deterministic legal front
   door.
@@ -109,6 +116,8 @@ Repository discovery (Observed, 2026-10-20):
 ## Products
 
 65 products and projects are in the matrix: 17 direct, 33 adjacent and 15 pattern donors.
+Four rows (Brightflag, Onit, HighQ and GitHub pull request reviews) were not found in any
+search; they carry evidence `unknown` and no capability data, so 61 rows hold data.
 These are the findings that matter for this repository.
 
 ### Direct competitors
