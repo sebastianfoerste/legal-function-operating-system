@@ -68,7 +68,7 @@ details{margin:6px 0}summary{cursor:pointer;color:var(--accent)}
 @media(max-width:820px){main{grid-template-columns:1fr}nav{border-right:0;border-bottom:1px solid var(--line)}}
 @media(max-width:600px){#pane{padding:12px}header,.notice{padding-left:12px;padding-right:12px}
 table.changes,table.changes tbody,table.changes tr,table.changes td{display:block;width:100%}
-table.changes tr.head{display:none}table.changes tr{border:1px solid var(--line);border-radius:8px;margin:0 0 10px}
+table.changes tr.head,table.changes tr[hidden]{display:none}table.changes tr{border:1px solid var(--line);border-radius:8px;margin:0 0 10px}
 table.changes td{border:0;border-top:1px solid var(--line)}table.changes td:first-child{border-top:0}
 table.changes td[data-label]::before{content:attr(data-label);display:block;font-weight:700;font-size:12px;color:var(--muted)}
 dl.facts{grid-template-columns:1fr}dl.facts dd{margin-bottom:6px}}
@@ -133,7 +133,7 @@ async function command(name, args) {
 // One form is open at a time. Fields: {name, label, kind: text|textarea|checkbox|select|checks,
 // min, required, hint, value, options: [[value, label]]}. Nothing is sent until every field passes.
 let openForm = null;
-function closeForm() { if (!openForm) return; const {host, trigger} = openForm; openForm = null; host.replaceChildren(); if (host.dataset.hideEmpty) host.closest("tr").hidden = true; if (trigger && trigger.isConnected) { trigger.setAttribute("aria-expanded", "false"); trigger.focus(); } }
+function closeForm() { if (!openForm) return; const {host, trigger, onclose} = openForm; openForm = null; host.replaceChildren(); if (host.dataset.hideEmpty) host.closest("tr").hidden = true; if (onclose) onclose(); if (trigger && trigger.isConnected) { trigger.setAttribute("aria-expanded", "false"); trigger.focus(); } }
 function field(spec, id) {
   const hintId = id + "-hint", errorId = id + "-error";
   const describedBy = [spec.hint ? hintId : null, errorId].filter(Boolean).join(" ");
@@ -144,7 +144,7 @@ function field(spec, id) {
     return h("div", {"data-field": spec.name}, error, h("label", {class: "inline-label"}, h("input", {type: "checkbox", id, name: spec.name, "aria-describedby": describedBy}), " " + spec.label), hint);
   }
   if (spec.kind === "checks") {
-    return h("fieldset", {"data-field": spec.name, id, "aria-describedby": describedBy, style: "border:0;padding:0;margin:8px 0"}, h("legend", {class: "label"}, spec.label), hint, error,
+    return h("fieldset", {"data-field": spec.name, id, tabindex: "-1", "aria-describedby": describedBy, style: "border:0;padding:0;margin:8px 0"}, h("legend", {class: "label"}, spec.label), hint, error,
       spec.options.map(([value, label], i) => h("div", null, h("label", {class: "inline-label"}, h("input", {type: "checkbox", name: spec.name, value, id: id + "-" + i}), " " + label))));
   }
   const control = spec.kind === "select"
@@ -193,7 +193,7 @@ function showForm(host, trigger, spec) {
     if (spec.check) { const extra = spec.check(values); if (extra) problems.push([fields[0], extra]); }
     if (problems.length) {
       summary.hidden = false;
-      summary.replaceChildren(h("h3", null, "There is a problem"), h("ul", null, problems.map(([f, message]) => h("li", null, h("a", {href: "#" + f.id, onclick: (e) => { e.preventDefault(); const target = $(f.id); const focusable = target.matches("input,select,textarea") ? target : target.querySelector("input"); focusable.focus(); }}, message)))));
+      summary.replaceChildren(h("h3", null, "There is a problem"), h("ul", null, problems.map(([f, message]) => h("li", null, h("a", {href: "#" + f.id, onclick: (e) => { e.preventDefault(); const target = $(f.id); const focusable = target.matches("input,select,textarea") ? target : target.querySelector("input"); (focusable || target).focus(); }}, message)))));
       summary.focus();
       return;
     }
@@ -205,7 +205,7 @@ function showForm(host, trigger, spec) {
   host.replaceChildren(form);
   toggle();
   if (host.dataset.hideEmpty) host.closest("tr").hidden = false;
-  openForm = {host, trigger};
+  openForm = {host, trigger, onclose: spec.onclose};
   const first = form.querySelector("input,select,textarea"); if (first) first.focus();
 }
 // A button that opens a form in `host`, placed right after the button by default.
@@ -230,7 +230,7 @@ async function loadList() {
   const actor = state.actors.find((a) => a.actor_id === state.actor);
   if (actor && actor.role === "business_requester") {
     create.append(h("h2", null, "Open a synthetic matter"));
-    for (const scenario of state.scenarios) create.append(h("button", {class: "matter", onclick: () => renderIntake(scenario)}, scenario.title));
+    for (const scenario of state.scenarios) { const button = h("button", {class: "matter", onclick: () => renderIntake(scenario, button)}, scenario.title); create.append(button); }
   }
 }
 async function loadMatter(id) {
@@ -242,14 +242,15 @@ async function loadMatter(id) {
 }
 // The intake form: the five required facts, pre-filled from the scenario, checked before the
 // matter is opened so the first version is complete (rehearsal step B02).
-function renderIntake(scenario) {
+function renderIntake(scenario, trigger) {
   closeForm(); state.matterId = ""; state.view = null; flash("", "");
   const host = h("div");
   $("matter").replaceChildren(h("h2", {class: "title", tabindex: "-1", id: "intake-title"}, "New request: " + scenario.title), host);
   const missing = scenario.required_facts.filter((f) => !f.present);
   const fields = scenario.required_facts.map((f) => ({name: f.key, label: f.label, kind: f.key === "requested_deviations" ? "textarea" : "text", value: f.value,
     hint: f.present ? "Pre-filled from the synthetic scenario. Change it if it is wrong." : "Missing in the synthetic scenario. Legal refuses a request without it."}));
-  showForm(host, null, {title: "Required facts (5)", submit: "Open the matter", fields,
+  showForm(host, trigger, {title: "Required facts (5)", submit: "Open the matter", fields,
+    onclose: () => { if (!state.view) $("matter").replaceChildren(h("p", {class: "muted"}, "No matter was opened. Choose a scenario or a matter.")); },
     context: h("p", {class: "muted"}, "Legal checks these five facts before triage. " + (missing.length ? missing.length + " of 5 are still empty." : "All five are filled in.") + " The customer's draft and the instructions come from the synthetic scenario."),
     onsubmit: async (values) => {
       const {status, payload: made} = await api("POST", "/matters", {scenario_id: scenario.scenario_id, matter_id: "PM-UI-" + Date.now().toString(36).toUpperCase(), facts: values, effort_minutes: effort()});
@@ -316,12 +317,13 @@ const CONFIRM = "I checked that the cited source supports this wording for this 
 const NOTE_COMMANDS = {approve: ["Approval note", 30], submit_revision: ["Revision note", 20], accept_delivery: ["Acceptance note", 20]};
 function transitionControl(item, role) {
   const allowed = item.roles.includes(role), label = words(item.command) + " → " + words(item.target);
-  if (!allowed) {
-    const id = "why-" + (++uid);
-    return h("span", null, h("button", {class: "act", disabled: true, "aria-describedby": id}, label), h("span", {class: "reason", id}, "Needs role: " + item.roles.map(words).join(" or ")));
-  }
+  // A control that cannot be used says why, in visible text tied to the button.
+  const blocked = (reason) => { const id = "why-" + (++uid); return h("span", null, h("button", {class: "act", disabled: true, "aria-describedby": id}, label), h("span", {class: "reason", id}, reason)); };
+  if (!allowed) return blocked("Needs role: " + item.roles.map(words).join(" or "));
   if (item.command === "request_revision") {
     const open = state.view.comments.filter((c) => c.state === "open");
+    // The server refuses a revision request that names no open comment.
+    if (!open.length) return blocked("Add a comment first: a revision request must name an open comment.");
     return formButton(label, {title: "Request a revision", submit: "Request the revision", fields: [
       {name: "comment_ids", label: "Open comments this revision concerns", kind: "checks", options: open.map((c) => [c.comment_id, c.comment_id + ": " + c.body.slice(0, 80)])},
       note("Reason for the revision", 20)], onsubmit: (v) => command("request_revision", {comment_ids: v.comment_ids, note: v.note})}, {primary: true});

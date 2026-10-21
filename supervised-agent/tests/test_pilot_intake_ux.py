@@ -130,3 +130,11 @@ def test_review_room_takes_decisions_in_labelled_inline_forms() -> None:
         and "Evidence cited in this thread" in REVIEW_ROOM_HTML
     )
     assert "/*TOKENS*/" not in REVIEW_ROOM_HTML and "--on-accent" in REVIEW_ROOM_HTML
+
+
+def test_review_room_guards_the_cases_the_browser_test_covers() -> None:
+    # Static counterparts of tests/test_review_room_browser.py, for runs without a browser.
+    assert "table.changes tr[hidden]{display:none}" in REVIEW_ROOM_HTML
+    assert "a revision request must name an open comment" in REVIEW_ROOM_HTML
+    assert "(focusable || target).focus()" in REVIEW_ROOM_HTML
+    assert "No matter was opened" in REVIEW_ROOM_HTML
