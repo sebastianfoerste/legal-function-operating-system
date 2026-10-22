@@ -24,6 +24,10 @@ All notable changes to this project are recorded here. The format follows
 - `pyproject.toml` carries classifiers, project URLs and keywords, and reads the version from the package.
 - The README was rewritten (#16) and the case study refreshed (#12).
 
+### Removed
+
+- The weekly repository-traffic snapshot workflow added in 0.3.0.
+
 ### Fixed
 
 - A mistyped value band such as `">1M"` was read as "no value", which turned a board-attention matter into a low-risk, reviewer-only one. It is now rejected with a suggestion.
