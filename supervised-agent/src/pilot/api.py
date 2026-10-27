@@ -17,7 +17,7 @@ from pydantic import ValidationError
 
 from src.export_gate import ExportBlockedError
 from src.pilot.fixtures import build_synthetic_msa
-from src.pilot.models import PilotIntake
+from src.pilot.models import REQUIRED_FACTS, PilotIntake, required_fact_checklist
 from src.pilot.onboarding import ONBOARDING_TASKS
 from src.pilot.review_room import REVIEW_ROOM_HTML
 from src.pilot.scenario_runner import load_scenario, scenario_paths
@@ -86,7 +86,12 @@ class PilotApi:
                         for role, tasks in ONBOARDING_TASKS.items()
                     },
                     "scenarios": [
-                        {"scenario_id": s["scenario_id"], "title": s["title"]}
+                        {
+                            "scenario_id": s["scenario_id"],
+                            "title": s["title"],
+                            # Pre-fills the intake form, so a gap shows before submission.
+                            "required_facts": required_fact_checklist(s["intake"].get("facts", {})),
+                        }
                         for s in map(load_scenario, scenario_paths())
                     ],
                 },
@@ -128,7 +133,17 @@ class PilotApi:
             )
             if scenario is None:
                 raise PilotError(f"unknown scenario {scenario_id}")
-            intake = PilotIntake.model_validate(scenario["intake"])
+            data = scenario["intake"]
+            facts = body.get("facts")
+            if facts is not None:
+                # The intake form may complete or correct the scenario's required facts
+                # before the first version exists; nothing else is taken from the page.
+                if not isinstance(facts, dict) or not all(
+                    key in REQUIRED_FACTS and isinstance(value, str) for key, value in facts.items()
+                ):
+                    raise PilotError("facts must map required fact names to text")
+                data = {**data, "facts": {**data.get("facts", {}), **facts}}
+            intake = PilotIntake.model_validate(data)
             name, document = (
                 scenario["document_name"],
                 build_synthetic_msa(scenario["document_variant"]),

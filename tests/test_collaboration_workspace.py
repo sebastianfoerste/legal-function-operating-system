@@ -98,6 +98,7 @@ class CollaborationWorkspaceTests(unittest.TestCase):
             self.assertIn("Search approved passages", content)
             self.assertIn("Insufficient evidence in approved resources", content)
             self.assertNotIn("https://", content)
+            self.assertIn('<html lang="en">', content)
         finally:
             output.unlink(missing_ok=True)
 

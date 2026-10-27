@@ -166,3 +166,124 @@ products instead.
 - `gate-oc-audit`: <https://github.com/Constellation-Labs/gate-oc-audit>
 - `Aegis`: <https://github.com/Justin0504/Aegis>
 - `corsair`: <https://github.com/grcorsair/corsair>
+
+## Re-check of Rounds 1 and 2
+
+Date: 2026-10-20
+
+- All 13 GitHub repositories named in Rounds 1 and 2 still resolve. This was checked
+  with `git ls-remote` against each repository's `HEAD`. Their activity and star counts
+  were not re-measured: the GitHub web and search pages returned 403 from the research
+  environment.
+- The app-store and marketplace searches were not repeated. Vendor and store hosts did
+  not resolve from the environment, so the Round 1 and Round 2 store findings are carried
+  forward unverified.
+- One Round 2 implication needs an update. The hash-chain technique is still not white
+  space, and since 2026-05-11 a direct neighbour ships through the same plugin channel:
+  Anthropic's `claude-for-legal` (Apache-2.0). It has a matter-intake skill that blocks
+  on an open conflicts check, an NDA triager and an escalation router. A search of its
+  source finds no hash chain and no export gate (Observed by grep of a clone). The
+  differentiator stated in Round 2 therefore still holds.
+
+## Round 3: Review Room And Supervision UX
+
+Date: 2026-10-20
+
+Purpose: decide which review-room and supervision patterns to adapt into the pilot's
+review room (`src/pilot/review_room.py`). The front door, triage, operations and
+reporting landscape is in `docs/research/2026-10-competitive-landscape.md` at the
+repository root.
+
+Evidence tags:
+
+- **Observed**: source code read in a clone.
+- **Claimed**: a search snippet only, because vendor sites did not resolve.
+- **Inferred**: reasoning.
+
+### Search Surfaces
+
+- 43 web searches in English, German and French. The vendor-facing searches for review,
+  playbook, approval and presence patterns are queries 7, 8 and 15–18 and 27–29 in the
+  root landscape's search log.
+- `git clone --depth 1` of the review and supervision projects listed below, read
+  without running any code.
+- Vendor documentation sites, EUR-Lex and the GitHub search pages could not be reached.
+  That is a coverage boundary, not a finding.
+
+### GitHub Signals
+
+- **`anthropics/claude-for-legal`** (Apache-2.0, Observed):
+  - The NDA triager returns GREEN only against playbook positions an attorney has
+    reviewed; otherwise it falls back to YELLOW.
+  - The playbook monitor proposes a change after 5 deviations within 12 months and
+    writes only after the lawyer accepts an exact diff.
+  - The escalation router drafts and never sends.
+- **`open-legal-products/mike`** (AGPL, pattern only, Observed):
+  - every write needs approval of its exact contents;
+  - answers are single-use;
+  - permissions are re-checked before execution;
+  - writes happen at most once.
+
+  This is the closest match to this repository's version-bound approvals and
+  `StaleSubmissionError`.
+- **`superdoc-dev/superdoc`** (AGPL, pattern only, Observed): attributed tracked
+  changes with author and date, accepted or rejected by ID, with an expected-revision
+  guard.
+- **`JSv4/Python-Redlines`** (MIT, Observed): native Word tracked changes. Its engine
+  wheel bundles a 44 MB .NET binary, so it is not adopted without an owner decision.
+- **`hypothesis/client`** (BSD-2-Clause, Observed): anchors fall back from position to
+  quote, and an annotation that cannot be anchored becomes an orphan. That matches the
+  pilot's `anchor_status: orphaned` comments.
+- **`temporalio/ui`** and **`langfuse/langfuse`** (MIT; Langfuse's viewer is
+  enterprise-licensed; Observed):
+  - Temporal UI groups events and shows compact, feed and JSON views with a legend.
+  - Langfuse writes audit events as change or access with an outcome, and soft-locks a
+    review item for 5 minutes.
+- **`alphagov/govuk-frontend`** (MIT code, Observed): an error summary that takes focus
+  and links to each field, per-field errors tied by `aria-describedby`, and a 3px focus
+  ring.
+
+### App Store And Marketplace Signals
+
+- Not re-run in this round; the store hosts did not resolve.
+- In vendor snippets (Claimed), review UX sits in Word add-ins (Definely, Spellbook) and
+  in CLM review panes:
+  - Ironclad: preferred and fallback language per clause, and a "Needs Review" bucket.
+  - LegalOn: pass or fail per rule with references.
+
+  The detailed layout of those panes was not visible.
+
+### Product Implication
+
+The review room already had what the reviewed products market as trust: version-bound
+decisions, stale refusals, evidence per transition and a verified event chain. What it
+lacked was legibility at the point of decision. Round 3 adds that without new state:
+
+- Inline decision forms replace browser dialogs. Each lists what is missing before
+  anything is sent, and resolving a comment shows the evidence cited in its thread.
+- The playbook's own standard and fallback position appears beside each change.
+  Nothing is generated, and the requester view and customer package never carry it.
+- Opening a matter shows the five required facts first, so a first intake can be
+  complete.
+- Requesters get plain stages and their next step.
+- Landmarks, labelled controls, a live region and state that is never shown by colour
+  alone. axe reports no violations on any review-room view in light or dark mode.
+
+The patterns parked for later are a presence badge labelled as a simulated role, a
+grouped event timeline and attributed DOCX tracked changes. The reasons are in the root
+`docs/research/adaptation-plan.md`.
+
+### Source Links
+
+- `claude-for-legal`: <https://github.com/anthropics/claude-for-legal>
+- NDA triage skill: <https://github.com/anthropics/claude-for-legal/blob/main/commercial-legal/skills/nda-review/SKILL.md>
+- Playbook monitor: <https://github.com/anthropics/claude-for-legal/blob/main/commercial-legal/agents/playbook-monitor.md>
+- `mike`: <https://github.com/open-legal-products/mike>
+- `superdoc`: <https://github.com/superdoc-dev/superdoc>
+- `Python-Redlines`: <https://github.com/JSv4/Python-Redlines>
+- `hypothesis/client`: <https://github.com/hypothesis/client>
+- `temporalio/ui`: <https://github.com/temporalio/ui>
+- `langfuse`: <https://github.com/langfuse/langfuse>
+- GOV.UK Frontend error summary: <https://github.com/alphagov/govuk-frontend/tree/main/packages/govuk-frontend/src/govuk/components/error-summary>
+- Ironclad playbook recipe (snippet only): <https://support.ironcladapp.com/hc/en-us/articles/34018339425303-Recipe-Build-a-Playbook-to-Help-Legal-Reduce-Negotiation-Time>
+- LegalOn playbooks (snippet only): <https://legalontech.com/post/ai-ready-playbooks>
