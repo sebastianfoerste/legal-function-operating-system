@@ -115,9 +115,32 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await approver.waitForTimeout(2500);
   out.approverStale = await approver.locator("#stale").innerText();
   out.approverPresence = await approver.locator("#presence").innerText();
+  // A second write: the warning names the newest revision, not the first one it saw.
+  await owner.getByLabel("Comment", { exact: true }).fill("Second note on the same finding.");
+  await owner.getByRole("button", { name: "add comment" }).click();
+  await owner.waitForTimeout(500);
+  await approver.waitForTimeout(2500);
+  out.approverStaleAgain = await approver.locator("#stale").innerText();
+  // Scrolled to the bottom of the page, the warning is still in view.
+  await approver.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await approver.waitForTimeout(200);
+  out.staleInView = await approver.locator("#stale").evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return box.top >= 0 && box.bottom <= window.innerHeight;
+  });
   await approver.getByRole("button", { name: "Reload the matter" }).click();
   await approver.waitForTimeout(500);
   out.staleAfterReload = await approver.locator("#stale").innerText();
+  // Switching role stops the check-ins: no presence request in the next 2.5 s.
+  let checkIns = 0;
+  approver.on("request", (r) => { if (r.method() === "POST" && r.url().endsWith("/presence")) checkIns += 1; });
+  await approver.waitForTimeout(1500);
+  out.checkInsWhileOpen = checkIns;
+  await approver.selectOption("#actor", REQUESTER);
+  await approver.waitForTimeout(300);
+  checkIns = 0;
+  await approver.waitForTimeout(2500);
+  out.checkInsAfterSwitch = checkIns;
 
   out.errors = errors;
   console.log(JSON.stringify(out));
@@ -192,8 +215,16 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
     assert out["focusAfterCancel"] == "Scenario 2: specialist input and revision"
     assert "No matter was opened" not in out["paneDuringLoad"]
     assert "opened" in out["flashAfterOpen"]
-    assert out["ownerPresence"].startswith("Also open (simulated local role, not authentication)")
+    assert out["ownerPresence"].startswith(
+        "Also open in the last two minutes (simulated local role, not authentication)"
+    )
+    assert " s ago" not in out["ownerPresence"]
     assert "Synthetic Approver D (Legal Ops Lead) on revision" in out["ownerPresence"]
     assert "changed after you loaded it" in out["approverStale"]
     assert "Synthetic Matter Owner B (Commercial Counsel) on revision" in out["approverPresence"]
     assert out["staleAfterReload"] == ""
+    first = out["approverStale"].split("now revision ")[1].split(",")[0]
+    again = out["approverStaleAgain"].split("now revision ")[1].split(",")[0]
+    assert int(again) == int(first) + 1
+    assert out["staleInView"] is True
+    assert out["checkInsWhileOpen"] >= 1 and out["checkInsAfterSwitch"] == 0

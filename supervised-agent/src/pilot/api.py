@@ -216,7 +216,9 @@ class PilotApi:
             raise PilotError("presence needs the revision you loaded (an integer)")
         self.presence.seen(matter_id, actor.actor_id, actor.display_name, actor.role, revision)
         return {
-            "also_open_by": self.presence.others(matter_id, actor.actor_id, current),
+            # "behind" is relative to the revision this viewer loaded, not the latest one;
+            # current_revision tells the room whether the viewer is behind.
+            "also_open_by": self.presence.others(matter_id, actor.actor_id, revision),
             "current_revision": current,
             "window_seconds": self.presence.window_seconds,
             "presence_notice": PRESENCE_NOTICE,
