@@ -43,6 +43,8 @@ label,.label{display:block;margin:8px 0 3px;font-weight:600;font-size:13.5px}
 .hint{display:block;color:var(--muted);font-size:12.5px;margin:0 0 4px}
 .inline-label{display:inline;margin:0;font-weight:400}
 #flash{margin:0 0 14px;padding:10px 12px;border-radius:8px}#flash:empty{display:none}
+.presence{margin:0 0 12px;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}.presence:empty,.stale:empty{display:none}
+.stale{margin:0 0 12px;padding:8px 12px;border:1px solid var(--warn);background:var(--warn-bg);color:var(--warn);border-radius:8px;font-weight:600}
 #flash.error{background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad)}
 #flash.info{background:var(--ok-bg);border:1px solid var(--ok);color:var(--ok)}
 form.inline{border:1px solid var(--accent);border-radius:8px;padding:10px 12px;margin:8px 0;background:var(--panel)}
@@ -89,7 +91,9 @@ dl.facts{grid-template-columns:1fr}dl.facts dd{margin-bottom:6px}}
 </main>
 <script>
 "use strict";
-const state = {actors: [], scenarios: [], actor: "", matterId: "", view: null};
+const state = {actors: [], scenarios: [], actor: "", matterId: "", view: null, presenceTimer: null};
+// How often an open review room checks in (presence_ms in the address overrides it, minimum 1 s).
+const PRESENCE_MS = Math.max(1000, parseInt(new URLSearchParams(location.search).get("presence_ms"), 10) || 30000);
 const $ = (id) => document.getElementById(id);
 let uid = 0;
 function h(tag, attrs, ...children) {
@@ -238,12 +242,13 @@ async function loadMatter(id) {
   state.matterId = id;
   closeForm();
   const {status, payload} = await api("GET", "/matters/" + encodeURIComponent(id));
-  if (status !== 200) { $("matter").replaceChildren(); flash("error", payload.message); return; }
+  if (status !== 200) { stopPresence(); $("matter").replaceChildren(); flash("error", payload.message); return; }
   state.view = payload; render(); await loadList();
 }
 // The intake form: the five required facts, pre-filled from the scenario, checked before the
 // matter is opened so the first version is complete (rehearsal step B02).
 function renderIntake(scenario, trigger) {
+  stopPresence();
   closeForm(); state.matterId = ""; state.view = null; flash("", "");
   const host = h("div");
   $("matter").replaceChildren(h("h2", {class: "title", tabindex: "-1", id: "intake-title"}, "New request: " + scenario.title), host);
@@ -416,11 +421,46 @@ function renderReview(view, root) {
     h("details", null, h("summary", null, "Versions (" + view.versions.length + "), all kept"), h("ul", null, view.versions.map((v) => h("li", null, "v" + v.version + " " + v.created_at + " document ", h("span", {class: "hash"}, v.document_sha256.slice(0, 12)), " content ", h("span", {class: "hash"}, v.content_hash.slice(0, 12)))))),
     h("p", {class: view.audit_chain.verified ? "ok" : "bad"}, (view.audit_chain.verified ? "✓ " : "✗ ") + "Event chain: " + view.audit_chain.reason + " (" + view.audit_chain.event_count + " events)")));
 }
+// ---------------------------------------------------------------- presence
+// Who else has this matter open: simulated local roles, held in server memory only.
+function presenceText(others) {
+  if (!others.length) return "";
+  return "Also open (simulated local role, not authentication): " + others.map((o) =>
+    o.display_name + " on revision " + o.revision + (o.behind ? " (older than yours)" : "") + ", " + o.seconds_ago + " s ago").join("; ") + ".";
+}
+function showPresence(others, current) {
+  const line = $("presence"), stale = $("stale");
+  if (!line || !stale) return;
+  const text = presenceText(others || []);
+  if (line.textContent !== text) line.textContent = text;
+  const loaded = state.view.matter.revision;
+  if (current > loaded && !stale.childNodes.length) {
+    stale.replaceChildren("This matter changed after you loaded it (now revision " + current + ", you have " + loaded + "). Reload it before you decide. ",
+      h("button", {class: "act secondary", type: "button", onclick: () => loadMatter(state.matterId)}, "Reload the matter"));
+  } else if (current <= loaded && stale.childNodes.length) stale.replaceChildren();
+}
+function stopPresence() { if (state.presenceTimer) clearInterval(state.presenceTimer); state.presenceTimer = null; }
+function startPresence() {
+  stopPresence();
+  if (!state.view || state.view.view !== "review_room") return;
+  const matterId = state.matterId;
+  state.presenceTimer = setInterval(async () => {
+    if (state.matterId !== matterId || !state.view) { stopPresence(); return; }
+    const {status, payload} = await api("POST", "/matters/" + encodeURIComponent(matterId) + "/presence", {revision: state.view.matter.revision});
+    if (state.matterId !== matterId) return;
+    if (status !== 200) { stopPresence(); return; }
+    showPresence(payload.also_open_by, payload.current_revision);
+  }, PRESENCE_MS);
+}
 function render() {
   const view = state.view, root = $("matter");
   openForm = null;
   root.replaceChildren(h("h2", {class: "title"}, view.matter.matter_id + ": " + view.matter.title));
-  if (view.view === "requester_summary") renderRequester(view, root); else renderReview(view, root);
+  if (view.view === "requester_summary") { stopPresence(); renderRequester(view, root); return; }
+  root.append(h("p", {id: "presence", class: "presence", "aria-live": "polite"}), h("div", {id: "stale", class: "stale", "aria-live": "polite"}));
+  showPresence(view.also_open_by, view.matter.revision);
+  renderReview(view, root);
+  startPresence();
 }
 async function start() {
   const response = await fetch("/pilot/api/actors"); const payload = await response.json();
@@ -428,7 +468,7 @@ async function start() {
   const select = $("actor");
   for (const actor of state.actors) select.append(h("option", {value: actor.actor_id}, actor.display_name + " [" + words(actor.role) + "]"));
   state.actor = select.value;
-  select.addEventListener("change", async () => { closeForm(); state.actor = select.value; state.matterId = ""; state.view = null; flash("", ""); $("matter").replaceChildren(h("p", {class: "muted"}, "Choose a matter.")); await loadList(); });
+  select.addEventListener("change", async () => { stopPresence(); closeForm(); state.actor = select.value; state.matterId = ""; state.view = null; flash("", ""); $("matter").replaceChildren(h("p", {class: "muted"}, "Choose a matter.")); await loadList(); });
   await loadList();
 }
 start();

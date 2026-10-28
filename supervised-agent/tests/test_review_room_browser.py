@@ -17,7 +17,7 @@ from http.server import ThreadingHTTPServer
 import pytest
 
 from src.pilot.api import PilotApi
-from tests.pilot_support import OWNER, REQUESTER, make_service, run_until
+from tests.pilot_support import APPROVER_LEAD, OWNER, REQUESTER, make_service, run_until
 
 UNAVAILABLE = 3
 
@@ -27,14 +27,14 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 (async () => {
   let browser;
   try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
-  const [base, matter, OWNER, REQUESTER] = process.argv.slice(2);
+  const [base, matter, OWNER, REQUESTER, APPROVER] = process.argv.slice(2);
   const out = {};
   const errors = [];
-  async function open(actor, width) {
+  async function open(actor, width, query) {
     const page = await (await browser.newContext({ viewport: { width, height: 900 } })).newPage();
     page.on("pageerror", (e) => errors.push(e.message));
     page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
-    await page.goto(base + "/pilot");
+    await page.goto(base + "/pilot" + (query || ""));
     await page.waitForSelector("#actor option", { state: "attached" });
     await page.selectOption("#actor", actor);
     await page.waitForTimeout(300);
@@ -102,6 +102,23 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.waitForTimeout(2000);
   out.flashAfterOpen = await page.locator("#flash").innerText();
 
+  // Presence: the approver has the matter open; the owner sees it, labelled as simulated.
+  const approver = await open(APPROVER, 1280, "?presence_ms=1000");
+  await openMatter(approver);
+  const owner = await open(OWNER, 1280);
+  await openMatter(owner);
+  out.ownerPresence = await owner.locator("#presence").innerText();
+  // The owner writes; the approver's open room checks in and warns that it is behind.
+  await owner.getByLabel("Comment", { exact: true }).fill("Checked against the playbook position.");
+  await owner.getByRole("button", { name: "add comment" }).click();
+  await owner.waitForTimeout(500);
+  await approver.waitForTimeout(2500);
+  out.approverStale = await approver.locator("#stale").innerText();
+  out.approverPresence = await approver.locator("#presence").innerText();
+  await approver.getByRole("button", { name: "Reload the matter" }).click();
+  await approver.waitForTimeout(500);
+  out.staleAfterReload = await approver.locator("#stale").innerText();
+
   out.errors = errors;
   console.log(JSON.stringify(out));
   await browser.close();
@@ -148,6 +165,7 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
                 matter,
                 OWNER,
                 REQUESTER,
+                APPROVER_LEAD,
             ],
             capture_output=True,
             text=True,
@@ -174,3 +192,8 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
     assert out["focusAfterCancel"] == "Scenario 2: specialist input and revision"
     assert "No matter was opened" not in out["paneDuringLoad"]
     assert "opened" in out["flashAfterOpen"]
+    assert out["ownerPresence"].startswith("Also open (simulated local role, not authentication)")
+    assert "Synthetic Approver D (Legal Ops Lead) on revision" in out["ownerPresence"]
+    assert "changed after you loaded it" in out["approverStale"]
+    assert "Synthetic Matter Owner B (Commercial Counsel) on revision" in out["approverPresence"]
+    assert out["staleAfterReload"] == ""

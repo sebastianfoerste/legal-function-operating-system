@@ -2270,6 +2270,16 @@ class PilotService:
             "rationale": rule.rationale,
         }
 
+    def reader(self, actor_id: str, matter_id: str) -> tuple[Actor, int]:
+        """The actor, if they may read the matter, and its current revision. Writes nothing."""
+
+        with self.store.reading() as connection:
+            actor = self._actor(connection, actor_id)
+            matter = self._matter(connection, matter_id)
+            if not self._can_read(connection, actor, matter):
+                raise PermissionDeniedError(f"{actor_id} has no access to matter {matter_id}")
+            return actor, int(matter["revision"])
+
     def history(self, actor_id: str, matter_id: str) -> dict[str, Any]:
         """Every version, decision and event of a matter, for recovery and audit."""
 

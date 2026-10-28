@@ -19,6 +19,7 @@ from src.export_gate import ExportBlockedError
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.models import REQUIRED_FACTS, PilotIntake, required_fact_checklist
 from src.pilot.onboarding import ONBOARDING_TASKS
+from src.pilot.presence import PRESENCE_NOTICE, PresenceBoard
 from src.pilot.review_room import REVIEW_ROOM_HTML
 from src.pilot.scenario_runner import load_scenario, scenario_paths
 from src.pilot.service import (
@@ -42,8 +43,10 @@ def _error(status: int, code: str, message: str, **extra: Any) -> Response:
 
 
 class PilotApi:
-    def __init__(self, service: PilotService) -> None:
+    def __init__(self, service: PilotService, presence: PresenceBoard | None = None) -> None:
         self.service = service
+        # In memory only: presence never reaches the store, the event log or an export.
+        self.presence = presence or PresenceBoard()
 
     def handle(
         self, method: str, path: str, headers: dict[str, str], body: dict[str, Any] | None = None
@@ -109,13 +112,17 @@ class PilotApi:
             matter_id = rest[1]
             tail = rest[2:]
             if not tail and method == "GET":
-                return 200, self.service.view_matter(actor_id, matter_id), JSON
+                view = self.service.view_matter(actor_id, matter_id)
+                return 200, self._with_presence(matter_id, view), JSON
             if tail == ["history"] and method == "GET":
                 return 200, self.service.history(actor_id, matter_id), JSON
             if tail == ["package"] and method == "GET":
                 return 200, self._package(actor_id, matter_id), HTML
             if tail == ["commands"] and method == "POST":
-                return 200, self._command(actor_id, matter_id, body), JSON
+                view = self._command(actor_id, matter_id, body)
+                return 200, self._with_presence(matter_id, view), JSON
+            if tail == ["presence"] and method == "POST":
+                return 200, self._check_in(actor_id, matter_id, body), JSON
         return _error(404, "not_found", "unknown pilot route")
 
     def _create(self, actor_id: str, body: dict[str, Any]) -> dict[str, Any]:
@@ -178,6 +185,42 @@ class PilotApi:
         return self.service.execute(
             actor_id, matter_id, command, revision, args, Stamp(effort_minutes=_effort(body))
         )
+
+    def _with_presence(self, matter_id: str, view: dict[str, Any]) -> dict[str, Any]:
+        """Note the reviewer as present and add who else is. Requester views are untouched."""
+
+        if view.get("view") != "review_room":
+            return view
+        actor, revision = view["actor"], int(view["matter"]["revision"])
+        self.presence.seen(
+            matter_id, actor["actor_id"], actor["display_name"], actor["role"], revision
+        )
+        return {
+            **view,
+            "also_open_by": self.presence.others(matter_id, actor["actor_id"], revision),
+            "presence_notice": PRESENCE_NOTICE,
+        }
+
+    def _check_in(self, actor_id: str, matter_id: str, body: dict[str, Any]) -> dict[str, Any]:
+        """An open review room checks in with the revision it loaded; nothing is stored."""
+
+        actor, current = self.service.reader(actor_id, matter_id)
+        if actor.role == "business_requester":
+            raise PermissionDeniedError("presence is shown to reviewers only")
+        revision = body.get("revision")
+        if (
+            not isinstance(revision, int)
+            or isinstance(revision, bool)
+            or not 0 <= revision <= current
+        ):
+            raise PilotError("presence needs the revision you loaded (an integer)")
+        self.presence.seen(matter_id, actor.actor_id, actor.display_name, actor.role, revision)
+        return {
+            "also_open_by": self.presence.others(matter_id, actor.actor_id, current),
+            "current_revision": current,
+            "window_seconds": self.presence.window_seconds,
+            "presence_notice": PRESENCE_NOTICE,
+        }
 
     def _package(self, actor_id: str, matter_id: str) -> str:
         """The approved customer package, served only from a stored delivery manifest."""

@@ -72,7 +72,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F1 | Required facts before submission (H1) | 5 | Observed: docassemble, claude-for-legal Matter Intake, RETROSPECTIVE B02 | S | pass | 15 | table stakes | **Built** |
 | F2 | Playbook standard and fallback beside each change (H7) | 4 | Observed: claude-for-legal NDA triage table with playbook reference; own playbook fields | S | pass | 12 | table stakes | **Built** |
 | F3 | Plain-language requester status (H2) | 4 | Claimed: LawVu My Work, Linear Decline | S | pass | 8 | table stakes | **Built** |
-| F4 | "Also open by" presence on a matter (H3, part) | 3 | Observed: Chatwoot heartbeat, Langfuse soft lock; RETROSPECTIVE B20 | M | pass if labelled simulated | 4.5 | differentiator | Specced |
+| F4 | "Also open by" presence on a matter (H3, part) | 3 | Observed: Chatwoot heartbeat, Langfuse soft lock; RETROSPECTIVE B20 | M | pass if labelled simulated | 4.5 | differentiator | **Built** |
 | F5 | Override-pattern report over pilot decisions | 3 | Observed: claude-for-legal playbook monitor | M | pass | 4.5 | differentiator | Specced |
 | F6 | Audit-chain timeline (H8, part) | 3 | Observed: Temporal UI | M | pass | 4.5 | differentiator | Specced |
 | F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | Specced |
@@ -272,7 +272,7 @@ playbook position next to each change, and the evidence next to each resolution.
   - `src/pilot/review_room.py`
 - **Tests.** `tests/test_design_tokens.py`.
 
-### F4. "Also open by" presence (specced)
+### F4. "Also open by" presence (built)
 
 - **User story.** As a matter owner, I see that the specialist has the same revision
   open, so we do not both write to it (RETROSPECTIVE B20).
@@ -292,8 +292,17 @@ playbook position next to each change, and the evidence next to each resolution.
   - Never shown to requesters.
   - The text always includes "simulated local role".
   - Absent after the window passes.
-- **Risk.** It looks like identity. The label rule (rule 5) is the mitigation. Whether
-  views may be recorded at all is an owner decision.
+- **Risk.** It looks like identity. The label rule (rule 5) is the mitigation.
+- **Built** (ADR 0005, owner decision 7 answered: in memory only).
+  - `src/pilot/presence.py`: a lock-guarded board, 120-second window, injectable clock.
+  - Views and command responses note the reviewer; an open room checks in every 30
+    seconds through `POST /pilot/api/matters/{id}/presence`.
+  - The room shows "Also open (simulated local role, not authentication): …" with each
+    reviewer's revision, and warns with a reload button when a newer revision exists.
+  - Requesters are never shown or recorded. Nothing reaches the store, the event log or
+    an export.
+  - Tests: `supervised-agent/tests/test_pilot_presence.py`, and the presence and stale
+    steps in `supervised-agent/tests/test_review_room_browser.py`.
 
 ### F5. Override-pattern report (specced)
 
@@ -382,7 +391,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | --- | --- | --- |
 | H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified**: no branching exists to build on, so it is specced as F9 | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
 | H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu (Claimed); Plane (Observed) |
-| H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4; both specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
+| H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
 | H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; specced as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
@@ -411,7 +420,7 @@ playbook position next to each change, and the evidence next to each resolution.
 
 ### ADR needed (not decided here)
 
-- Where presence data lives, and whether a view counts as an audit event (F4).
+- ~~Where presence data lives, and whether a view counts as an audit event (F4).~~ Decided in ADR 0005.
 - New pilot states for decline, duplicate and snooze, and their mapping in the shared
   contract (F10).
 - Per-`type` question files: format, location, and how they relate to `request_schema()`
@@ -442,8 +451,8 @@ playbook position next to each change, and the evidence next to each resolution.
      legal review.
 6. **Remote MCP and HTTP transport.** claude-for-legal wires remote connectors. This
    repository stays local over stdio (rule 4, ADR 0002).
-7. **Presence records** (F4). Whether recording who viewed a matter is acceptable in the
-   pilot.
+7. **Presence records** (F4). **Decided on 2026-10-28:** in memory only, never stored or
+   logged, never shown to or recorded for requesters (ADR 0005).
 8. **Channel intake** (F11). Confirm that a local inbound adapter is wanted, or that
    channel intake stays out.
 9. **PyPI publication.** Still not published. Not touched here.
