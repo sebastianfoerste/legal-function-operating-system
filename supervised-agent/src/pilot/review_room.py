@@ -44,7 +44,8 @@ label,.label{display:block;margin:8px 0 3px;font-weight:600;font-size:13.5px}
 .inline-label{display:inline;margin:0;font-weight:400}
 #flash{margin:0 0 14px;padding:10px 12px;border-radius:8px}#flash:empty{display:none}
 .presence{margin:0 0 12px;padding:8px 12px;border-left:3px solid var(--accent);background:var(--accent-soft);border-radius:0 8px 8px 0}.presence:empty,.stale:empty{display:none}
-.stale{margin:0 0 12px;padding:8px 12px;border:1px solid var(--warn);background:var(--warn-bg);color:var(--warn);border-radius:8px;font-weight:600}
+html:has(.stale:not(:empty)){scroll-padding-top:var(--stale-h,120px)}
+.stale{position:sticky;top:0;z-index:1;margin:0 0 12px;padding:8px 12px;border:1px solid var(--warn);background:var(--warn-bg);color:var(--warn);border-radius:8px;font-weight:600}
 #flash.error{background:var(--bad-bg);border:1px solid var(--bad);color:var(--bad)}
 #flash.info{background:var(--ok-bg);border:1px solid var(--ok);color:var(--ok)}
 form.inline{border:1px solid var(--accent);border-radius:8px;padding:10px 12px;margin:8px 0;background:var(--panel)}
@@ -423,10 +424,12 @@ function renderReview(view, root) {
 }
 // ---------------------------------------------------------------- presence
 // Who else has this matter open: simulated local roles, held in server memory only.
+// The text holds no clock, so the live region speaks only when who is present, or the
+// revision they have open, changes; not on every check-in.
 function presenceText(others) {
   if (!others.length) return "";
-  return "Also open (simulated local role, not authentication): " + others.map((o) =>
-    o.display_name + " on revision " + o.revision + (o.behind ? " (older than yours)" : "") + ", " + o.seconds_ago + " s ago").join("; ") + ".";
+  return "Also open in the last two minutes (simulated local role, not authentication): " + others.map((o) =>
+    o.display_name + " on revision " + o.revision + (o.behind ? " (older than yours)" : "")).join("; ") + ".";
 }
 function showPresence(others, current) {
   const line = $("presence"), stale = $("stale");
@@ -434,10 +437,23 @@ function showPresence(others, current) {
   const text = presenceText(others || []);
   if (line.textContent !== text) line.textContent = text;
   const loaded = state.view.matter.revision;
-  if (current > loaded && !stale.childNodes.length) {
-    stale.replaceChildren("This matter changed after you loaded it (now revision " + current + ", you have " + loaded + "). Reload it before you decide. ",
+  if (current > loaded && stale.dataset.current !== String(current)) {
+    // Built once; later moves change only the text, so a focused reload button keeps focus.
+    if (!stale.childNodes.length) stale.replaceChildren(h("span", {class: "stale-text"}), " ",
       h("button", {class: "act secondary", type: "button", onclick: () => loadMatter(state.matterId)}, "Reload the matter"));
-  } else if (current <= loaded && stale.childNodes.length) stale.replaceChildren();
+    stale.dataset.current = String(current);
+    stale.querySelector(".stale-text").textContent = "This matter changed after you loaded it (now revision " + current + ", you have " + loaded + "). Reload it before you decide.";
+    padForStale(stale);
+  } else if (current <= loaded && stale.childNodes.length) { delete stale.dataset.current; stale.replaceChildren(); }
+}
+// The pinned warning must not cover a focused control (WCAG 2.2, 2.4.11): pad scrolling by
+// its height, and move a control it already covers back into view.
+function padForStale(stale) {
+  document.documentElement.style.setProperty("--stale-h", (stale.offsetHeight + 16) + "px");
+  const focused = document.activeElement;
+  if (!focused || focused === document.body || stale.contains(focused)) return;
+  const box = focused.getBoundingClientRect(), cover = stale.getBoundingClientRect();
+  if (box.top < cover.bottom && box.bottom > cover.top) focused.scrollIntoView({block: "nearest"});
 }
 function stopPresence() { if (state.presenceTimer) clearInterval(state.presenceTimer); state.presenceTimer = null; }
 function startPresence() {
@@ -462,6 +478,7 @@ function render() {
   renderReview(view, root);
   startPresence();
 }
+window.addEventListener("resize", () => { const stale = $("stale"); if (stale && stale.childNodes.length) padForStale(stale); });
 async function start() {
   const response = await fetch("/pilot/api/actors"); const payload = await response.json();
   state.actors = payload.actors; state.scenarios = payload.scenarios; $("notice").textContent = payload.identity_notice + " Synthetic data only. External delivery is disabled.";

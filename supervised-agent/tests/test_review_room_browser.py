@@ -115,9 +115,74 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await approver.waitForTimeout(2500);
   out.approverStale = await approver.locator("#stale").innerText();
   out.approverPresence = await approver.locator("#presence").innerText();
+  // A second write: the warning names the newest revision, not the first one it saw.
+  await owner.getByLabel("Comment", { exact: true }).fill("Second note on the same finding.");
+  await owner.getByRole("button", { name: "add comment" }).click();
+  await owner.waitForTimeout(500);
+  await approver.waitForTimeout(2500);
+  out.approverStaleAgain = await approver.locator("#stale").innerText();
+  // Scrolled to the bottom of the page, the warning is still in view.
+  await approver.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  await approver.waitForTimeout(200);
+  out.staleInView = await approver.locator("#stale").evaluate((el) => {
+    const box = el.getBoundingClientRect();
+    return box.top >= 0 && box.bottom <= window.innerHeight;
+  });
+  // A keyboard user on the reload button keeps focus when a further write arrives.
+  await approver.getByRole("button", { name: "Reload the matter" }).focus();
+  await owner.getByLabel("Comment", { exact: true }).fill("Third note on the same finding.");
+  await owner.getByRole("button", { name: "add comment" }).click();
+  await owner.waitForTimeout(500);
+  await approver.waitForTimeout(2500);
+  out.focusAfterRebuild = (await focused(approver)).text;
+  out.approverStaleThird = await approver.locator("#stale").innerText();
+  // At phone width, walking back up with Shift+Tab never leaves focus under the warning.
+  await approver.setViewportSize({ width: 390, height: 900 });
+  await approver.waitForTimeout(200);
+  await approver.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  out.focusUnderWarning = 0;
+  for (let i = 0; i < 40; i++) {
+    await approver.keyboard.press("Shift+Tab");
+    const hidden = await approver.evaluate(() => {
+      const el = document.activeElement, stale = document.getElementById("stale");
+      if (!el || el === document.body || stale.contains(el)) return false;
+      const box = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return Boolean(hit && stale.contains(hit));
+    });
+    if (hidden) out.focusUnderWarning += 1;
+  }
+  await approver.setViewportSize({ width: 1280, height: 900 });
   await approver.getByRole("button", { name: "Reload the matter" }).click();
   await approver.waitForTimeout(500);
   out.staleAfterReload = await approver.locator("#stale").innerText();
+  // At phone width, a control that already has focus is moved clear when the warning appears.
+  await approver.setViewportSize({ width: 390, height: 900 });
+  const respond = approver.getByRole("button", { name: "respond", exact: true }).first();
+  await respond.focus();
+  await respond.evaluate((el) => el.scrollIntoView({ block: "start" }));
+  await owner.getByLabel("Comment", { exact: true }).fill("Fourth note, after the reload.");
+  await owner.getByRole("button", { name: "add comment" }).click();
+  await owner.waitForTimeout(500);
+  await approver.waitForTimeout(2500);
+  out.focusedCoveredOnAppear = await approver.evaluate(() => {
+    const el = document.activeElement, stale = document.getElementById("stale");
+    if (!stale.childNodes.length || !el || el === document.body) return "no warning or no focus";
+    const box = el.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return Boolean(hit && stale.contains(hit));
+  });
+  // Switching role stops the check-ins: nothing is sent as the new role afterwards.
+  let checkIns = 0, sentAsRequester = 0;
+  approver.on("request", (r) => {
+    if (r.method() !== "POST" || !r.url().endsWith("/presence")) return;
+    if (r.headers()["x-pilot-actor"] === REQUESTER) sentAsRequester += 1; else checkIns += 1;
+  });
+  await approver.waitForTimeout(1500);
+  out.checkInsWhileOpen = checkIns;
+  await approver.selectOption("#actor", REQUESTER);
+  await approver.waitForTimeout(2800);
+  out.checkInsAfterSwitch = sentAsRequester;
 
   out.errors = errors;
   console.log(JSON.stringify(out));
@@ -192,8 +257,21 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
     assert out["focusAfterCancel"] == "Scenario 2: specialist input and revision"
     assert "No matter was opened" not in out["paneDuringLoad"]
     assert "opened" in out["flashAfterOpen"]
-    assert out["ownerPresence"].startswith("Also open (simulated local role, not authentication)")
+    assert out["ownerPresence"].startswith(
+        "Also open in the last two minutes (simulated local role, not authentication)"
+    )
+    assert " s ago" not in out["ownerPresence"]
     assert "Synthetic Approver D (Legal Ops Lead) on revision" in out["ownerPresence"]
     assert "changed after you loaded it" in out["approverStale"]
     assert "Synthetic Matter Owner B (Commercial Counsel) on revision" in out["approverPresence"]
     assert out["staleAfterReload"] == ""
+    first = out["approverStale"].split("now revision ")[1].split(",")[0]
+    again = out["approverStaleAgain"].split("now revision ")[1].split(",")[0]
+    assert int(again) == int(first) + 1
+    assert out["staleInView"] is True
+    assert out["focusAfterRebuild"] == "Reload the matter"
+    third = out["approverStaleThird"].split("now revision ")[1].split(",")[0]
+    assert int(third) == int(again) + 1
+    assert out["focusUnderWarning"] == 0
+    assert out["focusedCoveredOnAppear"] is False
+    assert out["checkInsWhileOpen"] >= 1 and out["checkInsAfterSwitch"] == 0

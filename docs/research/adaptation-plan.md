@@ -297,8 +297,13 @@ playbook position next to each change, and the evidence next to each resolution.
   - `src/pilot/presence.py`: a lock-guarded board, 120-second window, injectable clock.
   - Views and command responses note the reviewer; an open room checks in every 30
     seconds through `POST /pilot/api/matters/{id}/presence`.
-  - The room shows "Also open (simulated local role, not authentication): …" with each
-    reviewer's revision, and warns with a reload button when a newer revision exists.
+  - The room shows "Also open in the last two minutes (simulated local role, not
+    authentication): …" with each reviewer's revision, and a pinned warning with a reload
+    button that names the newest revision when the matter has moved on.
+  - Follow-up fixes from the review of the merged change (#22): "older than yours" is
+    relative to the viewer's loaded revision; the warning follows later writes and stays
+    in view; the live text holds no clock; expired entries are dropped for every matter;
+    the no-persistence and stop-polling tests now check what they claim.
   - Requesters are never shown or recorded. Nothing reaches the store, the event log or
     an export.
   - Tests: `supervised-agent/tests/test_pilot_presence.py`, and the presence and stale

@@ -43,12 +43,24 @@ class PresenceBoard:
         self._lock = threading.Lock()
         self._seen: dict[str, dict[str, _Seen]] = {}
 
+    def _prune(self, now: float) -> None:
+        """Drop every expired entry and every emptied matter. Call with the lock held."""
+
+        for matter_id in list(self._seen):
+            entries = self._seen[matter_id]
+            for actor_id in [a for a, s in entries.items() if now - s.at > self.window_seconds]:
+                del entries[actor_id]
+            if not entries:
+                del self._seen[matter_id]
+
     def seen(
         self, matter_id: str, actor_id: str, display_name: str, role: str, revision: int
     ) -> None:
+        now = self._clock()
         with self._lock:
+            self._prune(now)
             self._seen.setdefault(matter_id, {})[actor_id] = _Seen(
-                display_name, role, revision, self._clock()
+                display_name, role, revision, now
             )
 
     def others(self, matter_id: str, actor_id: str, current_revision: int) -> list[dict[str, Any]]:
@@ -56,9 +68,8 @@ class PresenceBoard:
 
         now = self._clock()
         with self._lock:
+            self._prune(now)
             entries = self._seen.get(matter_id, {})
-            for expired in [a for a, s in entries.items() if now - s.at > self.window_seconds]:
-                del entries[expired]
             current = sorted(
                 ((a, s) for a, s in entries.items() if a != actor_id), key=lambda item: item[0]
             )
