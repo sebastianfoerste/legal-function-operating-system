@@ -128,6 +128,31 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
     const box = el.getBoundingClientRect();
     return box.top >= 0 && box.bottom <= window.innerHeight;
   });
+  // A keyboard user on the reload button keeps focus when a further write arrives.
+  await approver.getByRole("button", { name: "Reload the matter" }).focus();
+  await owner.getByLabel("Comment", { exact: true }).fill("Third note on the same finding.");
+  await owner.getByRole("button", { name: "add comment" }).click();
+  await owner.waitForTimeout(500);
+  await approver.waitForTimeout(2500);
+  out.focusAfterRebuild = (await focused(approver)).text;
+  out.approverStaleThird = await approver.locator("#stale").innerText();
+  // At phone width, walking back up with Shift+Tab never leaves focus under the warning.
+  await approver.setViewportSize({ width: 390, height: 900 });
+  await approver.waitForTimeout(200);
+  await approver.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+  out.focusUnderWarning = 0;
+  for (let i = 0; i < 40; i++) {
+    await approver.keyboard.press("Shift+Tab");
+    const hidden = await approver.evaluate(() => {
+      const el = document.activeElement, stale = document.getElementById("stale");
+      if (!el || el === document.body || stale.contains(el)) return false;
+      const box = el.getBoundingClientRect();
+      const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+      return Boolean(hit && stale.contains(hit));
+    });
+    if (hidden) out.focusUnderWarning += 1;
+  }
+  await approver.setViewportSize({ width: 1280, height: 900 });
   await approver.getByRole("button", { name: "Reload the matter" }).click();
   await approver.waitForTimeout(500);
   out.staleAfterReload = await approver.locator("#stale").innerText();
@@ -227,4 +252,8 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
     again = out["approverStaleAgain"].split("now revision ")[1].split(",")[0]
     assert int(again) == int(first) + 1
     assert out["staleInView"] is True
+    assert out["focusAfterRebuild"] == "Reload the matter"
+    third = out["approverStaleThird"].split("now revision ")[1].split(",")[0]
+    assert int(third) == int(again) + 1
+    assert out["focusUnderWarning"] == 0
     assert out["checkInsWhileOpen"] >= 1 and out["checkInsAfterSwitch"] == 0
