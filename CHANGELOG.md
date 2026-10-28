@@ -33,7 +33,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
-- Review room presence: "older than yours" compared other reviewers with the matter's latest revision instead of the one you loaded; the stale warning kept naming the first newer revision and scrolled out of view; the presence line re-announced itself to screen readers every 30 seconds because it showed a seconds count; and expired presence entries were cleared only when the same matter was opened again.
+- Review room presence: "older than yours" compared other reviewers with the matter's latest revision instead of the one you loaded; the stale warning kept naming the first newer revision and scrolled out of view; the presence line re-announced itself to screen readers every 30 seconds because it showed a seconds count; and expired presence entries were cleared only when the same matter was read again (loaded, written to or checked in on).
 - The knowledge portal and the agent's static review-room snapshot now declare their page language.
 - The review room's selects have labels, the matter list marks the open matter, and results are announced to screen readers.
 - A mistyped value band such as `">1M"` was read as "no value", which turned a board-attention matter into a low-risk, reviewer-only one. It is now rejected with a suggestion.

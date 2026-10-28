@@ -39,10 +39,12 @@ Two constraints shape it here:
   they are behind.
 - The room shows "Also open in the last two minutes (simulated local role, not
   authentication): …". The line carries no clock, so its live region speaks only when who
-  is present changes. When a check-in reports a newer revision than the one loaded, a
-  warning with a reload button stays pinned in view and names the newest revision. Its
-  text updates in place, so a focused reload button keeps focus, and the page scrolls
-  focused controls clear of it (WCAG 2.2, 2.4.11).
+  is present, or the revision they have open, changes; not on every check-in. When a
+  check-in reports a newer revision than the one loaded, a warning with a reload button
+  stays pinned in view and names the newest revision. Its
+  text updates in place, so a focused reload button keeps focus. The page scrolls
+  focused controls clear of it, and a control it covers when it first appears is moved
+  back into view (WCAG 2.2, 2.4.11).
 - Requesters are neither shown presence nor recorded in it. Their check-in is refused.
 - Nothing is written to SQLite, the event log, history, exports or delivery manifests,
   and nothing survives a restart. A test compares a full SQL dump of the store and the
