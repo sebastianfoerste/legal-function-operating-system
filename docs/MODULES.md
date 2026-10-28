@@ -145,7 +145,9 @@ intake can be complete. Requesters see a plain stage, their next step and a note
 what is withheld; reviewers see the playbook's standard and fallback wording beside
 each proposed change. The page uses the shared design tokens in
 `src/legal_function_os/design_tokens.py` (light and dark) and stacks the changes table
-on narrow screens. The reasons and the research behind these choices are in
+on narrow screens. Reviewers also see which other simulated roles have the matter open
+and on which revision, held in server memory only and never recorded, with a reload
+prompt when the matter has moved on (ADR 0005). The reasons and the research behind these choices are in
 [`docs/research/adaptation-plan.md`](research/adaptation-plan.md) and the
 [architecture decision records](adr/README.md).
 

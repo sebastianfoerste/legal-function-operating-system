@@ -9,3 +9,4 @@ Rejected. A Proposed record names a choice the maintainer still has to make.
 | [0002](0002-mcp-2x-path.md) | Keep `mcp>=1.9,<2` for now; the path to 2.x | Accepted |
 | [0003](0003-intake-facts-and-requester-status.md) | Required facts and requester status are derived views, not new state | Accepted |
 | [0004](0004-docx-tracked-changes-engine.md) | Python-Redlines for Word tracked changes | Proposed |
+| [0005](0005-presence-in-memory.md) | Presence is held in memory only and is never an audit event | Accepted |

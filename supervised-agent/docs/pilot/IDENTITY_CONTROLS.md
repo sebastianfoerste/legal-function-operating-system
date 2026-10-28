@@ -24,6 +24,7 @@ For that reason:
 - every page of the review room, every API actor listing and every delivery manifest states that roles are simulated local roles;
 - actor identifiers must start with `syn-`, so a real name cannot be registered by accident;
 - the approval record in a delivery package names its approvers as simulated local roles;
+- the "Also open" presence line in the review room names simulated local roles, says it is not authentication, and is held in server memory only: it is never stored, logged or exported, and requesters are not part of it;
 - the charter treats approvals recorded in a trial as evidence of the workflow, with the named participants confirming their own decisions in the retrospective.
 
 A reviewer name passed to the older stateless library (`apply_review_decision`, the `legal.review.decide` tool) is likewise a free-text string. That path can produce an internal reviewed document. It cannot produce a delivery package, because the export gate requires reviewer decisions recorded in the store.
