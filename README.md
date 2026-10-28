@@ -105,7 +105,7 @@ Tools (all read-only): `triage_requests`, `board_pack`, `dpa_review`, `legal_req
 - [Board pack](examples/board-pack.md) · [Outcome control tower](examples/legal-outcome-control-tower.md) · [Capacity simulation](examples/legal-capacity-simulation.md) · [Architecture](docs/architecture.svg)
 - [Verification manifest](docs/verification-manifest.json): every inspectable artifact and the commands that validate it
 - [Supervised agent](supervised-agent/) and its [pilot case study](supervised-agent/docs/pilot/CASE_STUDY.md); shared contract: [`contracts/legal-workflow-controls.v1.schema.json`](contracts/legal-workflow-controls.v1.schema.json)
-- Detail: [Modules, capabilities, layout](docs/MODULES.md) · [Reviewer script](docs/RAAS_REVIEWER_SCRIPT.md) · [Collaboration programme](docs/COLLABORATION_PROGRAMME.md) · [Consolidation](docs/CONSOLIDATION.md) · [Contributing](CONTRIBUTING.md)
+- Detail: [Modules, capabilities, layout](docs/MODULES.md) · [CLI reference](docs/CLI.md) · [Competitive research, October 2026](docs/research/2026-10-competitive-landscape.md) · [Reviewer script](docs/RAAS_REVIEWER_SCRIPT.md) · [Collaboration programme](docs/COLLABORATION_PROGRAMME.md) · [Consolidation](docs/CONSOLIDATION.md) · [Contributing](CONTRIBUTING.md)
 
 ## Run from a clone
 

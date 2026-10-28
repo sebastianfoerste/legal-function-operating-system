@@ -170,3 +170,4 @@ def test_static_review_room_snapshot_offers_no_unsaved_controls(tmp_path) -> Non
     assert "<button" not in content and "<script" not in content
     assert "ninety (90) days" in content
     assert "http://" not in content and "https://" not in content
+    assert "<html lang='en'>" in content

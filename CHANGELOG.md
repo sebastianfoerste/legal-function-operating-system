@@ -17,6 +17,12 @@ All notable changes to this project are recorded here. The format follows
 - A code of conduct, a root security policy, issue and pull request templates, CODEOWNERS, Dependabot, this changelog and `CITATION.cff`.
 - A verification manifest in place of the portfolio proof (#11).
 - The supervised agent's pilot workflow and reviewer evidence track (#13).
+- Review room: inline decision forms with an error summary replace the browser prompt and confirm dialogs; resolving a comment shows the evidence cited in its thread.
+- Review room: opening a synthetic matter shows the five required facts, pre-filled from the scenario, and opens the matter only when all are filled, so the first version can be submitted.
+- Review room: requesters see a plain-language stage, their next step and what is withheld; reviewers see the playbook's standard and fallback position beside each change.
+- One design token set (`design_tokens.py`, light and dark, contrast-tested), used by the Pages index and the review room.
+- `docs/CLI.md`, the command reference the CLI help already pointed to.
+- Competitive research and an adaptation plan in `docs/research/`, Round 3 of the agent's competitive research, and architecture decision records in `docs/adr/`.
 
 ### Changed
 
@@ -30,10 +36,12 @@ All notable changes to this project are recorded here. The format follows
 ### Removed
 
 - The weekly repository-traffic snapshot workflow added in 0.3.0.
-- Internal material from `supervised-agent/docs/`: agent plans, competitive-research notes and the development checklist `tasks.md`.
+- Internal material from `supervised-agent/docs/`: agent plans and the development checklist `tasks.md`.
 
 ### Fixed
 
+- The knowledge portal and the agent's static review-room snapshot now declare their page language.
+- The review room's selects have labels, the matter list marks the open matter, and results are announced to screen readers.
 - A mistyped value band such as `">1M"` was read as "no value", which turned a board-attention matter into a low-risk, reviewer-only one. It is now rejected with a suggestion.
 - The workspace, agent-run and shared-space outputs counted `"awaiting_business_input": "no"` as true and split a string in `facts` or `dependencies` into characters. These optional fields are now type-checked and listed in the request schema.
 - The README's DPA command printed no DPA rows; it now names the output file.
