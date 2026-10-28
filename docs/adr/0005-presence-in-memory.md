@@ -29,15 +29,21 @@ Two constraints shape it here:
   lock, and its clock is injectable for tests.
 - A reviewer is noted when they load a matter or a command returns its view, and when
   their open room checks in (`POST /pilot/api/matters/{id}/presence` with the revision
-  they loaded, every 30 seconds). Entries older than 120 seconds are dropped.
+  they loaded, every 30 seconds). On every note and every read, entries older than 120
+  seconds are dropped from all matters, so the board never holds more than the last two
+  minutes.
 - The review view adds `also_open_by` and `presence_notice`. Each entry gives the
-  revision that reviewer loaded and whether it is older than the viewer's.
-- The room shows "Also open (simulated local role, not authentication): …" and, when a
-  check-in reports a newer revision than the one loaded, a warning with a reload button.
+  revision that reviewer loaded and whether it is older than the revision the viewer
+  loaded. A check-in also returns the current revision, so the room can tell the viewer
+  they are behind.
+- The room shows "Also open in the last two minutes (simulated local role, not
+  authentication): …". The line carries no clock, so its live region speaks only when who
+  is present changes. When a check-in reports a newer revision than the one loaded, a
+  warning with a reload button stays pinned in view and names the newest revision.
 - Requesters are neither shown presence nor recorded in it. Their check-in is refused.
 - Nothing is written to SQLite, the event log, history, exports or delivery manifests,
-  and nothing survives a restart. A test compares the history and the table list before
-  and after presence activity.
+  and nothing survives a restart. A test compares a full SQL dump of the store and the
+  matter history before and after presence activity, including refused check-ins.
 
 ## Consequences
 
