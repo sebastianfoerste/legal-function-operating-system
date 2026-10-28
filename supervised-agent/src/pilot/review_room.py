@@ -424,7 +424,8 @@ function renderReview(view, root) {
 }
 // ---------------------------------------------------------------- presence
 // Who else has this matter open: simulated local roles, held in server memory only.
-// The text holds no clock, so the live region speaks only when who is present changes.
+// The text holds no clock, so the live region speaks only when who is present, or the
+// revision they have open, changes; not on every check-in.
 function presenceText(others) {
   if (!others.length) return "";
   return "Also open in the last two minutes (simulated local role, not authentication): " + others.map((o) =>
@@ -442,9 +443,17 @@ function showPresence(others, current) {
       h("button", {class: "act secondary", type: "button", onclick: () => loadMatter(state.matterId)}, "Reload the matter"));
     stale.dataset.current = String(current);
     stale.querySelector(".stale-text").textContent = "This matter changed after you loaded it (now revision " + current + ", you have " + loaded + "). Reload it before you decide.";
-    // The pinned warning must not cover a control that receives focus (WCAG 2.4.11).
-    document.documentElement.style.setProperty("--stale-h", (stale.offsetHeight + 16) + "px");
+    padForStale(stale);
   } else if (current <= loaded && stale.childNodes.length) { delete stale.dataset.current; stale.replaceChildren(); }
+}
+// The pinned warning must not cover a focused control (WCAG 2.2, 2.4.11): pad scrolling by
+// its height, and move a control it already covers back into view.
+function padForStale(stale) {
+  document.documentElement.style.setProperty("--stale-h", (stale.offsetHeight + 16) + "px");
+  const focused = document.activeElement;
+  if (!focused || focused === document.body || stale.contains(focused)) return;
+  const box = focused.getBoundingClientRect(), cover = stale.getBoundingClientRect();
+  if (box.top < cover.bottom && box.bottom > cover.top) focused.scrollIntoView({block: "nearest"});
 }
 function stopPresence() { if (state.presenceTimer) clearInterval(state.presenceTimer); state.presenceTimer = null; }
 function startPresence() {
@@ -469,10 +478,7 @@ function render() {
   renderReview(view, root);
   startPresence();
 }
-window.addEventListener("resize", () => {
-  const stale = $("stale");
-  if (stale && stale.childNodes.length) document.documentElement.style.setProperty("--stale-h", (stale.offsetHeight + 16) + "px");
-});
+window.addEventListener("resize", () => { const stale = $("stale"); if (stale && stale.childNodes.length) padForStale(stale); });
 async function start() {
   const response = await fetch("/pilot/api/actors"); const payload = await response.json();
   state.actors = payload.actors; state.scenarios = payload.scenarios; $("notice").textContent = payload.identity_notice + " Synthetic data only. External delivery is disabled.";
