@@ -5,12 +5,15 @@ import io
 import tempfile
 import unittest
 from contextlib import redirect_stderr
+from dataclasses import replace
 from pathlib import Path
 
 from legal_function_os.raas_cli import main as raas_cli_main
 from legal_function_os.raas_deal_desk import (
+    LAST_VERIFIED_ON,
     RAAS_INPUT_SCHEMA,
     SOURCE_MANIFEST,
+    VERIFIED_ON,
     build_raas_deal_pack,
     render_raas_html,
     render_raas_markdown,
@@ -114,7 +117,127 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("transpose", product_liability["timing"])
         ai_act = next(item for item in SOURCE_MANIFEST if item["id"] == "EU-AI-ACT")
         self.assertIn("2 August 2026", ai_act["timing"])
-        self.assertIn("2 August 2027", ai_act["timing"])
+        # Regulation (EU) 2026/1744 deferred the high-risk dates in Article 113.
+        self.assertIn("2 December 2027", ai_act["timing"])
+        self.assertIn("2 August 2028", ai_act["timing"])
+        self.assertNotIn("2 August 2027", ai_act["timing"])
+        self.assertIn("EU-AI-ACT-AMENDMENT", ai_act["timing"])
+        amendment = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-AI-ACT-AMENDMENT"
+        )
+        self.assertEqual(
+            amendment["url"], "https://eur-lex.europa.eu/eli/reg/2026/1744/oj/eng"
+        )
+        self.assertIn("27 July 2026", amendment["timing"])
+
+    def test_machinery_regulation_application_date_follows_article_54(self):
+        # Article 54 of Regulation (EU) 2023/1230: applies from 20 January 2027.
+        machinery = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-MACHINERY-REGULATION"
+        )
+        self.assertIn("20 January 2027", machinery["timing"])
+        self.assertNotIn("14 January 2027", machinery["timing"])
+
+    def test_machinery_ai_routing_follows_regulation_2026_1744(self):
+        # Consolidated Regulation (EU) 2024/1689 as of 27 July 2026: Regulation
+        # (EU) 2023/1230 is listed in Annex I Section B, so Article 2(2) limits
+        # the directly applicable provisions for machinery-related high-risk AI,
+        # and Article 8 of Regulation (EU) 2023/1230 carries the requirements.
+        by_id = {item["id"]: item for item in SOURCE_MANIFEST}
+        ai_act = by_id["EU-AI-ACT"]
+        self.assertIn("Annex I Section B", ai_act["timing"])
+        self.assertIn("Article 2(2)", ai_act["timing"])
+        self.assertIn("Article 113(c)", ai_act["timing"])
+        self.assertIn("2(2)", ai_act["pinpoint"])
+        self.assertEqual(
+            ai_act["url"], "https://eur-lex.europa.eu/eli/reg/2024/1689/oj/eng"
+        )
+        self.assertIn("/2024/1689/2026-07-27/", ai_act["consolidated_url"])
+        amendment = by_id["EU-AI-ACT-AMENDMENT"]
+        self.assertIn("(EU) 2023/1230", amendment["title"])
+        self.assertIn("Regulation (EU) 2023/1230", amendment["pinpoint"])
+        self.assertIn("Annex I Section B", amendment["timing"])
+        machinery = by_id["EU-MACHINERY-REGULATION"]
+        self.assertEqual(
+            machinery["url"], "https://eur-lex.europa.eu/eli/reg/2023/1230/oj/eng"
+        )
+        self.assertIn("/2023/1230/2026-07-27/", machinery["consolidated_url"])
+        self.assertIn("Article 8", machinery["timing"])
+        self.assertIn("2 August 2028", machinery["timing"])
+        self.assertIn("EU-AI-ACT-AMENDMENT", machinery["timing"])
+
+    def test_each_source_carries_a_verification_date_not_before_its_law(self):
+        for source in SOURCE_MANIFEST:
+            self.assertRegex(source["verified_on"], r"^\d{4}-\d{2}-\d{2}$")
+        dates = [source["verified_on"] for source in SOURCE_MANIFEST]
+        # The top-level date must not overstate the check: it is the earliest
+        # per-source date, so every entry was last verified on or after it (the
+        # oldest check still in force). The latest date is carried separately.
+        self.assertEqual(VERIFIED_ON, min(dates))
+        self.assertEqual(LAST_VERIFIED_ON, max(dates))
+        self.assertEqual(self.pack.verified_on, VERIFIED_ON)
+        self.assertEqual(self.pack.last_verified_on, LAST_VERIFIED_ON)
+        # Regulation (EU) 2026/1744 entered into force on 27 July 2026. An entry
+        # that describes the amended law cannot have been verified earlier.
+        for source_id in ("EU-AI-ACT", "EU-AI-ACT-AMENDMENT", "EU-MACHINERY-REGULATION"):
+            source = next(item for item in SOURCE_MANIFEST if item["id"] == source_id)
+            self.assertGreaterEqual(source["verified_on"], "2026-07-27", source_id)
+
+    def test_sources_link_the_official_journal_and_label_consolidated_text(self):
+        markdown = render_raas_markdown(self.pack)
+        for source in SOURCE_MANIFEST:
+            # The primary link is the authentic Official Journal text.
+            self.assertRegex(
+                source["url"],
+                r"^https://eur-lex\.europa\.eu/eli/(reg|dir)/\d{4}/\d+/oj/eng$",
+                source["id"],
+            )
+            consolidated = source.get("consolidated_url")
+            if consolidated:
+                self.assertIn(
+                    f"[{source['id']}]({source['url']}):** {source['title']} "
+                    f"([consolidated text, for information only]({consolidated}))",
+                    markdown,
+                )
+        self.assertEqual(
+            {item["id"] for item in SOURCE_MANIFEST if item.get("consolidated_url")},
+            {"EU-AI-ACT", "EU-MACHINERY-REGULATION"},
+        )
+
+    def test_pack_states_the_verification_range_not_a_single_date(self):
+        markdown = render_raas_markdown(self.pack)
+        self.assertNotIn("last verified", markdown)
+        if VERIFIED_ON != LAST_VERIFIED_ON:
+            self.assertIn(
+                f"**Legal sources verified:** between {VERIFIED_ON} and "
+                f"{LAST_VERIFIED_ON}; each source below shows its own date",
+                markdown,
+            )
+        for source in SOURCE_MANIFEST:
+            self.assertIn(f"Verified on {source['verified_on']}.", markdown)
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            outputs = write_raas_outputs(self.pack, Path(tmp_dir))
+            for name in ("json", "sources"):
+                payload = json.loads(outputs[name].read_text(encoding="utf-8"))
+                self.assertEqual(payload["verified_on"], VERIFIED_ON)
+                self.assertEqual(payload["last_verified_on"], LAST_VERIFIED_ON)
+
+    def test_pack_wording_covers_both_a_date_span_and_a_single_date(self):
+        # The manifest's own dates select only one branch of the wording, so
+        # both are pinned here on packs with fixed dates.
+        span = replace(self.pack, verified_on="2026-07-20", last_verified_on="2026-10-18")
+        self.assertIn(
+            "**Legal sources verified:** between 2026-07-20 and 2026-10-18; "
+            "each source below shows its own date\n",
+            render_raas_markdown(span),
+        )
+        single = replace(self.pack, verified_on="2026-10-18", last_verified_on="2026-10-18")
+        single_markdown = render_raas_markdown(single)
+        self.assertIn(
+            "**Legal sources verified:** 2026-10-18, every source below on that date\n",
+            single_markdown,
+        )
+        self.assertNotIn("between 2026-10-18 and 2026-10-18", single_markdown)
 
     def test_source_digest_is_stable_and_pack_bound(self):
         self.assertEqual(self.pack.source_digest, source_digest())

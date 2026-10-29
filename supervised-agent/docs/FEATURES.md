@@ -49,11 +49,9 @@ the chain does not verify, in addition to the existing review-state, blocker-fin
 and review-note conditions. Surfaced in the Trust Cockpit, a standalone CLI output and
 a dedicated MCP tool.
 
-The hash-chain technique itself is not novel — other open-source tools log AI agent
-actions the same way. What this feature adds is pairing that chain with the legal-matter
-workflow itself: it can only block export on *this* repo's typed intake, risk triage and
-reviewer routing, not a generic action log. See
-[`docs/competitive-research-2026-06-30.md`](competitive-research-2026-06-30.md#round-2-audit-integrity-chain).
+The hash-chain technique itself is not novel. What this feature adds is pairing that
+chain with the legal-matter workflow itself: it can only block export on *this* repo's
+typed intake, risk triage and reviewer routing, not a generic action log.
 
 Implementation:
 

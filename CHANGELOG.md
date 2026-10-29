@@ -30,6 +30,14 @@ All notable changes to this project are recorded here. The format follows
 - Input is checked before any decision. An unknown `value_band` or `urgency`, a quoted boolean, a duplicate id or a misspelled field name stops the run with exit status 2 and one line per problem. An unknown `type` still goes to the General queue, with a warning and a "needs manual triage" line in the rationale.
 - `pyproject.toml` carries classifiers, project URLs and keywords, and reads the version from the package.
 - The README was rewritten (#16) and the case study refreshed (#12).
+- Each legal source in the RaaS source manifest records its own `verified_on` date. The top-level `verified_on` is now the earliest of these dates: every source was last checked on or after it, so it is the oldest check still in force. The new `last_verified_on` is the latest. The decision pack states that range instead of the single "Verified legal-source snapshot" date it showed in 0.3.0. The Data Act, Cyber Resilience Act and GDPR entries were re-checked on 2026-10-18.
+- The RaaS source manifest links the Official Journal text of each act. The AI Act and Machinery Regulation entries also link their consolidated text as of 27 July 2026 (`consolidated_url`), labelled as for information only.
+- `supervised-agent/docs/demo.png` is now a rendering of real CLI output instead of a mock image.
+
+### Removed
+
+- The weekly repository-traffic snapshot workflow added in 0.3.0.
+- Internal material from `supervised-agent/docs/`: agent plans and the development checklist `tasks.md`.
 
 ### Fixed
 
@@ -42,6 +50,8 @@ All notable changes to this project are recorded here. The format follows
 - The Pages site's "DPA clause review" card linked to a missing file.
 - The CLI docstring promised a non-zero exit for board-attention items.
 - `legal_function_os.__version__` said 0.2.0 in the 0.3.0 release.
+- The RaaS AI Act high-risk dates follow Regulation (EU) 2026/1744: 2 December 2027 for Annex III systems and 2 August 2028 for Article 6(1) and Annex I systems. The manifest describes how machinery AI is now covered through Annex I Section B of the AI Act and Article 8 of the Machinery Regulation.
+- The Machinery Regulation applies from 20 January 2027 (Article 54), not 14 January 2027.
 
 ## [0.3.0] - 2026-08-28
 

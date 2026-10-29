@@ -11,7 +11,7 @@
   "verification_artifacts": [
     {
       "path": "docs/demo.png",
-      "label": "Demo screenshot"
+      "label": "Rendered output of the offline CLI demo"
     },
     {
       "path": "docs/architecture.svg",
