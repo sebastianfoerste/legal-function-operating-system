@@ -10,7 +10,8 @@ from src.pilot.metrics import (
     render_metrics_markdown,
 )
 from src.pilot.scenario_runner import ScenarioRunner, load_scenario, scenario_paths
-from tests.pilot_support import make_service, run_until
+from src.pilot.service import Stamp
+from tests.pilot_support import OWNER, make_service, revision, run_until
 
 PLAYBOOK = scenario_paths()[0].parents[1] / "playbook" / "saas-msa-deviation-playbook.v1.json"
 
@@ -120,6 +121,22 @@ def test_open_matters_do_not_count(tmp_path) -> None:
     service = make_service(tmp_path)
     run_until(service, "specialist-revision", "B13")  # payment terms rejected, still in review
     assert build_pilot_metrics(service.store)["playbook_override_patterns"]["rules"] == []
+
+
+def test_a_matter_withdrawn_in_review_still_counts(tmp_path) -> None:
+    # Decided on 2026-10-29: a withdrawn matter is closed, and the override its reviewer
+    # recorded before the withdrawal is still a signal about the playbook.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B13")  # payment terms rejected
+    service.withdraw(
+        OWNER, matter_id, revision(service, matter_id),
+        note="Customer paused the deal; closing without delivery.",
+        stamp=Stamp(fixture_at="2026-09-08T12:00:00Z"),
+    )  # fmt: skip
+    rules = build_pilot_metrics(service.store)["playbook_override_patterns"]["rules"]
+    assert [(r["rule_id"], r["rejected"], r["matters"]) for r in rules] == [
+        ("payment-terms", 1, [matter_id])
+    ]
 
 
 def test_the_report_is_deterministic_and_changes_nothing(tmp_path) -> None:

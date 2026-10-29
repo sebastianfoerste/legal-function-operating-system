@@ -335,6 +335,9 @@ playbook position next to each change, and the evidence next to each resolution.
   - Tests: `supervised-agent/tests/test_pilot_override_patterns.py` and the rehearsal test.
   - Done differently from the claude-for-legal monitor: no proposed wording and no write
     path. A lawyer revises the playbook as a new version.
+  - **Decided on 2026-10-29:** a matter withdrawn during review counts as closed, as the
+    plan says. Its reviewer recorded the override before the withdrawal, so it is still a
+    signal about the playbook. A test pins this.
 
 ### F6. Audit-chain timeline (built)
 
@@ -488,15 +491,12 @@ playbook position next to each change, and the evidence next to each resolution.
    decision path keeps `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` false.
 4. **Python-Redlines** (ADR 0004). A new dependency with a bundled native binary, or an
    extension of the stdlib DOCX writer.
-5. **AI Act timing after the Digital Omnibus.**
-   - `src/legal_function_os/raas_sources.py` states that the Regulation generally applies
-     from 2 August 2026 and that product-linked high-risk obligations apply from
-     2 August 2027.
-   - Search snippets report a provisional agreement that would move Annex III to
-     2 December 2027 and Annex I to 2 August 2028 (Claimed; see the landscape).
-   - Official Journal publication could not be checked because EUR-Lex was not reachable.
-   - Nothing was changed. This needs verification against EUR-Lex and the maintainer's
-     legal review.
+5. **AI Act timing after the Digital Omnibus.** **Settled on 2026-10-29 by PR #15.**
+   - `src/legal_function_os/raas_sources.py` now follows the amending regulation and
+     records when each source was re-checked against the EUR-Lex consolidated texts. That
+     file is the record; this plan restates no date or citation.
+   - The research for this plan saw only search snippets (Claimed) and could not reach
+     EUR-Lex, so it changed nothing.
 6. **Remote MCP and HTTP transport.** claude-for-legal wires remote connectors. This
    repository stays local over stdio (rule 4, ADR 0002).
 7. **Presence records** (F4). **Decided on 2026-10-28:** in memory only, never stored or
