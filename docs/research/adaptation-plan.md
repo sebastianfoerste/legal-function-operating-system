@@ -75,7 +75,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F4 | "Also open by" presence on a matter (H3, part) | 3 | Observed: Chatwoot heartbeat, Langfuse soft lock; RETROSPECTIVE B20 | M | pass if labelled simulated | 4.5 | differentiator | **Built** |
 | F5 | Override-pattern report over pilot decisions | 3 | Observed: claude-for-legal playbook monitor | M | pass | 4.5 | differentiator | **Built** |
 | F6 | Audit-chain timeline (H8, part) | 3 | Observed: Temporal UI | M | pass | 4.5 | differentiator | **Built** |
-| F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | Specced |
+| F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | **Built** |
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | Specced |
 | F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | Specced |
 | F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | Specced |
@@ -378,7 +378,7 @@ playbook position next to each change, and the evidence next to each resolution.
   - Tests: `supervised-agent/tests/test_pilot_timeline.py` and a browser check in
     `supervised-agent/tests/test_review_room_browser.py`.
 
-### F7. KPI tiles and live timers (specced)
+### F7. KPI tiles and live timers (built)
 
 - **Plan.**
   - Control tower tiles gain target, delta against target, and an as-of time and source,
@@ -386,6 +386,38 @@ playbook position next to each change, and the evidence next to each resolution.
   - The live review room shows elapsed wall-clock and business time from the pilot's
     two clocks via `metrics.to_parent_ledger`. No new clock is added.
   - `as_of` is injectable, and no timestamps appear in committed artifacts.
+- **Built: control tower tiles.**
+  - `outcome_control_tower.py` adds `kpi_tiles`. Each tile has a title, value, target,
+    signed delta, the standing in words (with ✓ or ✗ on the page), an as-of time and
+    a source.
+  - Targets are optional, under `kpi_targets` in the outcome config: throughput rate,
+    response SLA attainment and stalled requests. Which direction is better is fixed per
+    KPI in code. The bundled config sets synthetic targets (70%, 90%, none stalled).
+  - The as-of time is the ledger's own `as_of_utc`. Nothing reads the system clock, so
+    the committed artifacts carry no generation time.
+  - Not taken from Evidence: the neutral range and the sparkline, because a snapshot has
+    no series.
+  - Request rows now carry their response and resolution targets in business hours.
+- **Built: time on a matter in the review room.**
+  - `supervised-agent/src/pilot/timing.py` measures the matter with the parent tower
+    over its events. The events are mapped by `ledger.matter_ledger`, which moved out of
+    `metrics.py`; `metrics.to_parent_ledger` uses it unchanged.
+  - One clock per matter, never mixed: scripted when every event has a scripted time,
+    otherwise the time the server recorded.
+  - An open matter is measured to the service clock's `now`, which tests inject. A
+    closed one is measured to its closing event, and an open rehearsal matter to its
+    latest scripted step.
+  - The "Time on this matter" section shows elapsed calendar time, business time (with
+    legal and waiting on the business), first response and resolution against their
+    targets, the clock and the calendar.
+  - It is measured each time the matter is loaded or changed. The page adds no clock
+    and does not tick.
+  - Requesters do not see it. A time that cannot be read leaves the section saying why;
+    it never stops the room.
+- **Fixed on the way.** The tower's Markdown and HTML failed when no first response had
+  been measured yet.
+- **Tests.** New cases in `tests/test_outcome_control_tower.py`,
+  `supervised-agent/tests/test_pilot_timing.py`, and the review room browser test.
 
 ### F8. Approval-matrix view (specced)
 
@@ -442,7 +474,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
-| H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; specced as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
+| H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; built as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
 | H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **parked**: it bundles a 44 MB .NET binary (ADR 0004, Proposed) | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
 | H8. Visual governance views | **Confirmed.** F6 is built; F8 is specced | Temporal UI (Observed); SpotDraft (Claimed) |
 

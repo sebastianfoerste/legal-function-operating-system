@@ -80,6 +80,8 @@ to the forecast. A versioned synthetic event ledger reconciles gross cycle time,
 business-wait time, legal-controlled time, approval dwell, SLA attainment, queue age,
 effort, reopenings, and stalled work. It calibrates forecast points against observed
 minutes and keeps every monetary figure inside an explicit assumption-based proxy.
+Each headline tile shows its target (optional, under `kpi_targets` in the outcome
+config), the difference from it in words, and the ledger's as-of time and source.
 
 Context: the
 [2025 Thomson Reuters Legal Department Operations Index](https://legal.thomsonreuters.com/en/insights/reports/legal-department-operations-index)
@@ -147,7 +149,9 @@ each proposed change. The page uses the shared design tokens in
 `src/legal_function_os/design_tokens.py` (light and dark) and stacks the changes table
 on narrow screens. Reviewers also see which other simulated roles have the matter open
 and on which revision, held in server memory only and never recorded, with a reload
-prompt when the matter has moved on (ADR 0005). Their history is one timeline of the
+prompt when the matter has moved on (ADR 0005). They also see the time spent on the
+matter, in calendar and business hours against its service levels, measured by the
+outcome control tower on one clock. Their history is one timeline of the
 matter's event chain, grouped by version, with each event marked as a command, refusal,
 decision or export; the chain check comes first, and a broken chain marks its first bad
 event. The pilot's measurement report lists
@@ -211,7 +215,7 @@ src/legal_function_os/
   data/                    synthetic data, packaged so the demo runs uninstalled
     sample_requests.json   synthetic general legal requests
     service_events.json    versioned synthetic request lifecycle
-    outcome_config.json    business calendar and value assumptions
+    outcome_config.json    business calendar, value assumptions and KPI targets
     capacity_scenarios.json  illustrative capacity constraints
     dpa_documents.json     synthetic Art. 28 GDPR processing agreements
     raas_deal.json         synthetic specialist transaction

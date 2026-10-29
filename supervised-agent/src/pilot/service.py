@@ -64,7 +64,8 @@ from src.pilot.state_machine import (
     find_transition,
 )
 from src.pilot.store import Clock, PilotStore, SystemClock, canonical
-from src.pilot.timeline import build_timeline, load_payload, stored_text
+from src.pilot.timeline import build_timeline, load_payload, payload_object, stored_text
+from src.pilot.timing import matter_timing
 from src.playbook import DocumentChange, Playbook, load_playbook, propose_changes
 from src.source_verification import verify_source_ref, verify_source_refs
 
@@ -2262,6 +2263,14 @@ class PilotService:
                     "versions": versions,
                     "audit_chain": chain,
                     "timeline": build_timeline(rows, versions, decisions, chain, chain_break),
+                    "timing": matter_timing(
+                        matter_id,
+                        ctx.body.intake,
+                        [{**dict(r), "payload": payload_object(r["payload"]) or {}} for r in rows],
+                        closed=ctx.matter["state"] == "closed",
+                        withdrawn=ctx.matter["closed_outcome"] == "withdrawn_without_delivery",
+                        now=ctx.now,
+                    ),
                 }
             )
             return base

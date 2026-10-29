@@ -2,6 +2,15 @@
 
 **Observed at: 2026-07-17T16:00:00+00:00**
 
+## KPI tiles
+
+| KPI | Value | Against target | As of | Source |
+| --- | --- | --- | --- | --- |
+| Completed requests | 6/8 | +5.0 pp against target 70.0%: on target | 2026-07-17T16:00:00+00:00 | Service-event ledger, 52 events over 8 requests; target from the outcome config |
+| Response SLA attainment | 87.5% | -2.5 pp against target 90.0%: below target | 2026-07-17T16:00:00+00:00 | Service-event ledger, 52 events over 8 requests; first response in business hours against each service level; target from the outcome config |
+| Stalled requests | 2 | +2 against target 0: above target | 2026-07-17T16:00:00+00:00 | Service-event ledger, 52 events over 8 requests; open and inactive for 16 business hours or more; target from the outcome config |
+| Binding queue | Commercial | No target set | 2026-07-17T16:00:00+00:00 | Queue calibration; most stalled, then most open requests |
+
 ## Executive outcome
 
 - Requests: 8

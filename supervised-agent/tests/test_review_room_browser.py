@@ -238,6 +238,8 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.openGroups = await timeline(page).locator("details.version-group[open]").count();
   out.cards = [await card(page, 0), await card(page, 12)];
   out.findingsHeading = await page.locator("#findings-h").innerText();
+  out.timing = await page.locator("section", { has: page.locator("#timing-h") }).innerText();
+  out.timingTiles = await page.locator("ul.kpis li.kpi .kpi-title").allInnerTexts();
   await page.setViewportSize({ width: 390, height: 900 });
   await page.waitForTimeout(200);
   out.narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
@@ -264,7 +266,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   // Requester: no timeline at all, checked once the requester's own view is on screen.
   page = await open(REQUESTER, intact);
   await page.waitForSelector("#status-h");
-  out.requesterTimeline = await page.locator("#timeline-h, li.ev, .chain-status").count();
+  out.requesterTimeline = await page.locator("#timeline-h, li.ev, .chain-status, #timing-h").count();
 
   out.errors = errors;
   console.log(JSON.stringify(out));
@@ -394,6 +396,10 @@ def test_audit_timeline_in_a_browser(tmp_path, monkeypatch) -> None:
         assert shown["place"] == f"Position {row['seq']} · hash {row['event_hash'][:12]}"
         assert json.loads(shown["pre"]) == row["payload"]
     assert out["findingsHeading"].startswith("Findings (")
+    # Time on the matter: four tiles on the scripted clock, measured to the closing event.
+    assert out["timingTiles"] == ["Elapsed", "Business time", "First response", "Resolution"]
+    assert "Scripted rehearsal time, up to the closing event" in out["timing"]
+    assert "Target 16.0 h: met" in out["timing"] and "null" not in out["timing"]
     # At phone width nothing runs out of the page or out of the timeline section.
     assert out["narrowOverflow"] is False and out["sectionOverflow"] is False
 

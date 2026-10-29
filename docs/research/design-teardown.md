@@ -124,7 +124,7 @@ All Claimed.
   | Verdict | Pattern | Where |
   | --- | --- | --- |
   | Adopt | Pass or fail per rule, each with a reference | Already present: source verification per change |
-  | Adapt | Dashboard drill-down | Specced as F7 |
+  | Adapt | Dashboard drill-down | Not built. F7 added targets and deltas to the tiles, not drill-down |
   | Reject | AI-authored playbooks without a lawyer's sign-off | — |
 
 ### 6. SpotDraft
@@ -206,7 +206,7 @@ All Claimed.
   <https://github.com/temporalio/ui/blob/main/src/lib/types/events.ts>
 - **Evidence** (MIT): the BigValue tile has a title, a formatted value, a comparison with
   `down_is_good` and a neutral range, and a sparkline. This is the model for the F7 KPI
-  tile (from H6), specced.
+  tile (from H6), built without the neutral range and sparkline.
   <https://github.com/evidence-dev/evidence/blob/main/core/src/user-components/tags/bigvalue/BigValue.svelte>
 - **Chatwoot** (MIT core; SLA in `enterprise/`):
   - heartbeat presence with a 20-second window;
@@ -261,7 +261,7 @@ a verdict, and the file the verdict would change.
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Control tower tiles (for example 87.5% response SLA attainment) show a value and a label; the snapshot time is one line for the whole page, and no tile shows a target or delta | Observed (`examples/legal-outcome-control-tower.html`) | `baseline/control-tower-1280.png` | Adapt, specced (F7, from H6): Evidence-style tile in `outcome_control_tower.py` |
+| Control tower tiles (for example 87.5% response SLA attainment) show a value and a label; the snapshot time is one line for the whole page, and no tile shows a target or delta | Observed (`examples/legal-outcome-control-tower.html`) | `baseline/control-tower-1280.png` | Adapt, built (F7, from H6): Evidence-style tile with target, delta, as-of and source in `outcome_control_tower.py` |
 
 ### Board pack and knowledge portal
 

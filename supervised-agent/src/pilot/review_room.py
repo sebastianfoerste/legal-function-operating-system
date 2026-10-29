@@ -68,6 +68,10 @@ del{color:var(--bad)}ins{color:var(--ok);text-decoration:none;font-weight:600}
 details{margin:6px 0}summary{cursor:pointer;color:var(--accent)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+ul.kpis{list-style:none;padding:0;margin:6px 0;display:grid;grid-template-columns:repeat(auto-fit,minmax(11rem,1fr));gap:8px}
+li.kpi{border:1px solid var(--line);border-radius:8px;padding:8px 10px;background:var(--panel);overflow-wrap:anywhere}
+.kpi-title{display:block;font-size:12.5px;font-weight:600;color:var(--muted)}li.kpi strong{display:block;font-size:20px;margin:2px 0}
+.kpi-note{display:block;font-size:12.5px}
 .chain-status{margin:0 0 10px;padding:8px 12px;border:1px solid currentColor;border-radius:8px;background:var(--ok-bg);overflow-wrap:anywhere}
 .chain-status.bad{border-width:2px;background:var(--bad-bg)}.chain-status p{margin:2px 0}
 ul.legend{list-style:none;padding:0;margin:4px 0 10px}ul.legend li{margin:0 0 4px}
@@ -404,6 +408,7 @@ function renderReview(view, root) {
     h("button", {class: "act secondary", onclick: () => command("export_internal_review")}, "write internal review draft"),
     formButton("withdraw matter", {title: "Withdraw the matter", submit: "Withdraw", fields: [note("Reason for closing without delivery", 20)], onsubmit: (v) => command("withdraw", {note: v.note})}),
     view.manifests.some((m) => m.kind === "delivery_package") ? h("a", {href: "#", onclick: openPackage}, "Open the approved customer package") : null));
+  root.append(timingSection(view.timing, view.audit_chain.verified));
   root.append(h("section", {"aria-labelledby": "ready-h"}, h("h2", {id: "ready-h"}, "Readiness check"), evidenceList(view.readiness),
     h("h3", null, "Required facts"), factList(view.required_facts),
     h("h3", null, "Assignments"), h("p", null, Object.entries(view.assignments).map(([r, ids]) => words(r) + ": " + ids.join(", ")).join(" | ")),
@@ -435,6 +440,33 @@ function renderReview(view, root) {
   root.append(h("section", {"aria-labelledby": "findings-h"}, h("h2", {id: "findings-h"}, "Findings (" + view.findings.length + ")"),
     view.findings.length ? h("ul", null, view.findings.map((f) => h("li", null, "[" + f.severity + "] " + f.summary + " Evidence: " + f.evidence))) : h("p", {class: "muted"}, "No finding on this version.")));
   root.append(timelineSection(view.timeline, version.version));
+}
+// ------------------------------------------------------------------ timing
+// How long the matter has taken, measured by the parent's control tower on its service
+// calendar. One clock per matter, never mixed; the page adds no clock of its own.
+const SLA_WORDS = {met: "met", breached: "breached", open: "still open", unmeasured: "not measured yet", not_applicable: "not applicable, withdrawn"};
+const SLA_CLASS = {met: "ok", breached: "bad"};
+const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const hours = (value) => value.toFixed(1) + " h";
+function timingSection(t, verified) {
+  const section = h("section", {"aria-labelledby": "timing-h"}, h("h2", {id: "timing-h"}, "Time on this matter"));
+  if (!t.available) { section.append(h("p", {class: "muted"}, "Time on this matter cannot be measured: " + t.reason + ".")); return section; }
+  const cal = t.calendar, sla = (status) => ({class: "kpi-note " + (SLA_CLASS[status] || "")});
+  const tiles = [
+    ["Elapsed", hours(t.elapsed_hours), h("span", {class: "kpi-note"}, "Calendar time since the request was submitted")],
+    ["Business time", hours(t.business_hours), h("span", {class: "kpi-note"}, hours(t.legal_controlled_hours) + " with legal, " + hours(t.business_wait_hours) + " waiting on the business")],
+    ["First response", t.first_response_business_hours == null ? "none yet" : hours(t.first_response_business_hours), h("span", sla(t.response_sla), "Target " + hours(t.response_target_business_hours) + ": " + SLA_WORDS[t.response_sla])],
+    ["Resolution", hours(t.legal_controlled_hours), h("span", sla(t.resolution_sla), "With legal, of a " + hours(t.resolution_target_business_hours) + " target: " + SLA_WORDS[t.resolution_sla])],
+  ];
+  const clock = t.clock === "scripted" ? "Scripted rehearsal time" : "Time recorded by this server";
+  const upTo = !t.open ? "up to the closing event" : t.clock === "scripted" ? "up to the latest scripted step" : "up to when this page was loaded";
+  const days = cal.working_weekdays, run = days.every((d, i) => i === 0 || d === days[i - 1] + 1);
+  const dayText = run && days.length > 2 ? DAYS[days[0]] + " to " + DAYS[days[days.length - 1]] : days.map((d) => DAYS[d]).join(", ");
+  const excluded = cal.excluded_dates.length ? ", without " + cal.excluded_dates.length + " listed " + (cal.excluded_dates.length === 1 ? "date" : "dates") : "";
+  section.append(h("ul", {class: "kpis"}, tiles.map(([title, value, note]) => h("li", {class: "kpi"}, h("span", {class: "kpi-title"}, title), h("strong", null, value), note))),
+    h("p", {class: "muted"}, clock + ", " + upTo + " (" + t.as_of + "). Business hours " + dayText + ", " + cal.workday_start + " to " + cal.workday_end + " " + cal.timezone + excluded + ". Targets come from the service levels in the parent rules."));
+  if (!verified) section.append(h("p", {class: "bad"}, "✗ These times come from events the chain check did not verify."));
+  return section;
 }
 // ---------------------------------------------------------------- timeline
 // Every event on the matter's hash chain, in chain order and in runs of one version. The
