@@ -73,7 +73,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F2 | Playbook standard and fallback beside each change (H7) | 4 | Observed: claude-for-legal NDA triage table with playbook reference; own playbook fields | S | pass | 12 | table stakes | **Built** |
 | F3 | Plain-language requester status (H2) | 4 | Claimed: LawVu My Work, Linear Decline | S | pass | 8 | table stakes | **Built** |
 | F4 | "Also open by" presence on a matter (H3, part) | 3 | Observed: Chatwoot heartbeat, Langfuse soft lock; RETROSPECTIVE B20 | M | pass if labelled simulated | 4.5 | differentiator | **Built** |
-| F5 | Override-pattern report over pilot decisions | 3 | Observed: claude-for-legal playbook monitor | M | pass | 4.5 | differentiator | Specced |
+| F5 | Override-pattern report over pilot decisions | 3 | Observed: claude-for-legal playbook monitor | M | pass | 4.5 | differentiator | **Built** |
 | F6 | Audit-chain timeline (H8, part) | 3 | Observed: Temporal UI | M | pass | 4.5 | differentiator | Specced |
 | F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | Specced |
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | Specced |
@@ -309,7 +309,7 @@ playbook position next to each change, and the evidence next to each resolution.
   - Tests: `supervised-agent/tests/test_pilot_presence.py`, and the presence and stale
     steps in `supervised-agent/tests/test_review_room_browser.py`.
 
-### F5. Override-pattern report (specced)
+### F5. Override-pattern report (built)
 
 - **Plan.**
   - A deterministic count of `rejected` and `amended` decisions per playbook rule across
@@ -319,6 +319,22 @@ playbook position next to each change, and the evidence next to each resolution.
 - **Acceptance.**
   - Same input, same report.
   - No playbook file is written.
+- **Built.**
+  - `override_patterns()` in `supervised-agent/src/pilot/metrics.py`. It counts, per playbook
+    rule, the closed matters whose final version keeps a `rejected` or `amended` decision.
+    Each matter counts once per rule.
+  - Each override is timed by its `change_decided` event, on the report's own clock
+    (scripted for rehearsals, operational otherwise).
+  - The 365-day window ends at the latest decision, not at the time the report is built,
+    so the same store always gives the same report.
+  - A rule with 5 or more overrides becomes a proposal. Its suggestion depends on the
+    direction of the overrides (keep the counterparty's wording, rewrite, or both), and
+    it quotes the reviewers' recorded reasons. No wording is generated.
+  - The report is the "Playbook override patterns" section of `pilot-metrics.md` and
+    `.json`. It feeds step 5 of the retrospective template.
+  - Tests: `supervised-agent/tests/test_pilot_override_patterns.py` and the rehearsal test.
+  - Done differently from the claude-for-legal monitor: no proposed wording and no write
+    path. A lawyer revises the playbook as a new version.
 
 ### F6. Audit-chain timeline (specced)
 

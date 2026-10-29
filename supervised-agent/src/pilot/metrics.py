@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from src.pilot.parent_bridge import CONTRACT_REVIEW_STATE, parent_module, parent_request
-from src.pilot.service import VersionBody
+from src.pilot.service import StoredChange, VersionBody
 from src.pilot.store import PilotStore
 
 MEASUREMENT_PLAN_PATH = (
@@ -39,6 +39,14 @@ _WAITING_ON = {
     "specialist_reviewer": "specialist_availability",
     "final_approver": "approver_availability",
 }
+# A playbook rule that reviewers override this often is worth a lawyer's second look.
+OVERRIDE_THRESHOLD = 5
+OVERRIDE_WINDOW_DAYS = 365
+_OVERRIDES = ("rejected", "amended")
+_OVERRIDE_NOTE = (
+    "Proposals only. Nothing here changes the playbook: a lawyer decides whether a rule "
+    "is revised, clarified or kept, and records that as a new playbook version."
+)
 _PARENT_ROLE = {
     "business_requester": "Business Requester",
     "matter_owner": "Legal Counsel",
@@ -71,11 +79,19 @@ def _load(store: PilotStore) -> list[dict[str, Any]]:
                 "SELECT body FROM matter_versions WHERE matter_id = ? AND version = ?",
                 (row["matter_id"], row["current_version"]),
             ).fetchone()
+            changes = [
+                StoredChange.model_validate_json(c["body"])
+                for c in connection.execute(
+                    "SELECT body FROM changes WHERE matter_id = ? AND version = ? ORDER BY position",
+                    (row["matter_id"], row["current_version"]),
+                )
+            ]
             matters.append(
                 {
                     "row": dict(row),
                     "events": events,
                     "body": VersionBody.model_validate_json(version["body"]),
+                    "changes": changes,
                     "chain": store.verify_chain(connection, row["matter_id"]),
                 }
             )
@@ -170,6 +186,115 @@ def _matter_metrics(matter: dict[str, Any], key: str) -> dict[str, Any]:
     }
 
 
+# -- playbook override patterns ---------------------------------------------------
+
+
+def _override_records(matters: list[dict[str, Any]], key: str) -> list[dict[str, Any]]:
+    """One record per closed matter and change whose standing decision departs from the playbook.
+
+    Only the final version counts, so a decision carried across versions is counted once.
+    The time is that of the last ``change_decided`` event for the change and outcome, on
+    the same clock as the rest of the report.
+    """
+
+    records = []
+    for matter in matters:
+        if matter["row"]["state"] != "closed":
+            continue
+        for change in matter["changes"]:
+            if change.decision not in _OVERRIDES:
+                continue
+            times = [
+                e[key]
+                for e in matter["events"]
+                if e["event_type"] == "change_decided"
+                and e["payload"].get("change_id") == change.id
+                and e["payload"].get("outcome") == change.decision
+                and e[key]
+            ]
+            rule = matter["body"].playbook.rule(change.rule_id or "")
+            records.append(
+                {
+                    "matter_id": matter["row"]["matter_id"],
+                    "rule_id": change.rule_id or "(no rule)",
+                    "topic": rule.topic if rule else "(no rule)",
+                    "outcome": change.decision,
+                    "reason": change.decision_reason or "",
+                    "decided_by": change.decided_by,
+                    "at": times[-1] if times else None,
+                }
+            )
+    return records
+
+
+def _override_suggestion(rejected: int, amended: int) -> str:
+    if rejected and not amended:
+        return (
+            "Reviewers kept the counterparty's wording every time. Consider whether the "
+            "standard position still fits these deals."
+        )
+    if amended and not rejected:
+        return (
+            "Reviewers rewrote the proposed wording every time. Consider whether the standard "
+            "wording or the fallback needs revising."
+        )
+    return "Reviewers departed in both directions. Clarify the rule before revising it."
+
+
+def override_patterns(
+    records: list[dict[str, Any]],
+    *,
+    threshold: int = OVERRIDE_THRESHOLD,
+    window_days: int = OVERRIDE_WINDOW_DAYS,
+) -> dict[str, Any]:
+    """Count overrides per playbook rule in the window ending at the latest decision.
+
+    Deterministic: the window ends at the latest dated record, not at the time the report
+    is built. A rule with ``threshold`` or more overrides becomes a proposal for review.
+    """
+
+    dated = [r for r in records if r["at"]]
+    as_of = max((r["at"] for r in dated), default=None)
+    start = _parse(as_of) - timedelta(days=window_days) if as_of else None
+    by_rule: dict[str, list[dict[str, Any]]] = {}
+    for record in dated:
+        if start is not None and _parse(record["at"]) >= start:
+            by_rule.setdefault(record["rule_id"], []).append(record)
+    rules = []
+    for rule_id, group in by_rule.items():
+        group = sorted(group, key=lambda r: (r["at"], r["matter_id"]))
+        rejected = sum(r["outcome"] == "rejected" for r in group)
+        amended = len(group) - rejected
+        flagged = len(group) >= threshold
+        rules.append(
+            {
+                "rule_id": rule_id,
+                "topic": group[0]["topic"],
+                "overrides_in_window": len(group),
+                "rejected": rejected,
+                "amended": amended,
+                "matters": sorted({r["matter_id"] for r in group}),
+                "reasons": [
+                    {"matter_id": r["matter_id"], "outcome": r["outcome"], "reason": r["reason"]}
+                    for r in group
+                ],
+                "flagged": flagged,
+                "suggestion": _override_suggestion(rejected, amended) if flagged else None,
+            }
+        )
+    rules.sort(key=lambda r: (-r["overrides_in_window"], r["rule_id"]))
+    return {
+        "basis": "closed matters; the standing decision on each change in the final version",
+        "threshold": threshold,
+        "window_days": window_days,
+        "as_of": as_of,
+        "undated_overrides": len(records) - len(dated),
+        "rules": rules,
+        "proposals": [r["rule_id"] for r in rules if r["flagged"]],
+        "note": _OVERRIDE_NOTE,
+    }
+
+
 def _plan() -> dict[str, Any]:
     return json.loads(MEASUREMENT_PLAN_PATH.read_text(encoding="utf-8"))
 
@@ -212,6 +337,9 @@ def build_pilot_metrics(store: PilotStore) -> dict[str, Any]:
             }
             for m in matters
         ],
+        "playbook_override_patterns": override_patterns(
+            _override_records(matters, "fixture_at" if scripted else "occurred_at")
+        ),
     }
 
 
@@ -270,7 +398,47 @@ def render_metrics_markdown(metrics: dict[str, Any]) -> str:
         "one does not predict the other.",
         "",
     ]
+    lines += _render_overrides(metrics["playbook_override_patterns"])
     return "\n".join(lines)
+
+
+def _render_overrides(patterns: dict[str, Any]) -> list[str]:
+    lines = [
+        "## Playbook override patterns",
+        "",
+        f"Basis: {patterns['basis']}. A rule overridden in {patterns['threshold']} or more "
+        f"matters within {patterns['window_days']} days, up to {patterns['as_of'] or 'the latest decision'}, "
+        "becomes a proposal for review.",
+        "",
+    ]
+    if not patterns["rules"]:
+        return [*lines, "No change departed from the playbook in a closed matter.", ""]
+    lines += [
+        "| Rule | Topic | Overrides | Counterparty wording kept | Amended | Matters | Proposal |",
+        "| --- | --- | --- | --- | --- | --- | --- |",
+    ]
+    for rule in patterns["rules"]:
+        lines.append(
+            f"| {rule['rule_id']} | {rule['topic']} | {rule['overrides_in_window']} | {rule['rejected']} "
+            f"| {rule['amended']} | {', '.join(rule['matters'])} | {'yes' if rule['flagged'] else 'no'} |"
+        )
+    lines.append("")
+    flagged = [r for r in patterns["rules"] if r["flagged"]]
+    if not flagged:
+        lines.append(f"No rule reached the threshold of {patterns['threshold']} overrides.")
+    for rule in flagged:
+        lines += [
+            "",
+            f"### Proposal: review `{rule['rule_id']}` ({rule['topic']})",
+            "",
+            rule["suggestion"],
+            "",
+            "Reasons recorded by the reviewers:",
+            "",
+        ]
+        lines += [f"- {r['matter_id']} ({r['outcome']}): {r['reason']}" for r in rule["reasons"]]
+    lines += ["", patterns["note"], ""]
+    return lines
 
 
 # -- parent reporting contract ---------------------------------------------------

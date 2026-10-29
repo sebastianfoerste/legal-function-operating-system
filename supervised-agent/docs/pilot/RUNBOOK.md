@@ -23,7 +23,7 @@ The command refuses to run into an existing store. It seeds the synthetic partic
 | File | Content |
 | --- | --- |
 | `rehearsal-report.md`, `.json` | Each check after the final restart, and every step with its expected and actual outcome |
-| `pilot-metrics.md`, `.json` | The measurement report |
+| `pilot-metrics.md`, `.json` | The measurement report, including playbook override patterns |
 | `parent-outcome-view.json` | The same events read by the parent outcome control tower |
 | `shared-control-contract.json` | Each matter in the shared `legal-workflow-controls.v1` contract |
 | `exports/` | Internal review exports and delivery packages |

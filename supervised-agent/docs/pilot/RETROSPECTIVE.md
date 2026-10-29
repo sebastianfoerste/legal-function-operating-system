@@ -38,6 +38,6 @@ Hold it within one week of the end of the pilot window. The pilot lead brings th
 2. **Baseline comparison.** For each measure in `measurement-plan.json`: baseline, pilot, difference, sample sizes. State where a figure is an estimate.
 3. **Delay attribution.** Minutes waiting on the requester or missing facts, on each reviewer role, on acceptance. Software execution time. Refused commands by cause.
 4. **Each participant, in turn.** What cost you time that the workflow should have saved? What did you approve or sign off without reading in full, and why? Which refusal was wrong?
-5. **Playbook quality.** Proposed changes accepted, amended, rejected; rejections caused by a wrong rule or a wrong locator.
+5. **Playbook quality.** Proposed changes accepted, amended, rejected; rejections caused by a wrong rule or a wrong locator. The measurement report's "Playbook override patterns" section counts, per rule, the closed matters in which reviewers kept the counterparty's wording or amended it, with their reasons; a rule overridden in five or more matters within a year is listed as a proposal. The legal team decides each proposal; the report changes nothing.
 6. **Friction to change.** One table in the form used in Part A: observation, evidence, change, owner, date.
 7. **Decision.** Continue, change and continue, or stop, against the acceptance criteria in the charter.

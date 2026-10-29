@@ -8,6 +8,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 
+- Pilot measurement report: a "Playbook override patterns" section counts, per playbook rule, the closed matters in which reviewers kept the counterparty's wording or amended the proposal, with their reasons. A rule overridden in five or more matters within 365 days of the latest decision is listed as a proposal for the legal team. The report is deterministic and never changes the playbook.
 - Review room: an "Also open" line shows which other simulated reviewer roles have the matter open and on which revision, and warns with a reload button when the matter has moved on. Presence is held in server memory for two minutes; it is never stored, logged, exported or shown to requesters (ADR 0005).
 - A published request format: [`contracts/legal-request.v1.schema.json`](contracts/legal-request.v1.schema.json) and [`docs/INPUT_FORMAT.md`](docs/INPUT_FORMAT.md).
 - CSV intake: `--input requests.csv` reads a request log saved from a spreadsheet, one request per row. Headers are matched loosely, yes/no answers become booleans, and Excel's comma, semicolon, tab, UTF-16 and Windows-1252 exports all work. [`examples/requests-template.csv`](examples/requests-template.csv) is a template.
