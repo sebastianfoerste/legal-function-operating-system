@@ -351,24 +351,30 @@ playbook position next to each change, and the evidence next to each resolution.
   - A broken chain highlights the first bad event.
   - Requesters do not see it.
 - **Built.**
-  - `build_timeline()` in `supervised-agent/src/pilot/timeline.py`. It reads the same event
-    rows as `history()`, in chain order, and splits them into runs of one version.
+  - `build_timeline()` in `supervised-agent/src/pilot/timeline.py`. It reads the matter's
+    event rows once, in chain order, and splits them into runs of one version.
   - A refusal records no version, so it goes with the version in force; an amendment is
     the last event of the version it replaced.
-  - A table classifies all 22 event types the service writes. A test fails when a new
-    one is written without a class.
+  - A table classifies all 22 event types the service writes. A test reads every event
+    write under `src/pilot` and fails when one uses a type that is not in the table, or
+    names it any way but a plain string.
   - Each event shows its class, type, actor, role, chain position and a 12-character hash
     prefix. Its "Chain record" shows the full hashes, both clocks (labelled) and the
     payload as JSON, in place of Temporal's separate JSON view.
   - The legend counts each class.
-  - The chain status from `verify_chain` comes first. When the chain is broken, it names
-    the reason and links to the first bad event, which is marked. Every later event is
-    marked "not verified".
+  - The chain status comes first and covers exactly the rows shown, because
+    `PilotStore.check_events` checks those same rows. When the chain is broken, it gives
+    the reason, says which positions are verified and which are missing, and links to the
+    first event that is not verified.
+  - The first bad event is marked, and every later event is marked "not verified". When
+    an event's link to the one before it does not match, the one before is marked too,
+    because either may have been rewritten.
+  - A tampered row never stops the view: a payload or value that cannot be parsed or
+    hashed is reported as a break, and a stored position that is not a number is shown
+    as stored.
   - Decisions later set aside stay listed under their version with the reason.
     Findings, which are not events, keep their own list.
   - The timeline is part of the review view only, which requesters never get.
-  - `verify_chain` now reports a payload that is not valid JSON as a broken chain
-    instead of failing.
   - Tests: `supervised-agent/tests/test_pilot_timeline.py` and a browser check in
     `supervised-agent/tests/test_review_room_browser.py`.
 

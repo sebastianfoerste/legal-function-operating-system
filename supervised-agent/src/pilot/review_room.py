@@ -68,15 +68,16 @@ del{color:var(--bad)}ins{color:var(--ok);text-decoration:none;font-weight:600}
 details{margin:6px 0}summary{cursor:pointer;color:var(--accent)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
-.chain-status{margin:0 0 10px;padding:8px 12px;border:1px solid currentColor;border-radius:8px;background:var(--ok-bg)}
+.chain-status{margin:0 0 10px;padding:8px 12px;border:1px solid currentColor;border-radius:8px;background:var(--ok-bg);overflow-wrap:anywhere}
 .chain-status.bad{border-width:2px;background:var(--bad-bg)}.chain-status p{margin:2px 0}
 ul.legend{list-style:none;padding:0;margin:4px 0 10px}ul.legend li{margin:0 0 4px}
-details.version-group{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:8px 0}
+details.version-group{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:8px 0;overflow-wrap:anywhere}
 details.version-group>summary{font-weight:600}
 ol.timeline{list-style:none;padding:0;margin:6px 0 10px}
 li.ev{border-left:4px solid var(--pill-line);padding:6px 10px;margin:0 0 6px}
 li.ev.refusal{border-left-color:var(--bad)}li.ev.decision{border-left-color:var(--ink)}li.ev.export{border-left-color:var(--warn)}
 li.ev.unverified{border-left-style:dashed}li.ev.first-bad{border:2px solid var(--bad);border-left-width:6px;background:var(--bad-bg)}
+li.ev.suspect{border:2px dashed var(--bad);border-left-width:6px}
 li.ev:focus{outline:3px solid var(--focus);outline-offset:2px}
 .badge{display:inline-block;min-width:5.5em;text-align:center;padding:1px 8px;border:1px solid var(--pill-line);border-radius:4px;background:var(--panel);color:var(--ink);font-size:12px;font-weight:700}
 .badge.refusal{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
@@ -437,33 +438,40 @@ function renderReview(view, root) {
 }
 // ---------------------------------------------------------------- timeline
 // Every event on the matter's hash chain, in chain order and in runs of one version. The
-// chain status comes first; a broken chain marks its first bad event and all that follow.
+// chain status comes first; the server explains a break and marks each event, so the page
+// only shows what the check found.
 function chainStatus(chain) {
   if (chain.verified) return h("p", {class: "chain-status ok"}, "✓ Event chain intact: " + chain.event_count + " events, positions 0 to " + (chain.event_count - 1) + ". Latest hash ", h("span", {class: "hash"}, chain.chain_root_hash.slice(0, 12)), ".");
-  const first = chain.broken_at_seq;
-  const jump = (event) => { event.preventDefault(); const target = $("ev-" + first); target.closest("details").open = true; target.focus(); };
+  const target = chain.first_unverified_index;
+  const jump = (event) => { event.preventDefault(); const item = $("ev-" + target); item.closest("details").open = true; item.focus(); };
   return h("div", {class: "chain-status bad"}, h("p", null, h("strong", null, "✗ Event chain broken: " + chain.reason + ".")),
-    first == null ? null : h("p", null, (first ? "Positions 0 to " + (first - 1) + " are verified; position " + first + " and every later event are not. " : "No event is verified. "), h("a", {href: "#ev-" + first, onclick: jump}, "Go to the first bad event")));
+    h("p", null, chain.explanation, target == null ? null : [" ", h("a", {href: "#ev-" + target, onclick: jump}, "Go to the first event that is not verified")]));
 }
-function timelineEvent(e, labels, reason) {
-  const mark = e.chain === "first_bad" ? h("p", {class: "bad"}, h("strong", null, "✗ First bad event: "), reason + ".")
-    : e.chain === "unverified" ? h("p", {class: "bad"}, "✗ Not verified: recorded after the first bad event.") : null;
-  return h("li", {id: "ev-" + e.seq, class: "ev " + e.class + (e.chain === "verified" ? "" : " " + e.chain.replace("_", "-")), tabindex: e.chain === "first_bad" ? "-1" : null},
+const CHAIN_MARKS = {
+  first_bad: (reason) => [h("strong", null, "✗ First bad event: "), reason + "."],
+  suspect: () => "✗ Not verified: the next event recorded a different hash for this one, so this event or the next one was changed.",
+  unverified: () => "✗ Not verified: recorded after the first bad event.",
+};
+function timelineEvent(e, labels, chain) {
+  const mark = CHAIN_MARKS[e.chain];
+  const payload = e.payload ? JSON.stringify(e.payload, null, 2) : (e.payload_readable ? "Not a JSON object. " : "Not readable as JSON. ") + "Stored text: " + e.payload_text;
+  return h("li", {id: "ev-" + e.index, class: "ev " + e.class + (e.chain === "verified" ? "" : " " + e.chain.replace("_", "-")), tabindex: e.index === chain.first_unverified_index ? "-1" : null},
     h("div", null, h("span", {class: "badge " + e.class}, labels[e.class]), " ", h("strong", null, words(e.event_type)), " ", h("span", {class: "muted"}, "by " + e.actor_id + " (" + words(e.role) + ")")),
     h("div", {class: "muted"}, "Position " + e.seq + " · hash ", h("span", {class: "hash"}, e.hash_prefix)),
-    mark, h("div", null, e.note),
+    mark ? h("p", {class: "bad"}, mark(chain.reason)) : null, h("div", null, e.note),
     h("details", null, h("summary", null, "Chain record", h("span", {class: "visually-hidden"}, " of position " + e.seq)),
       h("dl", {class: "facts"}, h("dt", null, "Previous hash"), h("dd", {class: "hash"}, e.prev_hash || "none (first event)"), h("dt", null, "Event hash"), h("dd", {class: "hash"}, e.event_hash),
         h("dt", null, "Recorded at"), h("dd", null, e.occurred_at), e.fixture_at ? [h("dt", null, "Scripted time"), h("dd", null, e.fixture_at)] : null),
-      h("pre", null, e.payload ? JSON.stringify(e.payload, null, 2) : "Payload unreadable.")));
+      h("pre", null, payload)));
 }
-function timelineGroup(g, current, labels, reason) {
-  const n = g.events.length, bad = g.events.some((e) => e.chain === "first_bad"), unverified = g.events.some((e) => e.chain !== "verified");
+function timelineGroup(g, current, labels, chain) {
+  const n = g.events.length, has = (state) => g.events.some((e) => e.chain === state);
   const span = n ? ", positions " + g.events[0].seq + " to " + g.events[n - 1].seq : ", none yet";
-  return h("details", {class: "version-group", open: g.version === current || bad},
-    h("summary", null, (g.version == null ? "Version unknown" : "Version " + g.version) + ": " + n + (n === 1 ? " event" : " events") + span + (bad ? " · ✗ first bad event" : unverified ? " · ✗ not verified" : "")),
+  const flag = has("first_bad") ? " · ✗ first bad event" : g.events.some((e) => e.chain !== "verified") ? " · ✗ not verified" : "";
+  return h("details", {class: "version-group", open: g.version === current || has("first_bad") || has("suspect")},
+    h("summary", null, (g.version == null ? "Version unknown" : "Version " + g.version) + ": " + n + (n === 1 ? " event" : " events") + span + flag),
     g.content_hash ? h("p", {class: "muted"}, "Created " + g.created_at + " · document ", h("span", {class: "hash"}, g.document_sha256.slice(0, 12)), " · content ", h("span", {class: "hash"}, g.content_hash.slice(0, 12))) : null,
-    n ? h("ol", {class: "timeline"}, g.events.map((e) => timelineEvent(e, labels, reason))) : null,
+    n ? h("ol", {class: "timeline"}, g.events.map((e) => timelineEvent(e, labels, chain))) : null,
     g.set_aside.length ? h("div", {class: "context"}, h("strong", null, "Decisions on this version set aside later (" + g.set_aside.length + ")"),
       h("ul", null, g.set_aside.map((d) => h("li", null, words(d.kind) + (d.target_id ? " " + d.target_id : "") + ": " + words(d.outcome) + " by " + d.actor_id + ". " + d.invalidated_reason + ".")))) : null);
 }
@@ -474,7 +482,7 @@ function timelineSection(t, current) {
     h("h3", null, "Legend"), h("ul", {class: "legend"}, t.legend.map((l) => h("li", null, h("span", {class: "badge " + l.class}, l.label), " " + l.count + (l.count === 1 ? " event: " : " events: ") + l.meaning))),
     h("h3", null, "Events by version"),
     h("p", {class: "muted"}, "Every version is kept. An event belongs to the version in force when it was recorded, so an amendment is the last event of the version it replaced."),
-    t.groups.map((g) => timelineGroup(g, current, labels, t.chain.reason)));
+    t.groups.map((g) => timelineGroup(g, current, labels, t.chain)));
 }
 // ---------------------------------------------------------------- presence
 // Who else has this matter open: simulated local roles, held in server memory only.

@@ -64,7 +64,7 @@ from src.pilot.state_machine import (
     find_transition,
 )
 from src.pilot.store import Clock, PilotStore, SystemClock, canonical
-from src.pilot.timeline import build_timeline, read_payload
+from src.pilot.timeline import build_timeline, load_payload, stored_text
 from src.playbook import DocumentChange, Playbook, load_playbook, propose_changes
 from src.source_verification import verify_source_ref, verify_source_refs
 
@@ -2190,6 +2190,13 @@ class PilotService:
                         "evidence": self._evidence(probe, names),
                     }
                 )
+            # The chain check and the timeline cover the same rows, read once; versions and
+            # decisions are read after them, so every version an event names is present.
+            rows = connection.execute(
+                "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
+            ).fetchall()
+            verification, chain_break = self.store.check_events(rows)
+            chain = verification.model_dump()
             decisions = [
                 dict(r)
                 for r in connection.execute(
@@ -2204,7 +2211,6 @@ class PilotService:
                     (matter_id,),
                 )
             ]
-            chain = self.store.verify_chain(connection, matter_id).model_dump()
             base.update(
                 {
                     "view": "review_room",
@@ -2255,14 +2261,7 @@ class PilotService:
                     "manifests": manifests,
                     "versions": versions,
                     "audit_chain": chain,
-                    "timeline": build_timeline(
-                        connection.execute(
-                            "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
-                        ),
-                        versions,
-                        decisions,
-                        chain,
-                    ),
+                    "timeline": build_timeline(rows, versions, decisions, chain, chain_break),
                 }
             )
             return base
@@ -2325,20 +2324,26 @@ class PilotService:
                         ],
                     }
                 )
-            events = [
-                {
-                    **{k: r[k] for k in r.keys() if k != "payload"},
-                    "payload": read_payload(r["payload"]),
+            rows = connection.execute(
+                "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
+            ).fetchall()
+            events = []
+            for r in rows:
+                payload, parsed = load_payload(r["payload"])
+                event = {
+                    k: stored_text(r[k]) if isinstance(r[k], bytes) else r[k]
+                    for k in r.keys()
+                    if k != "payload"
                 }
-                for r in connection.execute(
-                    "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
-                )
-            ]
+                event["payload"] = payload
+                if not parsed:  # tampered: keep what is stored, for the audit
+                    event["payload_raw"] = stored_text(r["payload"])
+                events.append(event)
             return {
                 "matter_id": matter_id,
                 "versions": versions,
                 "events": events,
-                "audit_chain": self.store.verify_chain(connection, matter_id).model_dump(),
+                "audit_chain": self.store.check_events(rows)[0].model_dump(),
             }
 
     def version_document(self, actor_id: str, matter_id: str, version: int) -> bytes:

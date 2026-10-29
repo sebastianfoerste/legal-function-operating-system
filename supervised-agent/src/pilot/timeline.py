@@ -2,20 +2,24 @@
 
 Every event on the matter's hash chain, in chain order, in runs of the version it
 concerns, each classified as a command, a refusal, a decision or an export. The chain
-status is ``PilotStore.verify_chain``'s: the first event it rejects is marked, and the
-events after it are marked as not verified. Built from stored rows only, so the same
-store gives the same timeline. It is part of the review view, which requesters never
-get (``PilotService.view_matter``).
+status comes from ``PilotStore.check_events`` on the same rows: events before the
+first failing row are verified, the failing row is the first bad event, and every
+later event is not verified. Built from stored rows only, so the same store gives the
+same timeline, and a tampered row is shown, never raised. It is part of the review
+view, which requesters never get (``PilotService.view_matter``).
 """
 
 from __future__ import annotations
 
 import json
 from collections import Counter
-from collections.abc import Iterable, Mapping
+from collections.abc import Iterable, Mapping, Sequence
 from typing import Any
 
+from src.pilot.store import ChainBreak
+
 HASH_PREFIX = 12
+PAYLOAD_TEXT_LIMIT = 2000
 LEGEND = (
     ("command", "Command", "An accepted command that changed the matter."),
     (
@@ -58,38 +62,98 @@ EVENT_CLASSES = {
 }
 
 
-def event_class(event_type: str) -> str:
+def event_class(event_type: Any) -> str:
+    """The class of an event type; an unknown (or tampered) type shows as a command."""
+
     return EVENT_CLASSES.get(event_type, "command")
 
 
-def read_payload(text: Any) -> dict[str, Any] | None:
-    """The stored payload, or None when it is not a JSON object (the chain then fails)."""
+def load_payload(text: Any) -> tuple[Any, bool]:
+    """A stored payload parsed as JSON, and whether it parsed at all."""
 
     try:
-        value = json.loads(text)
-    except (TypeError, ValueError):
-        return None
-    return value if isinstance(value, dict) else None
+        return json.loads(text), True
+    except (TypeError, ValueError, RecursionError):
+        return None, False
+
+
+def payload_object(text: Any) -> dict[str, Any] | None:
+    """A stored payload when it is a JSON object, as the service always writes it."""
+
+    value, parsed = load_payload(text)
+    return value if parsed and isinstance(value, dict) else None
+
+
+def stored_text(value: Any) -> str | None:
+    """A stored value as text; a tampered column can hold bytes or a number."""
+
+    if value is None or isinstance(value, str):
+        return value
+    if isinstance(value, bytes):
+        return value.decode("utf-8", "replace")
+    return str(value)
 
 
 def _whole(value: Any) -> int | None:
-    return value if isinstance(value, int) and not isinstance(value, bool) else None
+    return value if type(value) is int else None
 
 
-def _chain_state(seq: int, chain: Mapping[str, Any]) -> str:
-    if chain["verified"]:
-        return "verified"
-    broken = chain.get("broken_at_seq")
-    if broken is None or seq > broken:
-        return "unverified"
-    return "first_bad" if seq == broken else "verified"
+def _states(count: int, verified: bool, brk: ChainBreak | None) -> list[str]:
+    """Each row's chain state, by its place in seq order (a stored seq may be tampered)."""
+
+    if verified:
+        return ["verified"] * count
+    if brk is None:
+        return ["unverified"] * count
+    # A prev_hash mismatch means this row or the one before it was changed: the one
+    # before may have been rewritten and rehashed, so it is not vouched for either.
+    suspect = brk.index - 1 if brk.kind == "prev_hash_mismatch" and brk.index else None
+    states = []
+    for index in range(count):
+        if index == suspect:
+            states.append("suspect")
+        elif index < brk.index:
+            states.append("verified")
+        else:
+            states.append("first_bad" if index == brk.index else "unverified")
+    return states
 
 
-def _group(
-    version: int | None,
-    known: Mapping[int, Mapping[str, Any]],
-    set_aside: Mapping[int, list[dict[str, Any]]],
-) -> dict[str, Any]:
+def _position(seq: Any) -> str:
+    whole = _whole(seq)
+    return str(whole) if whole is not None else repr(stored_text(seq))
+
+
+def _explain(rows: Sequence[Mapping[str, Any]], brk: ChainBreak | None, ok: int) -> str:
+    if not rows:
+        return "No event is recorded."
+    if brk is None:
+        return "No event is verified."
+    if ok == 0:
+        parts = ["No event is verified."]
+    else:
+        parts = [f"Positions 0 to {ok - 1} are verified." if ok > 1 else "Position 0 is verified."]
+    seq = _whole(brk.seq)
+    if brk.kind == "sequence_gap":
+        if seq is not None and seq > brk.index:
+            parts.append(
+                f"Position {brk.index} is missing."
+                if seq == brk.index + 1
+                else f"Positions {brk.index} to {seq - 1} are missing."
+            )
+        else:
+            parts.append(f"The event stored at position {_position(brk.seq)} is out of sequence.")
+    elif brk.kind == "prev_hash_mismatch" and brk.index:
+        parts.append(
+            f"Position {brk.index} does not link to position {brk.index - 1}, "
+            "so one of the two was changed after it was recorded."
+        )
+    first = _position(rows[ok]["seq"])
+    parts.append(f"The event at position {first} and every later event are not verified.")
+    return " ".join(parts)
+
+
+def _group(version: int | None, known: Mapping[int, Mapping[str, Any]]) -> dict[str, Any]:
     meta = known.get(version, {}) if version is not None else {}
     return {
         "version": version,
@@ -97,38 +161,34 @@ def _group(
             key: meta.get(key)
             for key in ("created_at", "document_name", "document_sha256", "content_hash")
         },
-        "set_aside": set_aside.get(version, []) if version is not None else [],
+        "set_aside": [],
         "events": [],
     }
 
 
 def build_timeline(
-    events: Iterable[Mapping[str, Any]],
+    rows: Sequence[Mapping[str, Any]],
     versions: Iterable[Mapping[str, Any]],
     decisions: Iterable[Mapping[str, Any]],
-    chain: Mapping[str, Any],
+    verification: Mapping[str, Any],
+    brk: ChainBreak | None,
 ) -> dict[str, Any]:
-    """Group ``events`` (rows in seq order) into runs of one version, with the chain status.
+    """Group event ``rows`` (in seq order) into runs of one version, with the chain status.
 
-    A refusal records no version; it belongs to the version in force when it happened,
-    which an amendment moves to its ``new_version``.
+    ``verification`` and ``brk`` are ``PilotStore.check_events(rows)``, so the status
+    covers exactly the rows shown. A refusal records no version; it belongs to the
+    version in force when it happened, which an amendment moves to its ``new_version``.
     """
 
     known = {v["version"]: v for v in versions}
-    set_aside: dict[int, list[dict[str, Any]]] = {}
-    for d in decisions:
-        if d["invalidated_at"]:
-            set_aside.setdefault(d["version"], []).append(
-                {
-                    key: d[key]
-                    for key in ("kind", "target_id", "outcome", "actor_id", "invalidated_reason")
-                }
-            )
+    states = _states(len(rows), bool(verification["verified"]), brk)
+    ok = states.count("verified")
     groups: list[dict[str, Any]] = []
     counts: Counter[str] = Counter()
     in_force: int | None = None
-    for row in events:
-        payload = read_payload(row["payload"])
+    for index, row in enumerate(rows):
+        value, parsed = load_payload(row["payload"])
+        payload = value if parsed and isinstance(value, dict) else None
         version = _whole((payload or {}).get("version"))
         if version is None:
             version = in_force
@@ -138,30 +198,57 @@ def build_timeline(
         kind = event_class(row["event_type"])
         counts[kind] += 1
         if not groups or groups[-1]["version"] != version:
-            first_run = all(g["version"] != version for g in groups)
-            groups.append(_group(version, known, set_aside if first_run else {}))
+            groups.append(_group(version, known))
+        event_hash = stored_text(row["event_hash"]) or ""
         groups[-1]["events"].append(
             {
-                "seq": row["seq"],
-                "event_type": row["event_type"],
+                "index": index,
+                "seq": row["seq"] if _whole(row["seq"]) is not None else stored_text(row["seq"]),
+                "event_type": stored_text(row["event_type"]),
                 "class": kind,
-                "actor_id": row["actor_id"],
-                "role": row["role"],
-                "note": row["note"],
-                "occurred_at": row["occurred_at"],
-                "fixture_at": row["fixture_at"],
-                "prev_hash": row["prev_hash"],
-                "event_hash": row["event_hash"],
-                "hash_prefix": str(row["event_hash"])[:HASH_PREFIX],
-                "chain": _chain_state(row["seq"], chain),
+                "actor_id": stored_text(row["actor_id"]),
+                "role": stored_text(row["role"]),
+                "note": stored_text(row["note"]),
+                "occurred_at": stored_text(row["occurred_at"]),
+                "fixture_at": stored_text(row["fixture_at"]),
+                "prev_hash": stored_text(row["prev_hash"]),
+                "event_hash": event_hash,
+                "hash_prefix": event_hash[:HASH_PREFIX],
+                "chain": states[index],
                 "payload": payload,
+                "payload_readable": parsed,
+                "payload_text": (
+                    None
+                    if payload is not None
+                    else (stored_text(row["payload"]) or "")[:PAYLOAD_TEXT_LIMIT]
+                ),
             }
         )
     # A version made by the latest amendment has no event of its own yet; it is still kept.
     grouped = {g["version"] for g in groups}
-    groups.extend(_group(v, known, set_aside) for v in sorted(known) if v not in grouped)
+    groups.extend(_group(v, known) for v in sorted(known) if v not in grouped)
+    # Decisions set aside later are listed once per version, on its longest run (a version
+    # has more than one run only when a stored version number was changed).
+    longest: dict[int, dict[str, Any]] = {}
+    for g in groups:
+        v = g["version"]
+        if v is not None and (v not in longest or len(g["events"]) > len(longest[v]["events"])):
+            longest[v] = g
+    for d in decisions:
+        if d["invalidated_at"] and d["version"] in longest:
+            longest[d["version"]]["set_aside"].append(
+                {
+                    key: d[key]
+                    for key in ("kind", "target_id", "outcome", "actor_id", "invalidated_reason")
+                }
+            )
     return {
-        "chain": dict(chain),
+        "chain": {
+            **verification,
+            "verified_events": ok,
+            "first_unverified_index": None if ok == len(rows) else ok,
+            "explanation": _explain(rows, brk, ok),
+        },
         "legend": [
             {"class": key, "label": label, "meaning": meaning, "count": counts[key]}
             for key, label, meaning in LEGEND

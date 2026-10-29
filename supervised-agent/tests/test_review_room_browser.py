@@ -17,7 +17,16 @@ from http.server import ThreadingHTTPServer
 import pytest
 
 from src.pilot.api import PilotApi
-from tests.pilot_support import APPROVER_LEAD, OWNER, REQUESTER, make_service, run_until
+from src.pilot.service import PermissionDeniedError
+from src.pilot.timeline import event_class
+from tests.pilot_support import (
+    APPROVER_LEAD,
+    OWNER,
+    REQUESTER,
+    make_service,
+    revision,
+    run_until,
+)
 
 UNAVAILABLE = 3
 
@@ -208,10 +217,14 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
     await page.selectOption("#actor", actor);
     await page.waitForTimeout(300);
     await page.locator("#list button", { hasText: matter }).first().click();
-    await page.waitForTimeout(500);
+    await page.waitForSelector("#matter h2.title");
     return page;
   }
   const timeline = (page) => page.locator("section", { has: page.locator("#timeline-h") });
+  const card = (page, index) => page.locator("#ev-" + index).evaluate((li) => ({
+    badge: li.querySelector(".badge").textContent, badgeClass: li.querySelector(".badge").className,
+    head: li.children[0].textContent, place: li.children[1].textContent, pre: li.querySelector("pre").textContent,
+  }));
 
   // Intact chain: the status comes first, then the legend, then the events by version.
   let page = await open(OWNER, intact);
@@ -223,24 +236,34 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.events = await timeline(page).locator("li.ev").count();
   out.heading = await page.locator("#timeline-h").innerText();
   out.openGroups = await timeline(page).locator("details.version-group[open]").count();
+  out.cards = [await card(page, 0), await card(page, 12)];
+  out.findingsHeading = await page.locator("#findings-h").innerText();
   await page.setViewportSize({ width: 390, height: 900 });
   await page.waitForTimeout(200);
   out.narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+  out.sectionOverflow = await timeline(page).evaluate((s) => s.scrollWidth > s.clientWidth);
 
-  // Broken chain: the status says so, and its link moves focus to the first bad event.
+  // Broken chain: the status explains it, and its link moves focus to the first bad event,
+  // opening its version group even when the reviewer had closed it.
   page = await open(OWNER, broken);
   out.brokenStatus = await timeline(page).locator(".chain-status").innerText();
   out.badOpenBeforeJump = await timeline(page).locator("li.ev.first-bad").evaluate((li) => li.closest("details").open);
   out.openGroupsBroken = await timeline(page).locator("details.version-group[open]").count();
-  await page.getByRole("link", { name: "Go to the first bad event" }).click();
+  out.legendBroken = await timeline(page).locator("ul.legend li").allInnerTexts();
+  out.groupSummaries = await timeline(page).locator("details.version-group > summary").allInnerTexts();
+  out.groupHashes = await timeline(page).locator("details.version-group > p.muted .hash").evaluateAll((spans) => spans.map((s) => s.textContent));
+  out.setAside = await timeline(page).locator("details.version-group .context").allInnerTexts();
+  await page.locator("#ev-5").evaluate((li) => { li.closest("details").open = false; });
+  await page.getByRole("link", { name: "Go to the first event that is not verified" }).click();
   out.focused = await page.evaluate(() => {
     const a = document.activeElement;
     return { id: a.id, cls: a.className, open: Boolean(a.closest("details") && a.closest("details").open), text: a.innerText };
   });
   out.unverified = await timeline(page).locator("li.ev.unverified").count();
 
-  // Requester: no timeline at all.
+  // Requester: no timeline at all, checked once the requester's own view is on screen.
   page = await open(REQUESTER, intact);
+  await page.waitForSelector("#status-h");
   out.requesterTimeline = await page.locator("#timeline-h, li.ev, .chain-status").count();
 
   out.errors = errors;
@@ -337,6 +360,9 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
 def test_audit_timeline_in_a_browser(tmp_path, monkeypatch) -> None:
     service = make_service(tmp_path)
     intact = run_until(service, "routine", "A13")  # delivered, 12 events
+    long_actor = "syn-" + "x" * 90  # refused and recorded: a long unbroken id and note
+    with pytest.raises(PermissionDeniedError):
+        service.withdraw(long_actor, intact, revision(service, intact), note="Long id test note.")
     broken = run_until(service, "specialist-revision", "B45")  # 43 events in 3 versions
     with service.store.transaction() as connection:  # edit position 5, in version 2
         connection.execute(
@@ -345,15 +371,55 @@ def test_audit_timeline_in_a_browser(tmp_path, monkeypatch) -> None:
     out = _run_node(
         tmp_path, monkeypatch, service, TIMELINE_SCRIPT, intact, broken, OWNER, REQUESTER
     )
+    history = service.history(OWNER, intact)["events"]
+    broken_view = service.view_matter(OWNER, broken)
 
     assert out["errors"] == []
     assert "chain-status ok" in out["firstAfterHeading"]["cls"]
-    assert out["firstAfterHeading"]["text"].startswith("✓ Event chain intact: 12 events")
+    assert out["firstAfterHeading"]["text"].startswith("✓ Event chain intact: 13 events")
     assert out["legend"] == ["Command", "Refusal", "Decision", "Export"]
-    assert out["events"] == 12 and out["heading"] == "Audit-chain timeline (12 events)"
-    assert out["openGroups"] == 1 and out["narrowOverflow"] is False
+    assert out["events"] == 13 and out["heading"] == "Audit-chain timeline (13 events)"
+    assert out["openGroups"] == 1
+    # Each card shows its class, type, actor, role, position, hash prefix and payload.
+    for shown, row in zip(out["cards"], (history[0], history[12]), strict=True):
+        label = {"command": "Command", "refusal": "Refusal"}[event_class(row["event_type"])]
+        assert (shown["badge"], shown["badgeClass"]) == (
+            label,
+            "badge " + event_class(row["event_type"]),
+        )
+        assert shown["head"] == (
+            f"{label} {row['event_type'].replace('_', ' ')} by {row['actor_id']} "
+            f"({row['role'].replace('_', ' ')})"
+        )
+        assert shown["place"] == f"Position {row['seq']} · hash {row['event_hash'][:12]}"
+        assert json.loads(shown["pre"]) == row["payload"]
+    assert out["findingsHeading"].startswith("Findings (")
+    # At phone width nothing runs out of the page or out of the timeline section.
+    assert out["narrowOverflow"] is False and out["sectionOverflow"] is False
+
     assert "✗ Event chain broken: event_hash mismatch at seq 5." in out["brokenStatus"]
-    assert "Positions 0 to 4 are verified" in out["brokenStatus"]
+    assert (
+        "Positions 0 to 4 are verified. The event at position 5 and every later event are not "
+        "verified." in out["brokenStatus"]
+    )
+    assert [line.split(":")[0] for line in out["legendBroken"]] == [
+        "Command 21 events",
+        "Refusal 7 events",
+        "Decision 13 events",
+        "Export 2 events",
+    ]
+    assert out["groupSummaries"] == [
+        "Version 1: 3 events, positions 0 to 2",
+        "Version 2: 33 events, positions 3 to 35 · ✗ first bad event",
+        "Version 3: 7 events, positions 36 to 42 · ✗ not verified",
+    ]
+    hashes = [
+        v[key][:12] for v in broken_view["versions"] for key in ("document_sha256", "content_hash")
+    ]
+    assert out["groupHashes"] == hashes
+    [set_aside] = out["setAside"]
+    assert set_aside.startswith("Decisions on this version set aside later (1)")
+    assert "specialist signoff: signed off by syn-specialist-privacy" in set_aside
     # Version 2 holds the first bad event and version 3 is current: both open, version 1 not.
     assert out["badOpenBeforeJump"] is True and out["openGroupsBroken"] == 2
     assert out["focused"]["id"] == "ev-5" and "first-bad" in out["focused"]["cls"]
