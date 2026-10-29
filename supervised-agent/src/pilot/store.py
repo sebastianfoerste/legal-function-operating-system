@@ -9,8 +9,9 @@ from __future__ import annotations
 
 import json
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
+from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Protocol
@@ -133,7 +134,48 @@ def canonical(value: Any) -> str:
     return json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
 
 
-def _event_body(row: sqlite3.Row | dict[str, Any]) -> str:
+_BREAK_REASONS = {
+    "sequence_gap": "sequence gap",
+    "prev_hash_mismatch": "prev_hash mismatch",
+    "unreadable_payload": "unreadable payload",
+    "unreadable_event": "unreadable event data",
+    "event_hash_mismatch": "event_hash mismatch",
+}
+
+
+@dataclass(frozen=True)
+class ChainBreak:
+    """The first row a chain check rejects: its place in seq order, its stored seq, and why."""
+
+    index: int
+    seq: Any
+    kind: str
+
+
+def _break_kind(row: Mapping[str, Any], index: int, expected_prev: Any) -> str | None:
+    if type(row["seq"]) is not int or row["seq"] != index:
+        return "sequence_gap"
+    if row["prev_hash"] != expected_prev:
+        return "prev_hash_mismatch"
+    try:
+        json.loads(row["payload"])
+    except (TypeError, ValueError, RecursionError):
+        return "unreadable_payload"
+    try:
+        digest = compute_audit_event_hash(
+            row["seq"],
+            row["prev_hash"],
+            row["event_type"],
+            row["actor_id"],
+            _event_body(row),
+            row["occurred_at"],
+        )
+    except (TypeError, ValueError, RecursionError):
+        return "unreadable_event"
+    return None if digest == row["event_hash"] else "event_hash_mismatch"
+
+
+def _event_body(row: sqlite3.Row | Mapping[str, Any]) -> str:
     """The part of an event the hash commits to besides seq, type, actor and time."""
 
     return canonical(
@@ -253,40 +295,46 @@ class PilotStore:
         rows = connection.execute(
             "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
         ).fetchall()
+        return PilotStore.check_events(rows)[0]
+
+    @staticmethod
+    def check_events(
+        rows: Sequence[Mapping[str, Any]],
+    ) -> tuple[AuditChainVerification, ChainBreak | None]:
+        """Check event rows (in seq order) as a hash chain, and say where it first fails.
+
+        A tampered row never raises: a value that cannot be parsed or hashed is reported
+        as a break like any other.
+        """
+
         if not rows:
-            return AuditChainVerification(
-                verified=False, event_count=0, reason="no matter events recorded"
+            return (
+                AuditChainVerification(
+                    verified=False, event_count=0, reason="no matter events recorded"
+                ),
+                None,
             )
-        expected_prev: str | None = None
+        expected_prev: Any = None
         for index, row in enumerate(rows):
-            problem = None
-            if row["seq"] != index:
-                problem = f"sequence gap at seq {row['seq']}"
-            elif row["prev_hash"] != expected_prev:
-                problem = f"prev_hash mismatch at seq {row['seq']}"
-            elif (
-                compute_audit_event_hash(
-                    row["seq"],
-                    row["prev_hash"],
-                    row["event_type"],
-                    row["actor_id"],
-                    _event_body(row),
-                    row["occurred_at"],
-                )
-                != row["event_hash"]
-            ):
-                problem = f"event_hash mismatch at seq {row['seq']}"
-            if problem:
-                return AuditChainVerification(
-                    verified=False,
-                    event_count=len(rows),
-                    broken_at_seq=row["seq"],
-                    reason=problem,
+            kind = _break_kind(row, index, expected_prev)
+            if kind:
+                seq = row["seq"]
+                return (
+                    AuditChainVerification(
+                        verified=False,
+                        event_count=len(rows),
+                        broken_at_seq=seq if type(seq) is int else None,
+                        reason=f"{_BREAK_REASONS[kind]} at seq {seq}",
+                    ),
+                    ChainBreak(index=index, seq=seq, kind=kind),
                 )
             expected_prev = row["event_hash"]
-        return AuditChainVerification(
-            verified=True,
-            event_count=len(rows),
-            chain_root_hash=expected_prev,
-            reason="chain intact",
+        return (
+            AuditChainVerification(
+                verified=True,
+                event_count=len(rows),
+                chain_root_hash=expected_prev,
+                reason="chain intact",
+            ),
+            None,
         )

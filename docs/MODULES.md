@@ -147,7 +147,10 @@ each proposed change. The page uses the shared design tokens in
 `src/legal_function_os/design_tokens.py` (light and dark) and stacks the changes table
 on narrow screens. Reviewers also see which other simulated roles have the matter open
 and on which revision, held in server memory only and never recorded, with a reload
-prompt when the matter has moved on (ADR 0005). The pilot's measurement report lists
+prompt when the matter has moved on (ADR 0005). Their history is one timeline of the
+matter's event chain, grouped by version, with each event marked as a command, refusal,
+decision or export; the chain check comes first, and a broken chain marks its first bad
+event. The pilot's measurement report lists
 the playbook rules reviewers keep overriding in closed matters, as proposals for the
 legal team; it never changes the playbook. The reasons and the research behind these choices are in
 [`docs/research/adaptation-plan.md`](research/adaptation-plan.md) and the

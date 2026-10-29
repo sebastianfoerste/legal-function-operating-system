@@ -17,6 +17,7 @@ from typing import Any
 from src.pilot.parent_bridge import CONTRACT_REVIEW_STATE, parent_module, parent_request
 from src.pilot.service import StoredChange, VersionBody
 from src.pilot.store import PilotStore
+from src.pilot.timeline import payload_object
 
 MEASUREMENT_PLAN_PATH = (
     Path(__file__).resolve().parents[2] / "examples" / "pilot" / "measurement-plan.json"
@@ -70,7 +71,7 @@ def _load(store: PilotStore) -> list[dict[str, Any]]:
     with store.reading() as connection:
         for row in connection.execute("SELECT * FROM matters ORDER BY created_at, matter_id"):
             events = [
-                {**dict(e), "payload": json.loads(e["payload"])}
+                {**dict(e), "payload": payload_object(e["payload"]) or {}}
                 for e in connection.execute(
                     "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (row["matter_id"],)
                 )

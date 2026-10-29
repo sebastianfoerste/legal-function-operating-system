@@ -42,7 +42,7 @@ Sources: <https://github.com/anthropics/claude-for-legal>; the files cited are u
   | Verdict | Pattern | Where |
   | --- | --- | --- |
   | Adopt | Name every gap before writing | `src/pilot/review_room.py` intake form, built here |
-  | Adapt | The 5-in-12-months override monitor, as a deterministic report over pilot decisions | `src/pilot/metrics.py`, specced, not built |
+  | Adapt | The 5-in-12-months override monitor, as a deterministic report over pilot decisions | `src/pilot/metrics.py`, built (F5) |
   | Reject | LLM drafting in the decision path | — |
 
 ### 2. Checkbox
@@ -202,7 +202,7 @@ All Claimed.
   - classification and principal per event;
   - a status legend.
 
-  This is the model for the F6 audit timeline (from H8), specced.
+  This is the model for the F6 audit timeline (from H8), built.
   <https://github.com/temporalio/ui/blob/main/src/lib/types/events.ts>
 - **Evidence** (MIT): the BigValue tile has a title, a formatted value, a comparison with
   `down_is_good` and a neutral range, and a sparkline. This is the model for the F7 KPI
@@ -254,7 +254,7 @@ a verdict, and the file the verdict would change.
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| History in three `<details>` lists; chain status one line | Observed | `baseline/room-approver-1280.png` | Adapt, specced (F6, from H8): a grouped timeline per Temporal UI, with actor, classification and chain position |
+| History in three `<details>` lists; chain status one line | Observed | `baseline/room-approver-1280.png` | Adapt, built (F6, from H8): a grouped timeline per Temporal UI, with actor, classification and chain position, in `src/pilot/timeline.py` and `review_room.py` |
 | Export eligibility table clear; pass or fail shown by colour only | Observed | — | Adopt, built: ✓ and ✗ added |
 
 ### KPIs

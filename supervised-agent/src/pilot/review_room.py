@@ -68,6 +68,22 @@ del{color:var(--bad)}ins{color:var(--ok);text-decoration:none;font-weight:600}
 details{margin:6px 0}summary{cursor:pointer;color:var(--accent)}
 .row{display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end}
 .visually-hidden{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+.chain-status{margin:0 0 10px;padding:8px 12px;border:1px solid currentColor;border-radius:8px;background:var(--ok-bg);overflow-wrap:anywhere}
+.chain-status.bad{border-width:2px;background:var(--bad-bg)}.chain-status p{margin:2px 0}
+ul.legend{list-style:none;padding:0;margin:4px 0 10px}ul.legend li{margin:0 0 4px}
+details.version-group{border:1px solid var(--line);border-radius:8px;padding:6px 10px;margin:8px 0;overflow-wrap:anywhere}
+details.version-group>summary{font-weight:600}
+ol.timeline{list-style:none;padding:0;margin:6px 0 10px}
+li.ev{border-left:4px solid var(--pill-line);padding:6px 10px;margin:0 0 6px}
+li.ev.refusal{border-left-color:var(--bad)}li.ev.decision{border-left-color:var(--ink)}li.ev.export{border-left-color:var(--warn)}
+li.ev.unverified{border-left-style:dashed}li.ev.first-bad{border:2px solid var(--bad);border-left-width:6px;background:var(--bad-bg)}
+li.ev.suspect{border:2px dashed var(--bad);border-left-width:6px}
+li.ev:focus{outline:3px solid var(--focus);outline-offset:2px}
+.badge{display:inline-block;min-width:5.5em;text-align:center;padding:1px 8px;border:1px solid var(--pill-line);border-radius:4px;background:var(--panel);color:var(--ink);font-size:12px;font-weight:700}
+.badge.refusal{border-color:var(--bad);background:var(--bad-bg);color:var(--bad)}
+.badge.decision{border-color:var(--ink);background:var(--ink);color:var(--surface)}
+.badge.export{border-color:var(--warn);background:var(--warn-bg);color:var(--warn)}
+pre{margin:6px 0;padding:6px 8px;border-radius:6px;background:var(--panel);font:12px/1.4 var(--font-mono);white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:820px){main{grid-template-columns:1fr}nav{border-right:0;border-bottom:1px solid var(--line)}}
 @media(max-width:600px){#pane{padding:12px}header,.notice{padding-left:12px;padding-right:12px}
 table.changes,table.changes tbody,table.changes tr,table.changes td{display:block;width:100%}
@@ -416,11 +432,57 @@ function renderReview(view, root) {
   root.append(h("section", {"aria-labelledby": "elig-h"}, h("h2", {id: "elig-h"}, "Export eligibility (delivery package)"),
     h("p", {class: view.eligibility.eligible ? "ok" : "bad"}, view.eligibility.eligible ? "✓ Eligible." : "✗ Not eligible."),
     h("table", null, h("tbody", null, h("tr", null, ["Check", "Result", "Detail"].map((t) => h("th", {scope: "col"}, t))), view.eligibility.checks.map((c) => h("tr", null, h("td", null, c.check_id), h("td", {class: c.status === "pass" ? "ok" : "bad"}, (c.status === "pass" ? "✓ " : "✗ ") + c.status), h("td", null, c.detail)))))));
-  root.append(h("section", {"aria-labelledby": "hist-h"}, h("h2", {id: "hist-h"}, "Findings, decisions and history"),
-    h("details", null, h("summary", null, "Findings (" + view.findings.length + ")"), h("ul", null, view.findings.map((f) => h("li", null, "[" + f.severity + "] " + f.summary + " Evidence: " + f.evidence)))),
-    h("details", null, h("summary", null, "Decisions (" + view.decisions.length + ")"), h("ul", null, view.decisions.map((d) => h("li", {class: d.invalidated_at ? "bad" : ""}, "v" + d.version + " " + d.kind + " " + (d.target_id || "") + " " + d.outcome + " by " + d.actor_id + (d.invalidated_at ? " | INVALIDATED: " + d.invalidated_reason : ""))))),
-    h("details", null, h("summary", null, "Versions (" + view.versions.length + "), all kept"), h("ul", null, view.versions.map((v) => h("li", null, "v" + v.version + " " + v.created_at + " document ", h("span", {class: "hash"}, v.document_sha256.slice(0, 12)), " content ", h("span", {class: "hash"}, v.content_hash.slice(0, 12)))))),
-    h("p", {class: view.audit_chain.verified ? "ok" : "bad"}, (view.audit_chain.verified ? "✓ " : "✗ ") + "Event chain: " + view.audit_chain.reason + " (" + view.audit_chain.event_count + " events)")));
+  root.append(h("section", {"aria-labelledby": "findings-h"}, h("h2", {id: "findings-h"}, "Findings (" + view.findings.length + ")"),
+    view.findings.length ? h("ul", null, view.findings.map((f) => h("li", null, "[" + f.severity + "] " + f.summary + " Evidence: " + f.evidence))) : h("p", {class: "muted"}, "No finding on this version.")));
+  root.append(timelineSection(view.timeline, version.version));
+}
+// ---------------------------------------------------------------- timeline
+// Every event on the matter's hash chain, in chain order and in runs of one version. The
+// chain status comes first; the server explains a break and marks each event, so the page
+// only shows what the check found.
+function chainStatus(chain) {
+  if (chain.verified) return h("p", {class: "chain-status ok"}, "✓ Event chain intact: " + chain.event_count + " events, positions 0 to " + (chain.event_count - 1) + ". Latest hash ", h("span", {class: "hash"}, chain.chain_root_hash.slice(0, 12)), ".");
+  const target = chain.first_unverified_index;
+  const jump = (event) => { event.preventDefault(); const item = $("ev-" + target); item.closest("details").open = true; item.focus(); };
+  return h("div", {class: "chain-status bad"}, h("p", null, h("strong", null, "✗ Event chain broken: " + chain.reason + ".")),
+    h("p", null, chain.explanation, target == null ? null : [" ", h("a", {href: "#ev-" + target, onclick: jump}, "Go to the first event that is not verified")]));
+}
+const CHAIN_MARKS = {
+  first_bad: (reason) => [h("strong", null, "✗ First bad event: "), reason + "."],
+  suspect: () => "✗ Not verified: the next event recorded a different hash for this one, so this event or the next one was changed.",
+  unverified: () => "✗ Not verified: recorded after the first bad event.",
+};
+function timelineEvent(e, labels, chain) {
+  const mark = CHAIN_MARKS[e.chain];
+  const payload = e.payload ? JSON.stringify(e.payload, null, 2) : (e.payload_readable ? "Not a JSON object. " : "Not readable as JSON. ") + "Stored text: " + e.payload_text;
+  return h("li", {id: "ev-" + e.index, class: "ev " + e.class + (e.chain === "verified" ? "" : " " + e.chain.replace("_", "-")), tabindex: e.index === chain.first_unverified_index ? "-1" : null},
+    h("div", null, h("span", {class: "badge " + e.class}, labels[e.class]), " ", h("strong", null, words(e.event_type)), " ", h("span", {class: "muted"}, "by " + e.actor_id + " (" + words(e.role) + ")")),
+    h("div", {class: "muted"}, "Position " + e.seq + " · hash ", h("span", {class: "hash"}, e.hash_prefix)),
+    mark ? h("p", {class: "bad"}, mark(chain.reason)) : null, h("div", null, e.note),
+    h("details", null, h("summary", null, "Chain record", h("span", {class: "visually-hidden"}, " of position " + e.seq)),
+      h("dl", {class: "facts"}, h("dt", null, "Previous hash"), h("dd", {class: "hash"}, e.prev_hash || "none (first event)"), h("dt", null, "Event hash"), h("dd", {class: "hash"}, e.event_hash),
+        h("dt", null, "Recorded at"), h("dd", null, e.occurred_at), e.fixture_at ? [h("dt", null, "Scripted time"), h("dd", null, e.fixture_at)] : null),
+      h("pre", null, payload)));
+}
+function timelineGroup(g, current, labels, chain) {
+  const n = g.events.length, has = (state) => g.events.some((e) => e.chain === state);
+  const span = n ? ", positions " + g.events[0].seq + " to " + g.events[n - 1].seq : ", none yet";
+  const flag = has("first_bad") ? " · ✗ first bad event" : g.events.some((e) => e.chain !== "verified") ? " · ✗ not verified" : "";
+  return h("details", {class: "version-group", open: g.version === current || has("first_bad") || has("suspect")},
+    h("summary", null, (g.version == null ? "Version unknown" : "Version " + g.version) + ": " + n + (n === 1 ? " event" : " events") + span + flag),
+    g.content_hash ? h("p", {class: "muted"}, "Created " + g.created_at + " · document ", h("span", {class: "hash"}, g.document_sha256.slice(0, 12)), " · content ", h("span", {class: "hash"}, g.content_hash.slice(0, 12))) : null,
+    n ? h("ol", {class: "timeline"}, g.events.map((e) => timelineEvent(e, labels, chain))) : null,
+    g.set_aside.length ? h("div", {class: "context"}, h("strong", null, "Decisions on this version set aside later (" + g.set_aside.length + ")"),
+      h("ul", null, g.set_aside.map((d) => h("li", null, words(d.kind) + (d.target_id ? " " + d.target_id : "") + ": " + words(d.outcome) + " by " + d.actor_id + ". " + d.invalidated_reason + ".")))) : null);
+}
+function timelineSection(t, current) {
+  const labels = Object.fromEntries(t.legend.map((l) => [l.class, l.label]));
+  return h("section", {"aria-labelledby": "timeline-h"}, h("h2", {id: "timeline-h"}, "Audit-chain timeline (" + t.chain.event_count + " events)"),
+    chainStatus(t.chain),
+    h("h3", null, "Legend"), h("ul", {class: "legend"}, t.legend.map((l) => h("li", null, h("span", {class: "badge " + l.class}, l.label), " " + l.count + (l.count === 1 ? " event: " : " events: ") + l.meaning))),
+    h("h3", null, "Events by version"),
+    h("p", {class: "muted"}, "Every version is kept. An event belongs to the version in force when it was recorded, so an amendment is the last event of the version it replaced."),
+    t.groups.map((g) => timelineGroup(g, current, labels, t.chain)));
 }
 // ---------------------------------------------------------------- presence
 // Who else has this matter open: simulated local roles, held in server memory only.
