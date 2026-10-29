@@ -9,7 +9,7 @@ from src.pilot.metrics import (
     override_patterns,
     render_metrics_markdown,
 )
-from src.pilot.scenario_runner import load_scenario, scenario_paths
+from src.pilot.scenario_runner import ScenarioRunner, load_scenario, scenario_paths
 from tests.pilot_support import make_service, run_until
 
 PLAYBOOK = scenario_paths()[0].parents[1] / "playbook" / "saas-msa-deviation-playbook.v1.json"
@@ -34,6 +34,33 @@ def _run_all(tmp_path):
         last = [step["id"] for step in script["steps"] if not step.get("restart")][-1]
         run_until(service, script["scenario_id"], last)
     return service
+
+
+def _specialist_with(tmp_path, after: str, extra: dict):
+    """Run the specialist scenario to its end with one extra decision after step ``after``."""
+
+    service = make_service(tmp_path)
+    script = next(
+        s for s in map(load_scenario, scenario_paths()) if s["scenario_id"] == "specialist-revision"
+    )
+    runner = ScenarioRunner(service)
+    for step in script["steps"]:
+        if step.get("restart"):
+            continue
+        assert runner.run_step(script, step)["passed"], step["id"]
+        if step.get("id") == after:
+            record = runner.run_step(
+                script,
+                {
+                    "id": "BX",
+                    "actor": "syn-owner-legalops",
+                    "command": "decide_change",
+                    "expect": "ok",
+                    **extra,
+                },
+            )
+            assert record["passed"], record
+    return build_pilot_metrics(service.store)["playbook_override_patterns"]
 
 
 def test_a_rule_overridden_in_five_matters_becomes_a_proposal() -> None:
@@ -81,7 +108,8 @@ def test_the_rehearsal_scenarios_report_their_two_overrides(tmp_path) -> None:
         "liability-cap": (0, 1, ["PM-SPECIALIST-002"]),
         "payment-terms": (1, 0, ["PM-SPECIALIST-002"]),
     }
-    assert patterns["proposals"] == [] and patterns["as_of"].startswith("2026-")
+    # Timed on the scripted clock: B26 (liability cap amended) is the latest override.
+    assert patterns["proposals"] == [] and patterns["as_of"] == "2026-09-09T09:30:00Z"
     assert all(r["reasons"][0]["reason"] for r in patterns["rules"])
     assert "## Playbook override patterns" in render_metrics_markdown(
         build_pilot_metrics(service.store)
@@ -115,3 +143,39 @@ def test_a_proposal_is_rendered_with_the_reviewers_reasons() -> None:
     assert "### Proposal: review `payment-terms` (Payment terms)" in lines
     assert "- PM-0 (rejected): Reason recorded on PM-0." in lines
     assert "Nothing here changes the playbook" in lines
+
+
+def test_a_rejection_later_reversed_is_not_an_override(tmp_path) -> None:
+    accept = {
+        "change_rule": "payment-terms",
+        "outcome": "accepted",
+        "source_support_confirmed": True,
+    }
+    patterns = _specialist_with(tmp_path, "B13", {"args": accept, "at": "2026-09-08T11:42:00Z"})
+    assert [r["rule_id"] for r in patterns["rules"]] == ["liability-cap"]
+
+
+def test_a_rejection_recorded_again_counts_once_with_its_latest_reason(tmp_path) -> None:
+    again = {
+        "change_rule": "payment-terms",
+        "outcome": "rejected",
+        "reason": "Corrected: Finance confirmed ninety day terms in writing for this customer.",
+    }
+    patterns = _specialist_with(tmp_path, "B13", {"args": again, "at": "2026-09-08T11:43:00Z"})
+    rule = next(r for r in patterns["rules"] if r["rule_id"] == "payment-terms")
+    assert (rule["overrides_in_window"], rule["rejected"], rule["matters"]) == (
+        1,
+        1,
+        ["PM-SPECIALIST-002"],
+    )
+    assert rule["reasons"][0]["reason"].startswith("Corrected:")
+
+
+def test_an_override_is_timed_by_its_latest_decision(tmp_path) -> None:
+    again = {
+        "change_rule": "payment-terms",
+        "outcome": "rejected",
+        "reason": "Recorded again after the liability cap was settled with Finance.",
+    }
+    patterns = _specialist_with(tmp_path, "B26", {"args": again, "at": "2026-09-09T09:40:00Z"})
+    assert patterns["as_of"] == "2026-09-09T09:40:00Z"

@@ -125,6 +125,7 @@ def test_rehearsal_metrics_separate_scripted_time_from_execution_time(rehearsal)
     overrides = metrics["playbook_override_patterns"]
     assert [r["rule_id"] for r in overrides["rules"]] == ["liability-cap", "payment-terms"]
     assert overrides["proposals"] == [] and "Nothing here changes the playbook" in overrides["note"]
+    assert overrides["as_of"] == "2026-09-09T09:30:00Z"  # scripted clock, never wall time
     rows = {row["matter_id"]: row for row in metrics["scripted_human_time"]}
     specialist = rows["PM-SPECIALIST-002"]
     assert specialist["intake_completeness"]["missing_at_first_submission"] == ["business_owner"]
