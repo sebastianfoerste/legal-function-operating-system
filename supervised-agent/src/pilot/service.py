@@ -64,6 +64,7 @@ from src.pilot.state_machine import (
     find_transition,
 )
 from src.pilot.store import Clock, PilotStore, SystemClock, canonical
+from src.pilot.timeline import build_timeline, read_payload
 from src.playbook import DocumentChange, Playbook, load_playbook, propose_changes
 from src.source_verification import verify_source_ref, verify_source_refs
 
@@ -2189,6 +2190,21 @@ class PilotService:
                         "evidence": self._evidence(probe, names),
                     }
                 )
+            decisions = [
+                dict(r)
+                for r in connection.execute(
+                    "SELECT decision_id, version, kind, target_id, actor_id, role, outcome, note, created_at, invalidated_at, invalidated_reason FROM decisions WHERE matter_id = ? ORDER BY decision_id",
+                    (matter_id,),
+                )
+            ]
+            versions = [
+                dict(r)
+                for r in connection.execute(
+                    "SELECT version, content_hash, document_name, document_sha256, created_at FROM matter_versions WHERE matter_id = ? ORDER BY version",
+                    (matter_id,),
+                )
+            ]
+            chain = self.store.verify_chain(connection, matter_id).model_dump()
             base.update(
                 {
                     "view": "review_room",
@@ -2231,26 +2247,22 @@ class PilotService:
                     "source_support": [self._source_support(ctx, c) for c in changes],
                     "comments": [{**c.model_dump(), "blocking": c.blocking} for c in comments],
                     "assignments": assigned,
-                    "decisions": [
-                        dict(r)
-                        for r in connection.execute(
-                            "SELECT decision_id, version, kind, target_id, actor_id, role, outcome, note, created_at, invalidated_at, invalidated_reason FROM decisions WHERE matter_id = ? ORDER BY decision_id",
-                            (matter_id,),
-                        )
-                    ],
+                    "decisions": decisions,
                     "allowed": allowed,
                     "eligibility": self._eligibility(ctx, "delivery_package").model_dump(
                         by_alias=True
                     ),
                     "manifests": manifests,
-                    "versions": [
-                        dict(r)
-                        for r in connection.execute(
-                            "SELECT version, content_hash, document_name, document_sha256, created_at FROM matter_versions WHERE matter_id = ? ORDER BY version",
-                            (matter_id,),
-                        )
-                    ],
-                    "audit_chain": self.store.verify_chain(connection, matter_id).model_dump(),
+                    "versions": versions,
+                    "audit_chain": chain,
+                    "timeline": build_timeline(
+                        connection.execute(
+                            "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
+                        ),
+                        versions,
+                        decisions,
+                        chain,
+                    ),
                 }
             )
             return base
@@ -2316,7 +2328,7 @@ class PilotService:
             events = [
                 {
                     **{k: r[k] for k in r.keys() if k != "payload"},
-                    "payload": json.loads(r["payload"]),
+                    "payload": read_payload(r["payload"]),
                 }
                 for r in connection.execute(
                     "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)

@@ -1,6 +1,6 @@
-"""Browser smoke test of the review room's inline forms.
+"""Browser smoke tests of the review room: inline forms, presence and the audit timeline.
 
-Runs a short Node Playwright script against a local server on 127.0.0.1. It is
+Runs short Node Playwright scripts against a local server on 127.0.0.1. It is
 skipped when Node, its Playwright package or a Chromium build is not installed, so
 the gate does not depend on a browser. Everything it touches is synthetic.
 """
@@ -191,6 +191,65 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
+TIMELINE_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, intact, broken, OWNER, REQUESTER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function open(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForTimeout(500);
+    return page;
+  }
+  const timeline = (page) => page.locator("section", { has: page.locator("#timeline-h") });
+
+  // Intact chain: the status comes first, then the legend, then the events by version.
+  let page = await open(OWNER, intact);
+  out.firstAfterHeading = await timeline(page).evaluate((s) => {
+    const first = s.querySelector("h2").nextElementSibling;
+    return { cls: first.className, text: first.textContent };
+  });
+  out.legend = await timeline(page).locator("ul.legend .badge").allInnerTexts();
+  out.events = await timeline(page).locator("li.ev").count();
+  out.heading = await page.locator("#timeline-h").innerText();
+  out.openGroups = await timeline(page).locator("details.version-group[open]").count();
+  await page.setViewportSize({ width: 390, height: 900 });
+  await page.waitForTimeout(200);
+  out.narrowOverflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth);
+
+  // Broken chain: the status says so, and its link moves focus to the first bad event.
+  page = await open(OWNER, broken);
+  out.brokenStatus = await timeline(page).locator(".chain-status").innerText();
+  out.badOpenBeforeJump = await timeline(page).locator("li.ev.first-bad").evaluate((li) => li.closest("details").open);
+  out.openGroupsBroken = await timeline(page).locator("details.version-group[open]").count();
+  await page.getByRole("link", { name: "Go to the first bad event" }).click();
+  out.focused = await page.evaluate(() => {
+    const a = document.activeElement;
+    return { id: a.id, cls: a.className, open: Boolean(a.closest("details") && a.closest("details").open), text: a.innerText };
+  });
+  out.unverified = await timeline(page).locator("li.ev.unverified").count();
+
+  // Requester: no timeline at all.
+  page = await open(REQUESTER, intact);
+  out.requesterTimeline = await page.locator("#timeline-h, li.ev, .chain-status").count();
+
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
 def _node_env() -> dict[str, str] | None:
     node, npm = shutil.which("node"), shutil.which("npm")
     if not node or not npm:
@@ -204,14 +263,14 @@ def _node_env() -> dict[str, str] | None:
     return env
 
 
-def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
+def _run_node(tmp_path, monkeypatch, service, script: str, *args: str) -> dict:
+    """Serve ``service`` on 127.0.0.1, run ``script`` with the base URL and ``args``."""
+
     env = _node_env()
     if env is None:
         pytest.skip("Node.js is not installed")
     import runtime_agent.app as app
 
-    service = make_service(tmp_path)
-    matter = run_until(service, "routine", "A06")  # in review, no comment yet
     monkeypatch.setattr(app, "_pilot_api", PilotApi(service))
     try:
         server = ThreadingHTTPServer(("127.0.0.1", 0), app.RuntimeHandler)
@@ -219,19 +278,11 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
         pytest.skip("this environment does not permit binding a local port")
     thread = threading.Thread(target=server.serve_forever, daemon=True)
     thread.start()
-    script = tmp_path / "smoke.cjs"
-    script.write_text(SCRIPT)
+    path = tmp_path / "smoke.cjs"
+    path.write_text(script)
     try:
         result = subprocess.run(
-            [
-                "node",
-                str(script),
-                f"http://127.0.0.1:{server.server_address[1]}",
-                matter,
-                OWNER,
-                REQUESTER,
-                APPROVER_LEAD,
-            ],
+            ["node", str(path), f"http://127.0.0.1:{server.server_address[1]}", *args],
             capture_output=True,
             text=True,
             env=env,
@@ -244,7 +295,13 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
     if result.returncode == UNAVAILABLE:
         pytest.skip("Node Playwright or its Chromium build is not installed")
     assert result.returncode == 0, result.stderr
-    out = json.loads(result.stdout.strip().splitlines()[-1])
+    return json.loads(result.stdout.strip().splitlines()[-1])
+
+
+def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
+    service = make_service(tmp_path)
+    matter = run_until(service, "routine", "A06")  # in review, no comment yet
+    out = _run_node(tmp_path, monkeypatch, service, SCRIPT, matter, OWNER, REQUESTER, APPROVER_LEAD)
 
     assert out["errors"] == []
     assert out["revisionDisabled"] and "must name an open comment" in out["revisionReason"]
@@ -275,3 +332,31 @@ def test_inline_forms_behave_in_a_browser(tmp_path, monkeypatch) -> None:
     assert out["focusUnderWarning"] == 0
     assert out["focusedCoveredOnAppear"] is False
     assert out["checkInsWhileOpen"] >= 1 and out["checkInsAfterSwitch"] == 0
+
+
+def test_audit_timeline_in_a_browser(tmp_path, monkeypatch) -> None:
+    service = make_service(tmp_path)
+    intact = run_until(service, "routine", "A13")  # delivered, 12 events
+    broken = run_until(service, "specialist-revision", "B45")  # 43 events in 3 versions
+    with service.store.transaction() as connection:  # edit position 5, in version 2
+        connection.execute(
+            "UPDATE events SET note = 'Edited later.' WHERE matter_id = ? AND seq = 5", (broken,)
+        )
+    out = _run_node(
+        tmp_path, monkeypatch, service, TIMELINE_SCRIPT, intact, broken, OWNER, REQUESTER
+    )
+
+    assert out["errors"] == []
+    assert "chain-status ok" in out["firstAfterHeading"]["cls"]
+    assert out["firstAfterHeading"]["text"].startswith("✓ Event chain intact: 12 events")
+    assert out["legend"] == ["Command", "Refusal", "Decision", "Export"]
+    assert out["events"] == 12 and out["heading"] == "Audit-chain timeline (12 events)"
+    assert out["openGroups"] == 1 and out["narrowOverflow"] is False
+    assert "✗ Event chain broken: event_hash mismatch at seq 5." in out["brokenStatus"]
+    assert "Positions 0 to 4 are verified" in out["brokenStatus"]
+    # Version 2 holds the first bad event and version 3 is current: both open, version 1 not.
+    assert out["badOpenBeforeJump"] is True and out["openGroupsBroken"] == 2
+    assert out["focused"]["id"] == "ev-5" and "first-bad" in out["focused"]["cls"]
+    assert out["focused"]["open"] and "✗ First bad event" in out["focused"]["text"]
+    assert out["unverified"] == 37
+    assert out["requesterTimeline"] == 0

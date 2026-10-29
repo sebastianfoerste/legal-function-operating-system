@@ -260,17 +260,23 @@ class PilotStore:
         expected_prev: str | None = None
         for index, row in enumerate(rows):
             problem = None
+            try:
+                body = _event_body(row)
+            except ValueError:
+                body = None
             if row["seq"] != index:
                 problem = f"sequence gap at seq {row['seq']}"
             elif row["prev_hash"] != expected_prev:
                 problem = f"prev_hash mismatch at seq {row['seq']}"
+            elif body is None:
+                problem = f"unreadable payload at seq {row['seq']}"
             elif (
                 compute_audit_event_hash(
                     row["seq"],
                     row["prev_hash"],
                     row["event_type"],
                     row["actor_id"],
-                    _event_body(row),
+                    body,
                     row["occurred_at"],
                 )
                 != row["event_hash"]

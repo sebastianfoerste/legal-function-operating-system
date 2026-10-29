@@ -74,7 +74,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F3 | Plain-language requester status (H2) | 4 | Claimed: LawVu My Work, Linear Decline | S | pass | 8 | table stakes | **Built** |
 | F4 | "Also open by" presence on a matter (H3, part) | 3 | Observed: Chatwoot heartbeat, Langfuse soft lock; RETROSPECTIVE B20 | M | pass if labelled simulated | 4.5 | differentiator | **Built** |
 | F5 | Override-pattern report over pilot decisions | 3 | Observed: claude-for-legal playbook monitor | M | pass | 4.5 | differentiator | **Built** |
-| F6 | Audit-chain timeline (H8, part) | 3 | Observed: Temporal UI | M | pass | 4.5 | differentiator | Specced |
+| F6 | Audit-chain timeline (H8, part) | 3 | Observed: Temporal UI | M | pass | 4.5 | differentiator | **Built** |
 | F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | Specced |
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | Specced |
 | F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | Specced |
@@ -336,7 +336,7 @@ playbook position next to each change, and the evidence next to each resolution.
   - Done differently from the claude-for-legal monitor: no proposed wording and no write
     path. A lawyer revises the playbook as a new version.
 
-### F6. Audit-chain timeline (specced)
+### F6. Audit-chain timeline (built)
 
 - **Plan.** Replace the three `<details>` lists with one timeline from `history()`
   events:
@@ -350,6 +350,27 @@ playbook position next to each change, and the evidence next to each resolution.
   - The chain status sits at the top.
   - A broken chain highlights the first bad event.
   - Requesters do not see it.
+- **Built.**
+  - `build_timeline()` in `supervised-agent/src/pilot/timeline.py`. It reads the same event
+    rows as `history()`, in chain order, and splits them into runs of one version.
+  - A refusal records no version, so it goes with the version in force; an amendment is
+    the last event of the version it replaced.
+  - A table classifies all 22 event types the service writes. A test fails when a new
+    one is written without a class.
+  - Each event shows its class, type, actor, role, chain position and a 12-character hash
+    prefix. Its "Chain record" shows the full hashes, both clocks (labelled) and the
+    payload as JSON, in place of Temporal's separate JSON view.
+  - The legend counts each class.
+  - The chain status from `verify_chain` comes first. When the chain is broken, it names
+    the reason and links to the first bad event, which is marked. Every later event is
+    marked "not verified".
+  - Decisions later set aside stay listed under their version with the reason.
+    Findings, which are not events, keep their own list.
+  - The timeline is part of the review view only, which requesters never get.
+  - `verify_chain` now reports a payload that is not valid JSON as a broken chain
+    instead of failing.
+  - Tests: `supervised-agent/tests/test_pilot_timeline.py` and a browser check in
+    `supervised-agent/tests/test_review_room_browser.py`.
 
 ### F7. KPI tiles and live timers (specced)
 
@@ -417,7 +438,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
 | H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; specced as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
 | H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **parked**: it bundles a 44 MB .NET binary (ADR 0004, Proposed) | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
-| H8. Visual governance views | **Confirmed, specced** as F6 and F8 | Temporal UI (Observed); SpotDraft (Claimed) |
+| H8. Visual governance views | **Confirmed.** F6 is built; F8 is specced | Temporal UI (Observed); SpotDraft (Claimed) |
 
 ## Design direction
 
