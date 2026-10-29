@@ -2269,7 +2269,8 @@ class PilotService:
                         [{**dict(r), "payload": payload_object(r["payload"]) or {}} for r in rows],
                         closed=ctx.matter["state"] == "closed",
                         withdrawn=ctx.matter["closed_outcome"] == "withdrawn_without_delivery",
-                        now=ctx.now,
+                        # Read after the event rows, so no event shown is later than it.
+                        now=self.clock.now(),
                     ),
                 }
             )

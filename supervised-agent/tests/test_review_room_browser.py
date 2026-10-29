@@ -17,7 +17,9 @@ from http.server import ThreadingHTTPServer
 import pytest
 
 from src.pilot.api import PilotApi
-from src.pilot.service import PermissionDeniedError
+from src.pilot.scenario_runner import seed_actors
+from src.pilot.service import PermissionDeniedError, PilotService
+from src.pilot.store import PilotStore
 from src.pilot.timeline import event_class
 from tests.pilot_support import (
     APPROVER_LEAD,
@@ -262,6 +264,8 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
     return { id: a.id, cls: a.className, open: Boolean(a.closest("details") && a.closest("details").open), text: a.innerText };
   });
   out.unverified = await timeline(page).locator("li.ev.unverified").count();
+  out.brokenTiles = await page.locator("ul.kpis li.kpi strong").allInnerTexts();
+  out.brokenTiming = await page.locator("section", { has: page.locator("#timing-h") }).innerText();
 
   // Requester: no timeline at all, checked once the requester's own view is on screen.
   page = await open(REQUESTER, intact);
@@ -269,6 +273,37 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.requesterTimeline = await page.locator("#timeline-h, li.ev, .chain-status, #timing-h").count();
 
   out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
+TIMING_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, OWNER, ...matters] = process.argv.slice(2);
+  const out = {};
+  for (const matter of matters) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", OWNER);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    out[matter] = {
+      errors,
+      timing: await page.locator("#timing-h").count() ? await page.locator("section", { has: page.locator("#timing-h") }).innerText() : "",
+      sections: await page.locator("#ready-h, #findings-h, #timeline-h").count(),
+    };
+  }
   console.log(JSON.stringify(out));
   await browser.close();
 })().catch((e) => { console.error(e); process.exit(1); });
@@ -399,7 +434,8 @@ def test_audit_timeline_in_a_browser(tmp_path, monkeypatch) -> None:
     # Time on the matter: four tiles on the scripted clock, measured to the closing event.
     assert out["timingTiles"] == ["Elapsed", "Business time", "First response", "Resolution"]
     assert "Scripted rehearsal time, up to the closing event" in out["timing"]
-    assert "Target 16.0 h: met" in out["timing"] and "null" not in out["timing"]
+    assert "Target 16.0 h: ✓ met" in out["timing"]
+    assert not any(word in out["timing"] for word in ("null", "undefined", "NaN"))
     # At phone width nothing runs out of the page or out of the timeline section.
     assert out["narrowOverflow"] is False and out["sectionOverflow"] is False
 
@@ -431,4 +467,63 @@ def test_audit_timeline_in_a_browser(tmp_path, monkeypatch) -> None:
     assert out["focused"]["id"] == "ev-5" and "first-bad" in out["focused"]["cls"]
     assert out["focused"]["open"] and "✗ First bad event" in out["focused"]["text"]
     assert out["unverified"] == 37
+    timing = broken_view["timing"]
+    assert out["brokenTiles"] == [
+        f"{timing[key]:.1f} h"
+        for key in ("elapsed_hours", "business_hours", "first_response_business_hours")
+    ] + [f"{timing['legal_controlled_hours']:.1f} h"]
+    assert "These times come from events the chain check did not verify." in out["brokenTiming"]
     assert out["requesterTimeline"] == 0
+
+
+class _SetClock:
+    def __init__(self, now: str) -> None:
+        self.value = now
+
+    def now(self) -> str:
+        return self.value
+
+
+def test_time_on_the_matter_never_stops_the_room(tmp_path, monkeypatch) -> None:
+    clock = _SetClock("2026-11-02T08:00:00Z")  # Monday 09:00 in Berlin
+    service = PilotService(
+        PilotStore(tmp_path / "pilot.sqlite3"), export_root=tmp_path / "exports", clock=clock
+    )
+    seed_actors(service)
+    api = PilotApi(service)
+    made = api.handle(
+        "POST",
+        "/pilot/api/matters",
+        {"X-Pilot-Actor": REQUESTER},
+        {"scenario_id": "routine", "matter_id": "PM-OP-1"},
+    )
+    assert made[0] == 201, made
+    body = {"command": "submit_intake", "expected_revision": made[1]["matter"]["revision"]}
+    submitted = api.handle(
+        "POST", "/pilot/api/matters/PM-OP-1/commands", {"X-Pilot-Actor": REQUESTER}, body
+    )
+    assert submitted[0] == 200, submitted
+    open_matter = run_until(service, "blocked", "C10")  # in triage, nobody has responded
+    unreadable = run_until(service, "routine", "A13")
+    with service.store.transaction() as connection:
+        connection.execute(
+            "UPDATE events SET fixture_at = 'not a time' "
+            "WHERE matter_id = ? AND event_type = 'intake_submitted'",
+            (unreadable,),
+        )
+    clock.value = "2026-11-04T09:00:00Z"  # two days on: 19 business hours, no response
+    out = _run_node(
+        tmp_path, monkeypatch, service, TIMING_SCRIPT, OWNER, open_matter, unreadable, "PM-OP-1"
+    )
+
+    for matter in (open_matter, unreadable, "PM-OP-1"):
+        assert out[matter]["errors"] == [] and out[matter]["sections"] == 3, matter
+        assert not any(w in out[matter]["timing"] for w in ("null", "undefined", "NaN")), matter
+    shown = out[open_matter]["timing"]
+    assert "none yet" in shown and "Target 8.0 h: not measured yet" in shown
+    assert "Scripted rehearsal time, up to the latest scripted step" in shown
+    assert "of a 27.0 h target: still open" in shown
+    assert "Time on this matter cannot be measured:" in out[unreadable]["timing"]
+    recorded = out["PM-OP-1"]["timing"]
+    assert "Target 16.0 h: ✗ past target, no response yet" in recorded
+    assert "Time recorded by this server, up to when this page was loaded" in recorded

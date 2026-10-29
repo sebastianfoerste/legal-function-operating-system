@@ -167,11 +167,31 @@ class OutcomeControlTowerTests(unittest.TestCase):
             ({"stalled_requests": float("inf")}, "must be a number"),
             ({"stalled_requests": -1}, "whole number of at least 0"),
             ({"stalled_requests": 1.5}, "whole number of at least 0"),
+            ({"response_sla_attainment": 0.8755}, "at most 3 decimal places"),
+            ({"throughput_rate": 10**400}, "between 0 and 1"),
         ]
         for targets, message in bad:
             config["kpi_targets"] = targets
             with self.assertRaisesRegex(ValueError, message, msg=repr(targets)):
                 build_outcome_control_tower(self.requests, self.ledger, config)
+
+    def test_odd_but_valid_targets_render_plainly(self) -> None:
+        config = deepcopy(self.config)
+        config["kpi_targets"] = {"throughput_rate": -0.0, "stalled_requests": 10**400}
+        tiles = self._tiles(build_outcome_control_tower(self.requests, self.ledger, config))
+        self.assertEqual(tiles["throughput_rate"]["target_display"], "0.0%")
+        self.assertEqual(tiles["stalled_requests"]["status"], "on_target")
+
+    def test_a_pipe_in_a_tile_does_not_break_the_markdown_table(self) -> None:
+        tower = build_outcome_control_tower(self.requests, self.ledger, self.config)
+        tower["kpi_tiles"][3]["display"] = "Commercial | EMEA"
+        row = next(
+            line
+            for line in render_outcome_markdown(tower).splitlines()
+            if line.startswith("| Binding queue")
+        )
+        self.assertIn("Commercial \\| EMEA", row)
+        self.assertEqual(row.replace("\\|", "").count("|"), 6)
 
     def test_an_unmeasured_attainment_renders_as_not_measured(self) -> None:
         request = deepcopy(self.requests[0])

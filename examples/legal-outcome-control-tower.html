@@ -31,7 +31,8 @@ ul { padding-left:20px; }
 li { margin:12px 0; }
 code { background:var(--panel); padding:2px 5px; border-radius:4px; }
 details { margin-top:24px; }
-@media (max-width:760px) { .metrics { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:900px) { .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:480px) { .metrics { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>

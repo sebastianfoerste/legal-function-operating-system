@@ -142,14 +142,27 @@ def _kpi_targets(config: dict[str, Any]) -> dict[str, float | int]:
     checked: dict[str, float | int] = {}
     for kpi, value in targets.items():
         kind = KPI_TARGETS[kpi][1]
-        if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+        # An int is always finite; testing it with math.isfinite could overflow a float.
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or (isinstance(value, float) and not math.isfinite(value))
+        ):
             raise ValueError(f"kpi_targets.{kpi} must be a number")
         if kind == "rate" and not 0 <= value <= 1:
             raise ValueError(f"kpi_targets.{kpi} must be between 0 and 1")
+        # Rates are measured to 0.1 percentage point; a finer target could be shown as
+        # met and missed at once.
+        if kind == "rate" and round(value, 3) != value:
+            raise ValueError(f"kpi_targets.{kpi} must have at most 3 decimal places")
         if kind == "count" and (value < 0 or value != int(value)):
             raise ValueError(f"kpi_targets.{kpi} must be a whole number of at least 0")
-        checked[kpi] = float(value) if kind == "rate" else int(value)
+        checked[kpi] = float(value) + 0.0 if kind == "rate" else int(value)  # + 0.0: no -0.0
     return checked
+
+
+def _md_cell(value: Any) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ")
 
 
 def _percent(rate: float | None) -> str:
@@ -189,7 +202,7 @@ def _kpi_tile(
     if value is None:
         return tile
     if kind == "rate":
-        delta: float | int = round(value - target, 3) + 0.0  # + 0.0 turns -0.0 into 0.0
+        delta: float | int = round(value - target, 3)
         tile["delta_display"] = f"{delta * 100:+.1f} pp"
     else:
         delta = int(value) - int(target)
@@ -642,8 +655,8 @@ def render_outcome_markdown(tower: dict[str, Any]) -> str:
         "| KPI | Value | Against target | As of | Source |",
         "| --- | --- | --- | --- | --- |",
         *(
-            f"| {tile['title']} | {tile['display']} | {kpi_status_text(tile)} "
-            f"| {tile['as_of_utc']} | {tile['source']} |"
+            f"| {_md_cell(tile['title'])} | {_md_cell(tile['display'])} "
+            f"| {_md_cell(kpi_status_text(tile))} | {tile['as_of_utc']} | {_md_cell(tile['source'])} |"
             for tile in tower["kpi_tiles"]
         ),
         "",
@@ -800,7 +813,8 @@ ul {{ padding-left:20px; }}
 li {{ margin:12px 0; }}
 code {{ background:var(--panel); padding:2px 5px; border-radius:4px; }}
 details {{ margin-top:24px; }}
-@media (max-width:760px) {{ .metrics {{ grid-template-columns:repeat(2,1fr); }} }}
+@media (max-width:900px) {{ .metrics {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} }}
+@media (max-width:480px) {{ .metrics {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>

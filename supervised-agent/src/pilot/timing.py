@@ -4,8 +4,9 @@ The matter's events go through the mapping behind ``metrics.to_parent_ledger``
 (``ledger.matter_ledger``), and the parent tower measures them on its service calendar,
 so business time, waiting time and the service levels are the parent's. Each matter is
 measured on one clock and the two are never mixed: the scripted rehearsal time when
-every event carries one, otherwise the time the server recorded. No clock is added: an
-open matter is measured up to the service clock's ``now``, which tests inject.
+every event other than a refused command carries one, otherwise the time the server
+recorded. Legal's time starts when the request is submitted to legal. No clock is added:
+an open matter is measured up to the service clock's ``now``, which tests inject.
 """
 
 from __future__ import annotations
@@ -45,8 +46,9 @@ def matter_timing(
     scripted = bool(counted) and all(e["fixture_at"] for e in counted)
     clock = "fixture_at" if scripted else "occurred_at"
     base: dict[str, Any] = {"clock": "scripted" if scripted else "recorded"}
-    if not counted:
-        return {**base, "available": False, "reason": "no event recorded"}
+    entries = matter_ledger(matter_id, counted, clock) if counted else []
+    if not entries:
+        return {**base, "available": False, "reason": "it has not been submitted to legal yet"}
     tower = parent_module("outcome_control_tower")
     try:
         # A closed matter is measured to its closing event. The scripted clock has no
@@ -66,7 +68,7 @@ def matter_timing(
             {
                 "schema": tower.LEDGER_SCHEMA,
                 "as_of_utc": as_of,
-                "events": matter_ledger(matter_id, counted, clock),
+                "events": entries,
             },
             config,
         )
@@ -74,10 +76,21 @@ def matter_timing(
         completed = row["state"] == "completed"
         measured_to = _utc(row["last_event_at_utc"]) if completed else as_of
         elapsed = (_parse(measured_to) - _parse(row["submitted_at_utc"])).total_seconds()
-    except (ValueError, TypeError, KeyError, AttributeError) as error:
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as error:
         # A stored event the parent cannot read (or a tampered one) leaves timing out;
         # it never stops the review room.
         return {**base, "available": False, "reason": str(error)}
+    response_sla, resolution_sla = row["response_sla"], row["resolution_sla"]
+    if withdrawn and not completed:
+        resolution_sla = "not_applicable"
+    # An open matter already past a target has missed it, whatever happens next: both
+    # counts start at submission and run in whole business minutes.
+    if not closed and response_sla == "unmeasured":
+        if row["gross_cycle_business_hours"] > row["response_target_business_hours"]:
+            response_sla = "overdue"
+    if not closed and resolution_sla == "open":
+        if row["legal_controlled_hours"] > row["resolution_target_business_hours"]:
+            resolution_sla = "overdue"
     return {
         **base,
         "available": True,
@@ -90,10 +103,8 @@ def matter_timing(
         "business_wait_hours": row["business_wait_hours"],
         "first_response_business_hours": row["first_response_business_hours"],
         "response_target_business_hours": row["response_target_business_hours"],
-        "response_sla": row["response_sla"],
+        "response_sla": response_sla,
         "resolution_target_business_hours": row["resolution_target_business_hours"],
-        "resolution_sla": (
-            "not_applicable" if withdrawn and not completed else row["resolution_sla"]
-        ),
+        "resolution_sla": resolution_sla,
         "calendar": result["calendar"],
     }

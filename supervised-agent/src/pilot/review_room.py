@@ -444,8 +444,10 @@ function renderReview(view, root) {
 // ------------------------------------------------------------------ timing
 // How long the matter has taken, measured by the parent's control tower on its service
 // calendar. One clock per matter, never mixed; the page adds no clock of its own.
-const SLA_WORDS = {met: "met", breached: "breached", open: "still open", unmeasured: "not measured yet", not_applicable: "not applicable, withdrawn"};
-const SLA_CLASS = {met: "ok", breached: "bad"};
+const SLA_WORDS = {met: "✓ met", breached: "✗ breached", open: "still open", unmeasured: "not measured yet", not_applicable: "not applicable, withdrawn"};
+const RESPONSE_WORDS = {...SLA_WORDS, overdue: "✗ past target, no response yet"};
+const RESOLUTION_WORDS = {...SLA_WORDS, overdue: "✗ past target, still open"};
+const SLA_CLASS = {met: "ok", breached: "bad", overdue: "bad"};
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const hours = (value) => value.toFixed(1) + " h";
 function timingSection(t, verified) {
@@ -453,10 +455,10 @@ function timingSection(t, verified) {
   if (!t.available) { section.append(h("p", {class: "muted"}, "Time on this matter cannot be measured: " + t.reason + ".")); return section; }
   const cal = t.calendar, sla = (status) => ({class: "kpi-note " + (SLA_CLASS[status] || "")});
   const tiles = [
-    ["Elapsed", hours(t.elapsed_hours), h("span", {class: "kpi-note"}, "Calendar time since the request was submitted")],
+    ["Elapsed", hours(t.elapsed_hours), h("span", {class: "kpi-note"}, "Calendar time since the request was submitted to legal")],
     ["Business time", hours(t.business_hours), h("span", {class: "kpi-note"}, hours(t.legal_controlled_hours) + " with legal, " + hours(t.business_wait_hours) + " waiting on the business")],
-    ["First response", t.first_response_business_hours == null ? "none yet" : hours(t.first_response_business_hours), h("span", sla(t.response_sla), "Target " + hours(t.response_target_business_hours) + ": " + SLA_WORDS[t.response_sla])],
-    ["Resolution", hours(t.legal_controlled_hours), h("span", sla(t.resolution_sla), "With legal, of a " + hours(t.resolution_target_business_hours) + " target: " + SLA_WORDS[t.resolution_sla])],
+    ["First response", t.first_response_business_hours == null ? "none yet" : hours(t.first_response_business_hours), h("span", sla(t.response_sla), "Target " + hours(t.response_target_business_hours) + ": " + RESPONSE_WORDS[t.response_sla])],
+    ["Resolution", hours(t.legal_controlled_hours), h("span", sla(t.resolution_sla), "With legal, of a " + hours(t.resolution_target_business_hours) + " target: " + RESOLUTION_WORDS[t.resolution_sla])],
   ];
   const clock = t.clock === "scripted" ? "Scripted rehearsal time" : "Time recorded by this server";
   const upTo = !t.open ? "up to the closing event" : t.clock === "scripted" ? "up to the latest scripted step" : "up to when this page was loaded";

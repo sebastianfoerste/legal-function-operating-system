@@ -392,7 +392,9 @@ playbook position next to each change, and the evidence next to each resolution.
     a source.
   - Targets are optional, under `kpi_targets` in the outcome config: throughput rate,
     response SLA attainment and stalled requests. Which direction is better is fixed per
-    KPI in code. The bundled config sets synthetic targets (70%, 90%, none stalled).
+    KPI in code. A rate target has at most 3 decimal places, the precision of the
+    measured rate, so a tile is never shown as met and missed at once. The bundled config
+    sets synthetic targets (70%, 90%, none stalled).
   - The as-of time is the ledger's own `as_of_utc`. Nothing reads the system clock, so
     the committed artifacts carry no generation time.
   - Not taken from Evidence: the neutral range and the sparkline, because a snapshot has
@@ -401,12 +403,19 @@ playbook position next to each change, and the evidence next to each resolution.
 - **Built: time on a matter in the review room.**
   - `supervised-agent/src/pilot/timing.py` measures the matter with the parent tower
     over its events. The events are mapped by `ledger.matter_ledger`, which moved out of
-    `metrics.py`; `metrics.to_parent_ledger` uses it unchanged.
-  - One clock per matter, never mixed: scripted when every event has a scripted time,
-    otherwise the time the server recorded.
-  - An open matter is measured to the service clock's `now`, which tests inject. A
-    closed one is measured to its closing event, and an open rehearsal matter to its
-    latest scripted step.
+    `metrics.py`, so the room and `metrics.to_parent_ledger` always agree.
+  - The mapping now starts legal's time when the request is submitted to legal, not
+    when the requester opens the draft. It waits on the business while any clarification
+    to the requester is open, not only until the first answer. This also corrects the
+    rehearsal's parent outcome report.
+  - One clock per matter, never mixed: scripted when every event other than a refused
+    command has a scripted time, otherwise the time the server recorded.
+  - An open matter is measured to the service clock's `now`, which tests inject; it is
+    read after the events, so no event shown is later. A closed one is measured to its
+    closing event, and an open rehearsal matter to its latest scripted step, refusals
+    included.
+  - An open matter already past its response or resolution target is shown as past
+    target, since it can no longer meet it.
   - The "Time on this matter" section shows elapsed calendar time, business time (with
     legal and waiting on the business), first response and resolution against their
     targets, the clock and the calendar.

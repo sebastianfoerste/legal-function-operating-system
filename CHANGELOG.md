@@ -45,6 +45,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- The pilot's service-event ledger counted legal's time from when a requester opened a draft instead of from submission, and ended a wait on the business at the first answer while other clarifications were still open. The rehearsal outcome report and the review room now measure from submission and wait until the last open clarification is answered or resolved.
 - The outcome control tower's Markdown and HTML failed when no request had a first response measured yet. They now show "n/a".
 - The pilot's event-chain check failed with an error, instead of reporting a broken chain, when a stored event held a payload that is not valid JSON (or is nested too deeply to parse) or a value that cannot be hashed. It now reports "unreadable payload at seq N" or "unreadable event data at seq N". The matter history keeps a payload that parses and adds the stored text of one that does not, and the pilot measurement report no longer fails on such a payload.
 - Review room presence: "older than yours" compared other reviewers with the matter's latest revision instead of the one you loaded; the stale warning kept naming the first newer revision and scrolled out of view; the presence line re-announced itself to screen readers every 30 seconds because it showed a seconds count; and expired presence entries were cleared only when the same matter was read again (loaded, written to or checked in on).
