@@ -122,6 +122,9 @@ def test_rehearsal_metrics_separate_scripted_time_from_execution_time(rehearsal)
     assert "not pilot outcomes" in metrics["interpretation"]
     assert metrics["baseline_comparison"].startswith("not performed")
     assert metrics["measurement_plan"]["defined_before_results"] is True
+    overrides = metrics["playbook_override_patterns"]
+    assert [r["rule_id"] for r in overrides["rules"]] == ["liability-cap", "payment-terms"]
+    assert overrides["proposals"] == [] and "Nothing here changes the playbook" in overrides["note"]
     rows = {row["matter_id"]: row for row in metrics["scripted_human_time"]}
     specialist = rows["PM-SPECIALIST-002"]
     assert specialist["intake_completeness"]["missing_at_first_submission"] == ["business_owner"]
