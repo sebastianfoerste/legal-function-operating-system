@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legal Function Outcome Control Tower</title>
 <style>
-:root { color-scheme: light; --ink:#17202a; --muted:#5c6773; --line:#dfe5ea; --panel:#f7f9fa; --accent:#134e4a; }
+:root { color-scheme: light; --ink:#17202a; --muted:#5c6773; --line:#dfe5ea; --panel:#f7f9fa; --accent:#134e4a; --ok:#2f6b3a; --bad:#a12622; }
 * { box-sizing:border-box; }
 body { margin:0; font:15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; color:var(--ink); background:#eef2f3; }
 main { max-width:1180px; margin:0 auto; padding:42px 24px 64px; }
@@ -15,9 +15,14 @@ h2 { margin:34px 0 14px; font-size:19px; }
 .muted { color:var(--muted); }
 .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0; }
 .metric, section { background:white; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(20,40,50,.05); }
-.metric { padding:18px; }
+.metric { padding:18px; min-width:0; overflow-wrap:anywhere; }
 .metric strong { display:block; font-size:28px; }
 .metric span { color:var(--muted); }
+.metric .metric-title { display:block; color:var(--ink); font-weight:600; }
+.metric .kpi-status { display:block; margin-top:6px; color:var(--ink); }
+.metric .kpi-status.on { color:var(--ok); }
+.metric .kpi-status.off { color:var(--bad); }
+.metric .kpi-meta { display:block; margin-top:6px; font-size:12.5px; }
 section { padding:22px; margin-top:18px; overflow:auto; }
 table { width:100%; border-collapse:collapse; min-width:760px; }
 th, td { padding:10px 9px; border-bottom:1px solid var(--line); text-align:left; }
@@ -26,7 +31,8 @@ ul { padding-left:20px; }
 li { margin:12px 0; }
 code { background:var(--panel); padding:2px 5px; border-radius:4px; }
 details { margin-top:24px; }
-@media (max-width:760px) { .metrics { grid-template-columns:repeat(2,1fr); } }
+@media (max-width:900px) { .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+@media (max-width:480px) { .metrics { grid-template-columns:1fr; } }
 </style>
 </head>
 <body>
@@ -35,10 +41,7 @@ details { margin-top:24px; }
 <h1>Legal Function Outcome Control Tower</h1>
 <p class="muted">Snapshot 2026-07-17T16:00:00+00:00. Local reviewer artifact with no external actions.</p>
 <div class="metrics">
-<div class="metric"><strong>6/8</strong><span>completed requests</span></div>
-<div class="metric"><strong>87.5%</strong><span>response SLA attainment</span></div>
-<div class="metric"><strong>2</strong><span>stalled requests</span></div>
-<div class="metric"><strong>Commercial</strong><span>binding queue</span></div>
+<div class="metric"><span class="metric-title">Completed requests</span><strong>6/8</strong><span class="kpi-status on">✓ +5.0 pp against target 70.0%: on target</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Service-event ledger, 52 events over 8 requests; target from the outcome config.</span></div><div class="metric"><span class="metric-title">Response SLA attainment</span><strong>87.5%</strong><span class="kpi-status off">✗ -2.5 pp against target 90.0%: below target</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Service-event ledger, 52 events over 8 requests; first response in business hours against each service level; target from the outcome config.</span></div><div class="metric"><span class="metric-title">Stalled requests</span><strong>2</strong><span class="kpi-status off">✗ +2 against target 0: above target</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Service-event ledger, 52 events over 8 requests; open and inactive for 16 business hours or more; target from the outcome config.</span></div><div class="metric"><span class="metric-title">Binding queue</span><strong>Commercial</strong><span class="kpi-status ">No target set</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Queue calibration; most stalled, then most open requests.</span></div>
 </div>
 <section><h2>Stalled action queue</h2><ul><li><strong>REQ-1002</strong> DPA: US support sub-processor (synthetic)<br><span>Privacy · waiting_on_business · 35.00 business hours inactive</span><br>Confirm the next business input and owner.</li><li><strong>REQ-1001</strong> Enterprise MSA: Globex (synthetic)<br><span>Commercial · work_started · 26.00 business hours inactive</span><br>Review ownership, priority, and the next controlled step.</li></ul></section>
 <section><h2>Queue calibration</h2><table><thead><tr><th>Queue</th><th>Requests</th><th>Open</th><th>Stalled</th><th>Planned points</th><th>Observed minutes</th><th>Minutes / point</th></tr></thead><tbody><tr><td>Commercial</td><td>3</td><td>1</td><td>1</td><td>14</td><td>645</td><td>46.07</td></tr><tr><td>Corporate / GC</td><td>1</td><td>0</td><td>0</td><td>10</td><td>365</td><td>36.5</td></tr><tr><td>Employment</td><td>1</td><td>0</td><td>0</td><td>3</td><td>115</td><td>38.33</td></tr><tr><td>Litigation</td><td>1</td><td>0</td><td>0</td><td>13</td><td>340</td><td>26.15</td></tr><tr><td>Privacy</td><td>2</td><td>1</td><td>1</td><td>17</td><td>465</td><td>27.35</td></tr></tbody></table></section>
@@ -86,6 +89,69 @@ details { margin-top:24px; }
     },
     &quot;binding_queue&quot;: &quot;Commercial&quot;
   },
+  &quot;kpi_targets&quot;: {
+    &quot;throughput_rate&quot;: 0.7,
+    &quot;response_sla_attainment&quot;: 0.9,
+    &quot;stalled_requests&quot;: 0
+  },
+  &quot;kpi_tiles&quot;: [
+    {
+      &quot;kpi&quot;: &quot;throughput_rate&quot;,
+      &quot;title&quot;: &quot;Completed requests&quot;,
+      &quot;value&quot;: 0.75,
+      &quot;display&quot;: &quot;6/8&quot;,
+      &quot;better&quot;: &quot;higher&quot;,
+      &quot;target&quot;: 0.7,
+      &quot;target_display&quot;: &quot;70.0%&quot;,
+      &quot;delta&quot;: 0.05,
+      &quot;delta_display&quot;: &quot;+5.0 pp&quot;,
+      &quot;status&quot;: &quot;on_target&quot;,
+      &quot;as_of_utc&quot;: &quot;2026-07-17T16:00:00+00:00&quot;,
+      &quot;source&quot;: &quot;Service-event ledger, 52 events over 8 requests; target from the outcome config&quot;
+    },
+    {
+      &quot;kpi&quot;: &quot;response_sla_attainment&quot;,
+      &quot;title&quot;: &quot;Response SLA attainment&quot;,
+      &quot;value&quot;: 0.875,
+      &quot;display&quot;: &quot;87.5%&quot;,
+      &quot;better&quot;: &quot;higher&quot;,
+      &quot;target&quot;: 0.9,
+      &quot;target_display&quot;: &quot;90.0%&quot;,
+      &quot;delta&quot;: -0.025,
+      &quot;delta_display&quot;: &quot;-2.5 pp&quot;,
+      &quot;status&quot;: &quot;off_target&quot;,
+      &quot;as_of_utc&quot;: &quot;2026-07-17T16:00:00+00:00&quot;,
+      &quot;source&quot;: &quot;Service-event ledger, 52 events over 8 requests; first response in business hours against each service level; target from the outcome config&quot;
+    },
+    {
+      &quot;kpi&quot;: &quot;stalled_requests&quot;,
+      &quot;title&quot;: &quot;Stalled requests&quot;,
+      &quot;value&quot;: 2,
+      &quot;display&quot;: &quot;2&quot;,
+      &quot;better&quot;: &quot;lower&quot;,
+      &quot;target&quot;: 0,
+      &quot;target_display&quot;: &quot;0&quot;,
+      &quot;delta&quot;: 2,
+      &quot;delta_display&quot;: &quot;+2&quot;,
+      &quot;status&quot;: &quot;off_target&quot;,
+      &quot;as_of_utc&quot;: &quot;2026-07-17T16:00:00+00:00&quot;,
+      &quot;source&quot;: &quot;Service-event ledger, 52 events over 8 requests; open and inactive for 16 business hours or more; target from the outcome config&quot;
+    },
+    {
+      &quot;kpi&quot;: &quot;binding_queue&quot;,
+      &quot;title&quot;: &quot;Binding queue&quot;,
+      &quot;value&quot;: &quot;Commercial&quot;,
+      &quot;display&quot;: &quot;Commercial&quot;,
+      &quot;better&quot;: null,
+      &quot;target&quot;: null,
+      &quot;target_display&quot;: null,
+      &quot;delta&quot;: null,
+      &quot;delta_display&quot;: null,
+      &quot;status&quot;: &quot;no_target&quot;,
+      &quot;as_of_utc&quot;: &quot;2026-07-17T16:00:00+00:00&quot;,
+      &quot;source&quot;: &quot;Queue calibration; most stalled, then most open requests&quot;
+    }
+  ],
   &quot;value_proxy&quot;: {
     &quot;assumption_notice&quot;: &quot;All monetary figures are assumption-based management proxies over synthetic effort records. They are not realised savings or accounting conclusions.&quot;,
     &quot;assumptions&quot;: {
@@ -236,9 +302,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-06T07:00:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-15T08:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 1.0,
+      &quot;response_target_business_hours&quot;: 8.0,
       &quot;gross_cycle_business_hours&quot;: 81.0,
       &quot;business_wait_hours&quot;: 5.0,
       &quot;legal_controlled_hours&quot;: 76.0,
+      &quot;resolution_target_business_hours&quot;: 27.0,
       &quot;approval_dwell_hours&quot;: 5.0,
       &quot;inactive_business_hours&quot;: 26.0,
       &quot;response_sla&quot;: &quot;met&quot;,
@@ -364,9 +432,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-13T07:00:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-14T08:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 2.0,
+      &quot;response_target_business_hours&quot;: 8.0,
       &quot;gross_cycle_business_hours&quot;: 45.0,
       &quot;business_wait_hours&quot;: 35.0,
       &quot;legal_controlled_hours&quot;: 10.0,
+      &quot;resolution_target_business_hours&quot;: 27.0,
       &quot;approval_dwell_hours&quot;: 0.0,
       &quot;inactive_business_hours&quot;: 35.0,
       &quot;response_sla&quot;: &quot;met&quot;,
@@ -439,9 +509,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-06T08:00:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-06T11:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 1.0,
+      &quot;response_target_business_hours&quot;: 40.0,
       &quot;gross_cycle_business_hours&quot;: 3.0,
       &quot;business_wait_hours&quot;: 0.0,
       &quot;legal_controlled_hours&quot;: 3.0,
+      &quot;resolution_target_business_hours&quot;: 90.0,
       &quot;approval_dwell_hours&quot;: 0.0,
       &quot;inactive_business_hours&quot;: 0.0,
       &quot;response_sla&quot;: &quot;met&quot;,
@@ -515,9 +587,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-07T07:00:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-09T11:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 6.0,
+      &quot;response_target_business_hours&quot;: 8.0,
       &quot;gross_cycle_business_hours&quot;: 22.0,
       &quot;business_wait_hours&quot;: 0.0,
       &quot;legal_controlled_hours&quot;: 22.0,
+      &quot;resolution_target_business_hours&quot;: 27.0,
       &quot;approval_dwell_hours&quot;: 7.0,
       &quot;inactive_business_hours&quot;: 0.0,
       &quot;response_sla&quot;: &quot;met&quot;,
@@ -609,9 +683,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-06T07:30:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-09T15:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 3.0,
+      &quot;response_target_business_hours&quot;: 8.0,
       &quot;gross_cycle_business_hours&quot;: 34.5,
       &quot;business_wait_hours&quot;: 0.0,
       &quot;legal_controlled_hours&quot;: 34.5,
+      &quot;resolution_target_business_hours&quot;: 27.0,
       &quot;approval_dwell_hours&quot;: 14.0,
       &quot;inactive_business_hours&quot;: 0.0,
       &quot;response_sla&quot;: &quot;met&quot;,
@@ -712,9 +788,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-08T07:00:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-08T12:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 1.0,
+      &quot;response_target_business_hours&quot;: 16.0,
       &quot;gross_cycle_business_hours&quot;: 5.0,
       &quot;business_wait_hours&quot;: 0.0,
       &quot;legal_controlled_hours&quot;: 5.0,
+      &quot;resolution_target_business_hours&quot;: 45.0,
       &quot;approval_dwell_hours&quot;: 0.0,
       &quot;inactive_business_hours&quot;: 0.0,
       &quot;response_sla&quot;: &quot;met&quot;,
@@ -788,9 +866,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-06T07:00:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-09T16:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 7.5,
+      &quot;response_target_business_hours&quot;: 4.0,
       &quot;gross_cycle_business_hours&quot;: 36.0,
       &quot;business_wait_hours&quot;: 0.0,
       &quot;legal_controlled_hours&quot;: 36.0,
+      &quot;resolution_target_business_hours&quot;: 9.0,
       &quot;approval_dwell_hours&quot;: 0.0,
       &quot;inactive_business_hours&quot;: 0.0,
       &quot;response_sla&quot;: &quot;breached&quot;,
@@ -873,9 +953,11 @@ details { margin-top:24px; }
       &quot;submitted_at_utc&quot;: &quot;2026-07-09T07:00:00+00:00&quot;,
       &quot;last_event_at_utc&quot;: &quot;2026-07-09T14:00:00+00:00&quot;,
       &quot;first_response_business_hours&quot;: 3.0,
+      &quot;response_target_business_hours&quot;: 16.0,
       &quot;gross_cycle_business_hours&quot;: 7.0,
       &quot;business_wait_hours&quot;: 0.0,
       &quot;legal_controlled_hours&quot;: 7.0,
+      &quot;resolution_target_business_hours&quot;: 45.0,
       &quot;approval_dwell_hours&quot;: 0.0,
       &quot;inactive_business_hours&quot;: 0.0,
       &quot;response_sla&quot;: &quot;met&quot;,

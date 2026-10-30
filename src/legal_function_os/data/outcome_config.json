@@ -16,6 +16,11 @@
     ]
   },
   "stalled_after_business_hours": 16,
+  "kpi_targets": {
+    "throughput_rate": 0.7,
+    "response_sla_attainment": 0.9,
+    "stalled_requests": 0
+  },
   "value_assumptions": {
     "currency": "EUR",
     "default_internal_role": "Legal Counsel",

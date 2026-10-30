@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
+from src.pilot.ledger import matter_ledger
 from src.pilot.parent_bridge import CONTRACT_REVIEW_STATE, parent_module, parent_request
 from src.pilot.service import StoredChange, VersionBody
 from src.pilot.store import PilotStore
@@ -48,12 +49,6 @@ _OVERRIDE_NOTE = (
     "Proposals only. Nothing here changes the playbook: a lawyer decides whether a rule "
     "is revised, clarified or kept, and records that as a new playbook version."
 )
-_PARENT_ROLE = {
-    "business_requester": "Business Requester",
-    "matter_owner": "Legal Counsel",
-    "specialist_reviewer": "Privacy Counsel",
-    "final_approver": "General Counsel",
-}
 
 
 def _parse(value: str) -> datetime:
@@ -445,55 +440,6 @@ def _render_overrides(patterns: dict[str, Any]) -> list[str]:
 # -- parent reporting contract ---------------------------------------------------
 
 
-def _matter_ledger(matter_id: str, events: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Map one matter's scripted events onto the parent's request lifecycle."""
-
-    entries: list[dict[str, Any]] = []
-    approved_at = max(
-        (i for i, e in enumerate(events) if e["event_type"] == "approved"), default=None
-    )
-    state: str | None = None
-    waiting = False
-    effort = 0
-
-    def emit(kind: str, event: dict[str, Any], minutes: int) -> None:
-        entry: dict[str, Any] = {
-            "event_id": f"{matter_id}-{len(entries) + 1:02d}",
-            "request_id": matter_id,
-            "event_type": kind,
-            "occurred_at_utc": event["fixture_at"],
-            "actor_role": _PARENT_ROLE.get(event["role"], "Legal Counsel"),
-            "note": f"Pilot event {event['event_type']} (synthetic).",
-        }
-        if minutes:
-            entry["effort_minutes"] = minutes
-        entries.append(entry)
-
-    for index, event in enumerate(events):
-        effort += event["effort_minutes"] or 0
-        name, kinds = event["event_type"], []
-        asks = name == "change_decided" and bool(event["payload"].get("comment_id"))
-        if name == "matter_created" and state is None:
-            kinds = ["submitted"]
-        elif name == "triage_completed" and state == "submitted":
-            kinds = ["acknowledged"]
-        elif name == "review_started" and state == "acknowledged":
-            kinds = ["assigned", "work_started"]
-        elif asks and not waiting and state in {"work_started", "resumed"}:
-            kinds, waiting = ["waiting_on_business"], True
-        elif name == "comment_response_added" and waiting and event["role"] == "business_requester":
-            kinds, waiting = ["resumed"], False
-        elif index == approved_at and not waiting and state in {"work_started", "resumed"}:
-            kinds = ["approval_requested", "approved"]
-        elif name == "delivery_accepted" and state == "approved":
-            kinds = ["completed"]
-        for kind in kinds:
-            # Effort recorded since the last mapped event travels with this one.
-            emit(kind, event, effort)
-            effort, state = 0, kind
-    return entries
-
-
 def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Express scripted pilot events in the parent's service-event ledger schema.
 
@@ -511,7 +457,7 @@ def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str,
         if not events:
             continue
         requests.append(parent_request(matter_id, matter["body"].intake))
-        ledger_events.extend(_matter_ledger(matter_id, events))
+        ledger_events.extend(matter_ledger(matter_id, events))
     latest = max((e["occurred_at_utc"] for e in ledger_events), default=None)
     as_of = (
         (_parse(latest) + timedelta(hours=1)).isoformat().replace("+00:00", "Z") if latest else ""

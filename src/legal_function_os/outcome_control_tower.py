@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import html
 import json
+import math
 from collections import Counter, defaultdict
 from dataclasses import asdict, dataclass
 from datetime import date, datetime, time, timedelta
@@ -121,6 +122,110 @@ class ServiceCalendar:
         return int(total_seconds // 60)
 
 
+# A KPI's better direction is part of its meaning, so the config sets only the target.
+KPI_TARGETS = {
+    "throughput_rate": ("higher", "rate"),
+    "response_sla_attainment": ("higher", "rate"),
+    "stalled_requests": ("lower", "count"),
+}
+
+
+def _kpi_targets(config: dict[str, Any]) -> dict[str, float | int]:
+    """The optional ``kpi_targets`` of the outcome config, checked."""
+
+    targets = config.get("kpi_targets", {})
+    if not isinstance(targets, dict):
+        raise ValueError("kpi_targets must be a JSON object")
+    unknown = sorted(set(targets) - set(KPI_TARGETS))
+    if unknown:
+        raise ValueError(f"kpi_targets has an unknown KPI: {', '.join(unknown)}")
+    checked: dict[str, float | int] = {}
+    for kpi, value in targets.items():
+        kind = KPI_TARGETS[kpi][1]
+        # An int is always finite; testing it with math.isfinite could overflow a float.
+        if (
+            isinstance(value, bool)
+            or not isinstance(value, (int, float))
+            or (isinstance(value, float) and not math.isfinite(value))
+        ):
+            raise ValueError(f"kpi_targets.{kpi} must be a number")
+        if kind == "rate" and not 0 <= value <= 1:
+            raise ValueError(f"kpi_targets.{kpi} must be between 0 and 1")
+        # Rates are measured to 0.1 percentage point; a finer target could be shown as
+        # met and missed at once.
+        if kind == "rate" and round(value, 3) != value:
+            raise ValueError(f"kpi_targets.{kpi} must have at most 3 decimal places")
+        if kind == "count" and (value < 0 or value != int(value)):
+            raise ValueError(f"kpi_targets.{kpi} must be a whole number of at least 0")
+        checked[kpi] = float(value) + 0.0 if kind == "rate" else int(value)  # + 0.0: no -0.0
+    return checked
+
+
+def _md_cell(value: Any) -> str:
+    return str(value).replace("|", "\\|").replace("\n", " ")
+
+
+def _percent(rate: float | None) -> str:
+    return "n/a" if rate is None else f"{rate * 100:.1f}%"
+
+
+def _kpi_tile(
+    kpi: str,
+    title: str,
+    value: Any,
+    display: str,
+    targets: dict[str, float | int],
+    as_of: str,
+    source: str,
+) -> dict[str, Any]:
+    """One KPI tile: value, target, delta against it, and where and when it was measured."""
+
+    better, kind = KPI_TARGETS.get(kpi, (None, None))
+    target = targets.get(kpi)
+    tile: dict[str, Any] = {
+        "kpi": kpi,
+        "title": title,
+        "value": value,
+        "display": display,
+        "better": better,
+        "target": target,
+        "target_display": None,
+        "delta": None,
+        "delta_display": None,
+        "status": "no_target" if target is None else "unmeasured",
+        "as_of_utc": as_of,
+        "source": source + ("; target from the outcome config" if target is not None else ""),
+    }
+    if target is None:
+        return tile
+    tile["target_display"] = _percent(target) if kind == "rate" else str(target)
+    if value is None:
+        return tile
+    if kind == "rate":
+        delta: float | int = round(value - target, 3)
+        tile["delta_display"] = f"{delta * 100:+.1f} pp"
+    else:
+        delta = int(value) - int(target)
+        tile["delta_display"] = f"{delta:+d}"
+    tile["delta"] = delta
+    met = value >= target if better == "higher" else value <= target
+    tile["status"] = "on_target" if met else "off_target"
+    return tile
+
+
+def kpi_status_text(tile: dict[str, Any]) -> str:
+    """The tile's standing against its target, in words."""
+
+    if tile["status"] == "no_target":
+        return "No target set"
+    if tile["status"] == "unmeasured":
+        return f"Target {tile['target_display']}; not measured yet"
+    words = "on target"
+    if tile["status"] == "off_target":
+        words = "below target" if tile["better"] == "higher" else "above target"
+    return f"{tile['delta_display']} against target {tile['target_display']}: {words}"
+
+
 def _validate_inputs(
     requests: list[dict[str, Any]],
     ledger: dict[str, Any],
@@ -228,6 +333,7 @@ def build_outcome_control_tower(
     """Build a deterministic outcome and value-control snapshot."""
 
     as_of, calendar, grouped = _validate_inputs(requests, ledger, config)
+    targets = _kpi_targets(config)
     value = dict(config.get("value_assumptions", {}))
     role_rates = {str(role): float(rate) for role, rate in value.get("internal_role_hourly_cost_eur", {}).items()}
     default_role = str(value.get("default_internal_role", "Legal Counsel"))
@@ -360,9 +466,11 @@ def build_outcome_control_tower(
                 "first_response_business_hours": (
                     _hours(response_minutes) if response_minutes is not None else None
                 ),
+                "response_target_business_hours": _hours(response_target),
                 "gross_cycle_business_hours": _hours(gross_minutes),
                 "business_wait_hours": _hours(wait_minutes),
                 "legal_controlled_hours": _hours(controlled_minutes),
+                "resolution_target_business_hours": _hours(resolution_target),
                 "approval_dwell_hours": _hours(approval_minutes),
                 "inactive_business_hours": _hours(inactive_minutes),
                 "response_sla": response_status,
@@ -424,9 +532,51 @@ def build_outcome_control_tower(
         ),
     )
     state_counts = Counter(row["state"] for row in request_rows)
+    response_rate = round(response_hits / response_measured, 3) if response_measured else None
+    binding_queue = bottlenecks[0]["queue"] if bottlenecks else None
+    as_of_text = as_of.isoformat()
+    ledger_source = f"Service-event ledger, {len(ledger['events'])} events over {len(requests)} requests"
+    kpi_tiles = [
+        _kpi_tile(
+            "throughput_rate",
+            "Completed requests",
+            round(completed_count / len(request_rows), 3),
+            f"{completed_count}/{len(request_rows)}",
+            targets,
+            as_of_text,
+            ledger_source,
+        ),
+        _kpi_tile(
+            "response_sla_attainment",
+            "Response SLA attainment",
+            response_rate,
+            _percent(response_rate),
+            targets,
+            as_of_text,
+            ledger_source + "; first response in business hours against each service level",
+        ),
+        _kpi_tile(
+            "stalled_requests",
+            "Stalled requests",
+            len(stalled_rows),
+            str(len(stalled_rows)),
+            targets,
+            as_of_text,
+            ledger_source + f"; open and inactive for {stalled_after} business hours or more",
+        ),
+        _kpi_tile(
+            "binding_queue",
+            "Binding queue",
+            binding_queue,
+            str(binding_queue),
+            targets,
+            as_of_text,
+            "Queue calibration; most stalled, then most open requests",
+        ),
+    ]
     return {
         "schema": OUTPUT_SCHEMA,
-        "generated_at_utc": as_of.isoformat(),
+        "generated_at_utc": as_of_text,
         "source": {
             "ledger_schema": LEDGER_SCHEMA,
             "config_schema": CONFIG_SCHEMA,
@@ -445,17 +595,17 @@ def build_outcome_control_tower(
             "stalled_requests": len(stalled_rows),
             "throughput_rate": round(completed_count / len(request_rows), 3),
             "reopen_count": reopen_total,
-            "response_sla_attainment": (
-                round(response_hits / response_measured, 3) if response_measured else None
-            ),
+            "response_sla_attainment": response_rate,
             "resolution_sla_attainment": (
                 round(resolved_hits / resolution_measured, 3)
                 if resolution_measured
                 else None
             ),
             "states": dict(sorted(state_counts.items())),
-            "binding_queue": bottlenecks[0]["queue"] if bottlenecks else None,
+            "binding_queue": binding_queue,
         },
+        "kpi_targets": targets,
+        "kpi_tiles": kpi_tiles,
         "value_proxy": {
             "assumption_notice": (
                 "All monetary figures are assumption-based management proxies over "
@@ -500,14 +650,24 @@ def render_outcome_markdown(tower: dict[str, Any]) -> str:
         "",
         f"**Observed at: {tower['generated_at_utc']}**",
         "",
+        "## KPI tiles",
+        "",
+        "| KPI | Value | Against target | As of | Source |",
+        "| --- | --- | --- | --- | --- |",
+        *(
+            f"| {_md_cell(tile['title'])} | {_md_cell(tile['display'])} "
+            f"| {_md_cell(kpi_status_text(tile))} | {tile['as_of_utc']} | {_md_cell(tile['source'])} |"
+            for tile in tower["kpi_tiles"]
+        ),
+        "",
         "## Executive outcome",
         "",
         f"- Requests: {summary['requests']}",
         f"- Completed: {summary['completed_requests']}",
         f"- Open: {summary['open_requests']}",
         f"- Stalled: {summary['stalled_requests']}",
-        f"- Response SLA attainment: {summary['response_sla_attainment'] * 100:.1f}%",
-        f"- Resolution SLA attainment: {summary['resolution_sla_attainment'] * 100:.1f}%",
+        f"- Response SLA attainment: {_percent(summary['response_sla_attainment'])}",
+        f"- Resolution SLA attainment: {_percent(summary['resolution_sla_attainment'])}",
         f"- Binding queue: {summary['binding_queue']}",
         "",
         "## Queue calibration",
@@ -571,8 +731,21 @@ def render_outcome_markdown(tower: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _tile_html(tile: dict[str, Any]) -> str:
+    standing = "on" if tile["status"] == "on_target" else "off" if tile["status"] == "off_target" else ""
+    mark = {"on": "✓ ", "off": "✗ "}.get(standing, "")
+    return (
+        '<div class="metric">'
+        f'<span class="metric-title">{html.escape(str(tile["title"]))}</span>'
+        f"<strong>{html.escape(str(tile['display']))}</strong>"
+        f'<span class="kpi-status {standing}">{mark}{html.escape(kpi_status_text(tile))}</span>'
+        f'<span class="kpi-meta">As of {html.escape(str(tile["as_of_utc"]))}. '
+        f"{html.escape(str(tile['source']))}.</span>"
+        "</div>"
+    )
+
+
 def render_outcome_html(tower: dict[str, Any]) -> str:
-    summary = tower["executive_summary"]
     queue_rows = "".join(
         "<tr>"
         f"<td>{html.escape(str(row['queue']))}</td>"
@@ -614,7 +787,7 @@ def render_outcome_html(tower: dict[str, Any]) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legal Function Outcome Control Tower</title>
 <style>
-:root {{ color-scheme: light; --ink:#17202a; --muted:#5c6773; --line:#dfe5ea; --panel:#f7f9fa; --accent:#134e4a; }}
+:root {{ color-scheme: light; --ink:#17202a; --muted:#5c6773; --line:#dfe5ea; --panel:#f7f9fa; --accent:#134e4a; --ok:#2f6b3a; --bad:#a12622; }}
 * {{ box-sizing:border-box; }}
 body {{ margin:0; font:15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; color:var(--ink); background:#eef2f3; }}
 main {{ max-width:1180px; margin:0 auto; padding:42px 24px 64px; }}
@@ -624,9 +797,14 @@ h2 {{ margin:34px 0 14px; font-size:19px; }}
 .muted {{ color:var(--muted); }}
 .metrics {{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0; }}
 .metric, section {{ background:white; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(20,40,50,.05); }}
-.metric {{ padding:18px; }}
+.metric {{ padding:18px; min-width:0; overflow-wrap:anywhere; }}
 .metric strong {{ display:block; font-size:28px; }}
 .metric span {{ color:var(--muted); }}
+.metric .metric-title {{ display:block; color:var(--ink); font-weight:600; }}
+.metric .kpi-status {{ display:block; margin-top:6px; color:var(--ink); }}
+.metric .kpi-status.on {{ color:var(--ok); }}
+.metric .kpi-status.off {{ color:var(--bad); }}
+.metric .kpi-meta {{ display:block; margin-top:6px; font-size:12.5px; }}
 section {{ padding:22px; margin-top:18px; overflow:auto; }}
 table {{ width:100%; border-collapse:collapse; min-width:760px; }}
 th, td {{ padding:10px 9px; border-bottom:1px solid var(--line); text-align:left; }}
@@ -635,7 +813,8 @@ ul {{ padding-left:20px; }}
 li {{ margin:12px 0; }}
 code {{ background:var(--panel); padding:2px 5px; border-radius:4px; }}
 details {{ margin-top:24px; }}
-@media (max-width:760px) {{ .metrics {{ grid-template-columns:repeat(2,1fr); }} }}
+@media (max-width:900px) {{ .metrics {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} }}
+@media (max-width:480px) {{ .metrics {{ grid-template-columns:1fr; }} }}
 </style>
 </head>
 <body>
@@ -644,10 +823,7 @@ details {{ margin-top:24px; }}
 <h1>Legal Function Outcome Control Tower</h1>
 <p class="muted">Snapshot {html.escape(str(tower['generated_at_utc']))}. Local reviewer artifact with no external actions.</p>
 <div class="metrics">
-<div class="metric"><strong>{summary['completed_requests']}/{summary['requests']}</strong><span>completed requests</span></div>
-<div class="metric"><strong>{summary['response_sla_attainment'] * 100:.1f}%</strong><span>response SLA attainment</span></div>
-<div class="metric"><strong>{summary['stalled_requests']}</strong><span>stalled requests</span></div>
-<div class="metric"><strong>{html.escape(str(summary['binding_queue']))}</strong><span>binding queue</span></div>
+{"".join(_tile_html(tile) for tile in tower["kpi_tiles"])}
 </div>
 <section><h2>Stalled action queue</h2><ul>{actions}</ul></section>
 <section><h2>Queue calibration</h2><table><thead><tr><th>Queue</th><th>Requests</th><th>Open</th><th>Stalled</th><th>Planned points</th><th>Observed minutes</th><th>Minutes / point</th></tr></thead><tbody>{queue_rows}</tbody></table></section>
