@@ -243,6 +243,10 @@ Publication in the Official Journal could not be checked because EUR-Lex was not
 reachable. No date in this repository was changed. The item is listed under **Needs owner
 decision** in the [adaptation plan](adaptation-plan.md#needs-owner-decision).
 
+**Update, 2026-10-29.** Settled by PR #15, which updated
+`src/legal_function_os/raas_sources.py` to the amending regulation after a check against
+the EUR-Lex consolidated texts. The snippets above stay Claimed and were not used for it.
+
 ## Not reachable
 
 | Host or source | Result on 2026-10-20 |
