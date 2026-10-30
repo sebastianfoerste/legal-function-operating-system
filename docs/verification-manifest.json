@@ -14,6 +14,8 @@
     { "path": "examples/legal-capacity-simulation.md", "label": "Capacity simulation and binding constraints" },
     { "path": "examples/legal-outcome-control-tower.md", "label": "Outcome control tower" },
     { "path": "examples/legal-outcome-control-tower.html", "label": "Outcome control tower browser view" },
+    { "path": "examples/approval-matrix.md", "label": "Approval matrix by value band and risk" },
+    { "path": "examples/approval-matrix.html", "label": "Approval matrix browser view" },
     { "path": "examples/raas-deal-pack.md", "label": "Industrial RaaS deal decision pack" },
     { "path": "examples/raas-deal-desk.svg", "label": "Deal decision cockpit" },
     { "path": "examples/raas-deal-room.html", "label": "RaaS reviewer deal room" },

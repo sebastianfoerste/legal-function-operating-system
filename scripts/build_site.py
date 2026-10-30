@@ -25,6 +25,7 @@ BLOB = f"{REPO}/blob/main"
 # (source, destination) for artifacts served directly from the site.
 HOSTED = (
     (ROOT / "examples" / "legal-outcome-control-tower.html", "legal-outcome-control-tower.html"),
+    (ROOT / "examples" / "approval-matrix.html", "approval-matrix.html"),
     (ROOT / "examples" / "raas-deal-room.html", "raas-deal-room.html"),
     (ROOT / "examples" / "raas-deal-desk.svg", "raas-deal-desk.svg"),
     (ROOT / "docs" / "architecture.svg", "architecture.svg"),
@@ -45,6 +46,13 @@ CARDS = (
         "legal-outcome-control-tower.html",
         "Business-time SLAs, wait-state reconciliation, effort calibration, the "
         "stalled-work queue and value proxies over a versioned service-event ledger.",
+        "Hosted",
+    ),
+    (
+        "Approval matrix",
+        "approval-matrix.html",
+        "Who must sign off for each value band and risk level, read from the rules and the "
+        "default policy, with each sample request placed in its cell.",
         "Hosted",
     ),
     (

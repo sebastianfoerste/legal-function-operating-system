@@ -141,7 +141,7 @@ All Claimed.
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | Render `rules.approval_chain` as a matrix of value band × risk × flags, with the matched path highlighted | `scripts/build_site.py` + `rules.py` (F8, from H8), specced |
+  | Adapt | Render `rules.approval_chain` as a matrix of value band × risk × flags, with the matched path highlighted | `approval_matrix.py`, hosted by `scripts/build_site.py` (F8, from H8), built |
   | Adopt | A mandatory Else | Already true: the chain always ends with a human tier |
 
 ### 7. Linear Triage and Plane Intake

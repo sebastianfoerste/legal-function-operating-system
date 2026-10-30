@@ -31,6 +31,11 @@ from typing import Any
 
 from legal_function_os import __version__
 from legal_function_os.agent_run import build_agent_runs
+from legal_function_os.approval_matrix import (
+    build_approval_matrix,
+    render_approval_markdown,
+    write_approval_matrix,
+)
 from legal_function_os.board_pack import build_board_pack, render_markdown, render_triage_markdown
 from legal_function_os.bundled import bundled_path
 from legal_function_os.capacity_simulator import (
@@ -338,6 +343,18 @@ def _init(args: argparse.Namespace) -> int:
 
 Handler = Callable[[argparse.Namespace], int]
 
+
+def _approval_matrix(args: argparse.Namespace) -> int:
+    policy = _load_policy(args.policy)
+    requests, _ = _load_valid_requests(args.input, policy)
+    matrix = build_approval_matrix(requests, policy)
+    if args.out:
+        for path in write_approval_matrix(matrix, Path(args.out)).values():
+            print(f"wrote {path}", file=sys.stderr)
+    else:
+        _emit(_json(matrix) if args.format == "json" else render_approval_markdown(matrix))
+    return 0
+
 # name: (one-line summary, handler). The order is the order of the help and docs.
 COMMANDS: dict[str, tuple[str, Handler]] = {
     "triage": (
@@ -363,6 +380,10 @@ COMMANDS: dict[str, tuple[str, Handler]] = {
     "control-tower": (
         "Measure business-time SLAs, waiting time and value from a service-event ledger.",
         _control_tower,
+    ),
+    "approval-matrix": (
+        "Show who must sign off for each value band and risk level, from the rules and policy.",
+        _approval_matrix,
     ),
     "init": (
         "Write a policy file (value bands, queues, SLAs, thresholds) from a short interview.",
@@ -475,6 +496,10 @@ def command_parser() -> argparse.ArgumentParser:
     )
     _add_format(tower, out="legal-outcome-control-tower.md, .json and .html")
 
+    matrix = parsers["approval-matrix"]
+    _add_input(matrix)
+    _add_format(matrix, out="approval-matrix.md, .json and .html")
+
     init = parsers["init"]
     init.add_argument(
         "--out",
@@ -546,6 +571,11 @@ def legacy_parser() -> argparse.ArgumentParser:
         "--outcome-output",
         default=None,
         help="Optional directory for outcome control tower JSON, Markdown, and HTML.",
+    )
+    parser.add_argument(
+        "--approval-matrix-output",
+        default=None,
+        help="Optional directory for the approval matrix Markdown, JSON and HTML.",
     )
     parser.add_argument(
         "--agent-runs-output",
@@ -685,6 +715,11 @@ def _legacy_main(argv: list[str]) -> int:
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"Invalid outcome control tower input: {exc}", file=sys.stderr)
             return 2
+
+    if args.approval_matrix_output:
+        write_approval_matrix(
+            build_approval_matrix(requests, policy), Path(args.approval_matrix_output)
+        )
 
     if args.agent_runs_output:
         Path(args.agent_runs_output).write_text(

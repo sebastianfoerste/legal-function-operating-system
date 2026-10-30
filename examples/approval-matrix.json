@@ -1,0 +1,316 @@
+{
+  "schema": "legal-function-os.approval-matrix.v1",
+  "policy": "Default illustrative policy",
+  "approval_ladder": [
+    {
+      "when": "Every request",
+      "adds": "Reviewer"
+    },
+    {
+      "when": "Value band \"50k-250k\" or above",
+      "adds": "Legal Ops Lead"
+    },
+    {
+      "when": "Value band \"250k-1m\" or above, or HIGH risk",
+      "adds": "General Counsel"
+    },
+    {
+      "when": "Value band \">1m\" or above",
+      "adds": "Board note"
+    }
+  ],
+  "risk_ladder": [
+    {
+      "risk": "HIGH",
+      "any_of": [
+        "Personal data transferred outside the EEA",
+        "Value band \">1m\" or above",
+        "Uncapped liability",
+        "A dispute at value band \"250k-1m\" or above"
+      ]
+    },
+    {
+      "risk": "MEDIUM",
+      "any_of": [
+        "Value band \"250k-1m\" or above",
+        "Personal data processed",
+        "Request type corporate, fundraising, ai_governance"
+      ]
+    },
+    {
+      "risk": "LOW",
+      "any_of": []
+    }
+  ],
+  "rows": [
+    {
+      "value_band": "none",
+      "cells": [
+        {
+          "risk": "LOW",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer"
+          ],
+          "unreachable_reason": null,
+          "requests": []
+        },
+        {
+          "risk": "MEDIUM",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer"
+          ],
+          "unreachable_reason": null,
+          "requests": [
+            "REQ-1008"
+          ]
+        },
+        {
+          "risk": "HIGH",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "General Counsel"
+          ],
+          "unreachable_reason": null,
+          "requests": [
+            "REQ-1004"
+          ]
+        }
+      ]
+    },
+    {
+      "value_band": "<50k",
+      "cells": [
+        {
+          "risk": "LOW",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer"
+          ],
+          "unreachable_reason": null,
+          "requests": [
+            "REQ-1003"
+          ]
+        },
+        {
+          "risk": "MEDIUM",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer"
+          ],
+          "unreachable_reason": null,
+          "requests": []
+        },
+        {
+          "risk": "HIGH",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "General Counsel"
+          ],
+          "unreachable_reason": null,
+          "requests": []
+        }
+      ]
+    },
+    {
+      "value_band": "50k-250k",
+      "cells": [
+        {
+          "risk": "LOW",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "Legal Ops Lead"
+          ],
+          "unreachable_reason": null,
+          "requests": []
+        },
+        {
+          "risk": "MEDIUM",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "Legal Ops Lead"
+          ],
+          "unreachable_reason": null,
+          "requests": [
+            "REQ-1006"
+          ]
+        },
+        {
+          "risk": "HIGH",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "Legal Ops Lead",
+            "General Counsel"
+          ],
+          "unreachable_reason": null,
+          "requests": [
+            "REQ-1002"
+          ]
+        }
+      ]
+    },
+    {
+      "value_band": "250k-1m",
+      "cells": [
+        {
+          "risk": "LOW",
+          "reachable": false,
+          "approval_chain": [],
+          "unreachable_reason": "Every request in this band is at least MEDIUM risk.",
+          "requests": []
+        },
+        {
+          "risk": "MEDIUM",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "Legal Ops Lead",
+            "General Counsel"
+          ],
+          "unreachable_reason": null,
+          "requests": []
+        },
+        {
+          "risk": "HIGH",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "Legal Ops Lead",
+            "General Counsel"
+          ],
+          "unreachable_reason": null,
+          "requests": [
+            "REQ-1007"
+          ]
+        }
+      ]
+    },
+    {
+      "value_band": ">1m",
+      "cells": [
+        {
+          "risk": "LOW",
+          "reachable": false,
+          "approval_chain": [],
+          "unreachable_reason": "Every request in this band is HIGH risk.",
+          "requests": []
+        },
+        {
+          "risk": "MEDIUM",
+          "reachable": false,
+          "approval_chain": [],
+          "unreachable_reason": "Every request in this band is HIGH risk.",
+          "requests": []
+        },
+        {
+          "risk": "HIGH",
+          "reachable": true,
+          "approval_chain": [
+            "Reviewer",
+            "Legal Ops Lead",
+            "General Counsel",
+            "Board note"
+          ],
+          "unreachable_reason": null,
+          "requests": [
+            "REQ-1001",
+            "REQ-1005"
+          ]
+        }
+      ]
+    }
+  ],
+  "requests": [
+    {
+      "request_id": "REQ-1001",
+      "title": "Enterprise MSA: Globex (synthetic)",
+      "value_band": ">1m",
+      "risk": "HIGH",
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel",
+        "Board note"
+      ]
+    },
+    {
+      "request_id": "REQ-1002",
+      "title": "DPA: US support sub-processor (synthetic)",
+      "value_band": "50k-250k",
+      "risk": "HIGH",
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel"
+      ]
+    },
+    {
+      "request_id": "REQ-1003",
+      "title": "NDA: design agency (synthetic)",
+      "value_band": "<50k",
+      "risk": "LOW",
+      "approval_chain": [
+        "Reviewer"
+      ]
+    },
+    {
+      "request_id": "REQ-1004",
+      "title": "AI feature governance review: agent autonomy (synthetic)",
+      "value_band": "none",
+      "risk": "HIGH",
+      "approval_chain": [
+        "Reviewer",
+        "General Counsel"
+      ]
+    },
+    {
+      "request_id": "REQ-1005",
+      "title": "Series B financing: term sheet (synthetic)",
+      "value_band": ">1m",
+      "risk": "HIGH",
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel",
+        "Board note"
+      ]
+    },
+    {
+      "request_id": "REQ-1006",
+      "title": "Vendor security questionnaire: analytics tool (synthetic)",
+      "value_band": "50k-250k",
+      "risk": "MEDIUM",
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead"
+      ]
+    },
+    {
+      "request_id": "REQ-1007",
+      "title": "Customer dispute: SLA credits claim (synthetic)",
+      "value_band": "250k-1m",
+      "risk": "HIGH",
+      "approval_chain": [
+        "Reviewer",
+        "Legal Ops Lead",
+        "General Counsel"
+      ]
+    },
+    {
+      "request_id": "REQ-1008",
+      "title": "Employment offer: senior engineer (synthetic)",
+      "value_band": "none",
+      "risk": "MEDIUM",
+      "approval_chain": [
+        "Reviewer"
+      ]
+    }
+  ],
+  "review_gate": "The chain names who must sign off before a request can close. Every chain starts with a human reviewer, and the matrix approves nothing."
+}
