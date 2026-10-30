@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Approval matrix</title>
+<style>
+:root{color-scheme:light dark;
+--bg:#fbf9f7;--surface:#ffffff;--panel:#f5f0ec;--ink:#211d1c;--muted:#6e6462;
+--line:#e2dad4;--pill-line:#8f847f;--accent:#8a2d2b;--accent-soft:#f2e4e2;--on-accent:#ffffff;
+--ok:#2f6b3a;--ok-bg:#eaf3ec;--warn:#8a4b08;--warn-bg:#fbf1e4;--bad:#a12622;--bad-bg:#fbeceb;
+--focus:#8a2d2b;
+--font:system-ui,-apple-system,"Segoe UI",sans-serif;--font-head:Georgia,"Times New Roman",serif;
+--font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{
+--bg:#191413;--surface:#221c1a;--panel:#2a2321;--ink:#ede7e4;--muted:#a89c98;
+--line:#38302d;--pill-line:#857873;--accent:#d97d75;--accent-soft:#3a2523;--on-accent:#191413;
+--ok:#7ccf8e;--ok-bg:#1d2a20;--warn:#e8b06a;--warn-bg:#2e2416;--bad:#f08a84;--bad-bg:#33201f;
+--focus:#e8a09a}}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink); font:15px/1.5 var(--font); }
+main { max-width:1100px; margin:0 auto; padding:40px 20px 64px; }
+h1 { margin:0 0 8px; font:600 32px/1.15 var(--font-head); }
+h2 { margin:32px 0 10px; font-size:18px; }
+.eyebrow { margin:0 0 6px; color:var(--accent); font-weight:700; font-size:12px; letter-spacing:.08em; text-transform:uppercase; }
+.muted { color:var(--muted); }
+section { margin-top:18px; padding:18px 20px; background:var(--surface); border:1px solid var(--line); border-radius:10px; overflow-wrap:break-word; }
+section h2 { margin-top:0; }
+.nowrap { white-space:nowrap; }
+ol.ladder { margin:0; padding-left:22px; } ol.ladder li { margin:4px 0; }
+table { width:100%; border-collapse:collapse; }
+th, td { padding:10px; border:1px solid var(--line); text-align:left; vertical-align:top; }
+thead th { background:var(--panel); }
+th[scope="row"] { background:var(--panel); white-space:nowrap; }
+ol.chain { margin:0; padding-left:20px; }
+td.matched { background:var(--accent-soft); box-shadow:inset 4px 0 0 var(--accent); }
+td.unreachable { color:var(--muted); }
+p.match { margin:8px 0 0; font-weight:600; }
+@media (max-width:640px) {
+  main { padding:28px 16px 48px; }
+  table, tbody, tr, th, td { display:block; width:100%; }
+  thead { display:none; }
+  tr { margin:0 0 12px; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  th, td { border:0; border-top:1px solid var(--line); }
+  tr > :first-child { border-top:0; }
+  td[data-label]::before, th[data-label]::before { content:attr(data-label); display:block; font-weight:700; font-size:12px; color:var(--muted); }
+  .nowrap { white-space:normal; }
+}
+</style>
+</head>
+<body>
+<main>
+<p class="eyebrow">Approval routing · synthetic demonstration</p>
+<h1>Approval matrix</h1>
+<p class="muted">Policy: Default illustrative policy. The chain names who must sign off before a request can close. Every chain starts with a human reviewer, and the matrix approves nothing. Nothing here is legal advice.</p>
+<section aria-labelledby="ladder-h"><h2 id="ladder-h">Who is added to the chain</h2><ol class="ladder"><li><strong>Every request:</strong> Reviewer</li><li><strong>Value band &quot;50k-250k&quot; or above:</strong> Legal Ops Lead</li><li><strong>Value band &quot;250k-1m&quot; or above, or HIGH risk:</strong> General Counsel</li><li><strong>Value band &quot;&gt;1m&quot; or above:</strong> Board note</li></ol></section>
+<section aria-labelledby="risk-h"><h2 id="risk-h">What sets the risk</h2><ol class="ladder"><li><strong>HIGH</strong> if any of: Personal data transferred outside the EEA; Value band &quot;&gt;1m&quot; or above; Uncapped liability; A dispute at value band &quot;250k-1m&quot; or above.</li><li><strong>MEDIUM</strong> if any of: Value band &quot;250k-1m&quot; or above; Personal data processed; Request type corporate, fundraising, ai_governance.</li><li><strong>LOW</strong> otherwise.</li></ol></section>
+<section aria-labelledby="matrix-h"><h2 id="matrix-h">Chain by value band and risk</h2>
+<p class="muted">Each cell is the approval chain the rules give. Cells marked ✓ hold portfolio requests.</p>
+<table><thead><tr><th scope="col">Value band</th><th scope="col">LOW risk</th><th scope="col">MEDIUM risk</th><th scope="col">HIGH risk</th></tr></thead><tbody><tr><th scope="row" data-label="Value band">none</th><td data-label="LOW risk"><ol class="chain"><li>Reviewer</li></ol></td><td class="matched" data-label="MEDIUM risk"><ol class="chain"><li>Reviewer</li></ol><p class="match">✓ 1 portfolio request: REQ-1008</p></td><td class="matched" data-label="HIGH risk"><ol class="chain"><li>Reviewer</li><li>General Counsel</li></ol><p class="match">✓ 1 portfolio request: REQ-1004</p></td></tr><tr><th scope="row" data-label="Value band">&lt;50k</th><td class="matched" data-label="LOW risk"><ol class="chain"><li>Reviewer</li></ol><p class="match">✓ 1 portfolio request: REQ-1003</p></td><td data-label="MEDIUM risk"><ol class="chain"><li>Reviewer</li></ol></td><td data-label="HIGH risk"><ol class="chain"><li>Reviewer</li><li>General Counsel</li></ol></td></tr><tr><th scope="row" data-label="Value band">50k-250k</th><td data-label="LOW risk"><ol class="chain"><li>Reviewer</li><li>Legal Ops Lead</li></ol></td><td class="matched" data-label="MEDIUM risk"><ol class="chain"><li>Reviewer</li><li>Legal Ops Lead</li></ol><p class="match">✓ 1 portfolio request: REQ-1006</p></td><td class="matched" data-label="HIGH risk"><ol class="chain"><li>Reviewer</li><li>Legal Ops Lead</li><li>General Counsel</li></ol><p class="match">✓ 1 portfolio request: REQ-1002</p></td></tr><tr><th scope="row" data-label="Value band">250k-1m</th><td class="unreachable" data-label="LOW risk"><span class="muted">Not reachable.</span> Every request in this band is at least MEDIUM risk.</td><td data-label="MEDIUM risk"><ol class="chain"><li>Reviewer</li><li>Legal Ops Lead</li><li>General Counsel</li></ol></td><td class="matched" data-label="HIGH risk"><ol class="chain"><li>Reviewer</li><li>Legal Ops Lead</li><li>General Counsel</li></ol><p class="match">✓ 1 portfolio request: REQ-1007</p></td></tr><tr><th scope="row" data-label="Value band">&gt;1m</th><td class="unreachable" data-label="LOW risk"><span class="muted">Not reachable.</span> Every request in this band is HIGH risk.</td><td class="unreachable" data-label="MEDIUM risk"><span class="muted">Not reachable.</span> Every request in this band is HIGH risk.</td><td class="matched" data-label="HIGH risk"><ol class="chain"><li>Reviewer</li><li>Legal Ops Lead</li><li>General Counsel</li><li>Board note</li></ol><p class="match">✓ 2 portfolio requests: REQ-1001, REQ-1005</p></td></tr></tbody></table></section>
+<section aria-labelledby="portfolio-h"><h2 id="portfolio-h">Portfolio requests</h2>
+<table><thead><tr><th scope="col">Request</th><th scope="col">Title</th><th scope="col">Value band</th><th scope="col">Risk</th><th scope="col">Approval chain</th></tr></thead><tbody><tr><td class="nowrap" data-label="Request">REQ-1001</td><td data-label="Title">Enterprise MSA: Globex (synthetic)</td><td class="nowrap" data-label="Value band">&gt;1m</td><td class="nowrap" data-label="Risk">HIGH</td><td data-label="Approval chain">Reviewer → Legal Ops Lead → General Counsel → Board note</td></tr><tr><td class="nowrap" data-label="Request">REQ-1002</td><td data-label="Title">DPA: US support sub-processor (synthetic)</td><td class="nowrap" data-label="Value band">50k-250k</td><td class="nowrap" data-label="Risk">HIGH</td><td data-label="Approval chain">Reviewer → Legal Ops Lead → General Counsel</td></tr><tr><td class="nowrap" data-label="Request">REQ-1003</td><td data-label="Title">NDA: design agency (synthetic)</td><td class="nowrap" data-label="Value band">&lt;50k</td><td class="nowrap" data-label="Risk">LOW</td><td data-label="Approval chain">Reviewer</td></tr><tr><td class="nowrap" data-label="Request">REQ-1004</td><td data-label="Title">AI feature governance review: agent autonomy (synthetic)</td><td class="nowrap" data-label="Value band">none</td><td class="nowrap" data-label="Risk">HIGH</td><td data-label="Approval chain">Reviewer → General Counsel</td></tr><tr><td class="nowrap" data-label="Request">REQ-1005</td><td data-label="Title">Series B financing: term sheet (synthetic)</td><td class="nowrap" data-label="Value band">&gt;1m</td><td class="nowrap" data-label="Risk">HIGH</td><td data-label="Approval chain">Reviewer → Legal Ops Lead → General Counsel → Board note</td></tr><tr><td class="nowrap" data-label="Request">REQ-1006</td><td data-label="Title">Vendor security questionnaire: analytics tool (synthetic)</td><td class="nowrap" data-label="Value band">50k-250k</td><td class="nowrap" data-label="Risk">MEDIUM</td><td data-label="Approval chain">Reviewer → Legal Ops Lead</td></tr><tr><td class="nowrap" data-label="Request">REQ-1007</td><td data-label="Title">Customer dispute: SLA credits claim (synthetic)</td><td class="nowrap" data-label="Value band">250k-1m</td><td class="nowrap" data-label="Risk">HIGH</td><td data-label="Approval chain">Reviewer → Legal Ops Lead → General Counsel</td></tr><tr><td class="nowrap" data-label="Request">REQ-1008</td><td data-label="Title">Employment offer: senior engineer (synthetic)</td><td class="nowrap" data-label="Value band">none</td><td class="nowrap" data-label="Risk">MEDIUM</td><td data-label="Approval chain">Reviewer</td></tr></tbody></table></section>
+</main>
+</body>
+</html>

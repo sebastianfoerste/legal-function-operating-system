@@ -5,7 +5,7 @@ JSON and write files locally. They make no network or model calls.
 
 | Command | What it does |
 | --- | --- |
-| `legal-function-os` | Request triage, board pack, DPA review, capacity, control tower and policy interview |
+| `legal-function-os` | Request triage, board pack, DPA review, capacity, control tower, approval matrix and policy interview |
 | `raas-deal-desk` | The industrial RaaS deal decision pack |
 | `legal-function-os-mcp` | The same rules as a local stdio MCP server (optional `mcp` extra) |
 
@@ -32,6 +32,7 @@ Without `--input`, the bundled synthetic requests are used.
 | `dpa-review` | Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses | `--out DIR`; `--input` takes agreements, not requests; no `--policy` |
 | `capacity` | Compare capacity scenarios and name the binding constraint | `--scenarios PATH` (required with `--input`), `--out DIR` |
 | `control-tower` | Business-time SLAs, waiting time and value from a service-event ledger | `--events PATH` and `--config PATH` (both required with `--input`), `--out DIR` |
+| `approval-matrix` | Who must sign off for each value band and risk level, from the rules and the policy, with each request placed in its cell | `--out DIR` (writes `approval-matrix.md`, `.json` and `.html`) |
 | `init` | Write a policy file from a short interview | `--out PATH` (default `policy.json`), `--defaults`, `--force`; no `--input` |
 
 Examples:
@@ -41,6 +42,7 @@ legal-function-os triage --input examples/requests-template.csv
 legal-function-os validate --input requests.csv --format json
 legal-function-os board-pack --input requests.json --out reports --fail-on-breach
 legal-function-os init --defaults --out policy.json
+legal-function-os approval-matrix --policy policy.json --out reports
 legal-function-os triage --policy policy.json --input requests.csv --id REQ-1001
 ```
 
@@ -57,6 +59,7 @@ original flags still work in that mode and are what `make demo` uses:
 | `--dpa-input PATH` with `--dpa-output PATH` | DPA review JSON; each needs the other |
 | `--workspace-output PATH` | Request vault, triage workflows and GC command centre JSON |
 | `--collaboration-output-dir DIR` | Operational lists, workflow runs and the local knowledge portal |
+| `--approval-matrix-output DIR` | Approval matrix (Markdown, JSON, HTML) |
 | `--agent-runs-output PATH` | Supervised matter agent runs JSON |
 | `--shared-space-output PATH` with optional `--approvals PATH` | Approval-gated requester status JSON |
 | `--fail-on-breach` | Exit status 1 when an SLA is breached |

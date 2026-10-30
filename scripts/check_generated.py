@@ -17,6 +17,9 @@ EXPECTED = (
     "legal-outcome-control-tower.md",
     "legal-outcome-control-tower.json",
     "legal-outcome-control-tower.html",
+    "approval-matrix.md",
+    "approval-matrix.json",
+    "approval-matrix.html",
     "raas-deal-pack.md",
     "raas-deal-pack.json",
     "raas-deal-room.html",
@@ -45,6 +48,8 @@ def main() -> int:
                 "--outcome-config",
                 str(ROOT / "src" / "legal_function_os" / "data" / "outcome_config.json"),
                 "--outcome-output",
+                str(output),
+                "--approval-matrix-output",
                 str(output),
                 "--quiet",
             ]
