@@ -1,7 +1,8 @@
 """Tests for the deterministic industrial robotics RaaS deal-desk pack."""
 
-import json
 import io
+import json
+import re
 import tempfile
 import unittest
 from contextlib import redirect_stderr
@@ -166,6 +167,66 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("2 August 2028", machinery["timing"])
         self.assertIn("EU-AI-ACT-AMENDMENT", machinery["timing"])
 
+    def test_cra_timing_covers_products_already_on_the_market(self):
+        # Article 69(3) of Regulation (EU) 2024/2847: the Article 14 reporting
+        # obligations also apply to products placed on the market before
+        # 11 December 2027. Reporting has applied since 11 September 2026.
+        cra = next(item for item in SOURCE_MANIFEST if item["id"] == "EU-CRA")
+        self.assertIn("Article 69(3)", cra["timing"])
+        self.assertIn("11 September 2026", cra["timing"])
+        self.assertIn("69", cra["pinpoint"])
+
+    def test_data_act_timing_gives_chapter_iv_dates(self):
+        # Article 50 of Regulation (EU) 2023/2854: Chapter IV applies to
+        # contracts concluded after 12 September 2025, and from 12 September
+        # 2027 to earlier contracts of indefinite duration or long remaining term.
+        data_act = next(item for item in SOURCE_MANIFEST if item["id"] == "EU-DATA-ACT")
+        self.assertIn("12 September 2025", data_act["timing"])
+        self.assertIn("12 September 2027", data_act["timing"])
+        self.assertIn("Chapter IV", data_act["timing"])
+
+    def test_machinery_directive_timing_gives_its_end_date(self):
+        # Article 52(1) of Regulation (EU) 2023/1230, as corrected: Directive
+        # 2006/42/EC is repealed with effect from 20 January 2027.
+        directive = next(item for item in SOURCE_MANIFEST if item["id"] == "EU-MACHINERY-DIRECTIVE")
+        self.assertIn("20 January 2027", directive["timing"])
+        self.assertIn("2023/1230", directive["timing"])
+
+    def test_pack_states_the_scenario_date_next_to_the_verification_range(self):
+        markdown = render_raas_markdown(self.pack)
+        signing = DEAL["requested_signing_date"]
+        self.assertIn(f"**Scenario date:** requested signing {signing} (synthetic)\n", markdown)
+        self.assertLess(markdown.index("**Legal sources verified:**"), markdown.index("**Scenario date:**"))
+
+    def test_html_deal_room_shows_provenance_and_accessible_tables(self):
+        document = render_raas_html(self.pack)
+        self.assertNotIn("Offline local reviewer artifact", document)
+        self.assertNotIn("Open this generated file locally", document)
+        if VERIFIED_ON != LAST_VERIFIED_ON:
+            self.assertIn(
+                f"Legal sources verified: between {VERIFIED_ON} and {LAST_VERIFIED_ON}; "
+                "each source below shows its own date",
+                document,
+            )
+        self.assertIn(f"Scenario date: requested signing {DEAL['requested_signing_date']} (synthetic)", document)
+        self.assertIn('<h2 id="sources">Legal sources</h2>', document)
+        for source in SOURCE_MANIFEST:
+            self.assertIn(f'<a href="{source["url"]}">{source["id"]}</a>', document)
+            self.assertIn(f"Verified on {source['verified_on']}.", document)
+            if source.get("consolidated_url"):
+                self.assertIn(
+                    f'<a href="{source["consolidated_url"]}">consolidated text, for information only</a>',
+                    document,
+                )
+        self.assertIn(self.pack.source_digest, document)
+        header_cells = re.findall(r"<th[ >]", document)
+        self.assertTrue(header_cells)
+        self.assertEqual(len(header_cells), document.count('<th scope="col">'))
+        self.assertEqual(document.count("<table"), document.count("<table aria-labelledby="))
+        for heading_id in ("playbook", "finance", "regulatory"):
+            self.assertIn(f'<h2 id="{heading_id}">', document)
+            self.assertIn(f'<table aria-labelledby="{heading_id}">', document)
+
     def test_each_source_carries_a_verification_date_not_before_its_law(self):
         for source in SOURCE_MANIFEST:
             self.assertRegex(source["verified_on"], r"^\d{4}-\d{2}-\d{2}$")
@@ -276,7 +337,8 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("Can we sign?", document)
         self.assertIn("RaaS Deal Decision Pack", svg)
         self.assertIn("+ 2 additional blockers in the decision pack", svg)
-        self.assertIn("Offline local reviewer artifact", document)
+        # The page is published on GitHub Pages; the old "open locally" banner is gone.
+        self.assertNotIn("Offline local reviewer artifact", document)
 
     def test_outputs_include_machine_readable_sources_and_reviewer_room(self):
         with tempfile.TemporaryDirectory() as tmp_dir:

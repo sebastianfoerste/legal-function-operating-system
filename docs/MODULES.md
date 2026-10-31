@@ -109,7 +109,7 @@ Start with:
 
 The generated HTML deal room is published at
 [sebastianfoerste.github.io/legal-function-operating-system/raas-deal-room.html](https://sebastianfoerste.github.io/legal-function-operating-system/raas-deal-room.html)
-and committed as an offline artifact at [`examples/raas-deal-room.html`](../examples/raas-deal-room.html).
+and committed as a self-contained file at [`examples/raas-deal-room.html`](../examples/raas-deal-room.html).
 A concise walkthrough is available in the [reviewer script](RAAS_REVIEWER_SCRIPT.md).
 
 The specialist workflow preserves:

@@ -19,6 +19,7 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
         f"**Deal:** {pack.deal_id}",
         f"**Input contract:** `{pack.input_schema}`",
         f"**Legal sources verified:** {_verification_range(pack)}",
+        f"**Scenario date:** {_scenario_date(pack)}",
         f"**Signing decision:** {gate['answer']}",
         "",
         "## Executive signing gate",
@@ -252,6 +253,7 @@ def render_raas_html(pack: RaaSDealPack) -> str:
         "</tr>"
         for item in pack.regulatory_readiness
     )
+    source_items = "".join(_html_source_item(source) for source in pack.source_manifest)
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -266,7 +268,7 @@ def render_raas_html(pack: RaaSDealPack) -> str:
     header p {{ max-width: 820px; color: #c9e0e0; }}
     main {{ max-width: 1120px; margin: 0 auto; padding: 24px; }}
     section {{ margin: 18px 0; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }}
-    .offline {{ margin: 0; padding: 10px 14px; border-radius: 8px; color: #355; background: #dceeee; }}
+    .banner {{ margin: 0; padding: 10px 14px; border-radius: 8px; color: #355; background: #dceeee; }}
     .metrics {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }}
     .metric {{ padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: white; }}
     .metric span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; }}
@@ -296,9 +298,10 @@ def render_raas_html(pack: RaaSDealPack) -> str:
 </head>
 <body>
   <header>
-    <p class="offline">Offline local reviewer artifact. Open this generated file locally. GitHub reviewers should start with the Markdown decision pack.</p>
+    <p class="banner">Generated reviewer artifact from synthetic data. The Markdown decision pack carries the full review; this page is its browser view.</p>
     <h1>{html.escape(pack.title)}</h1>
     <p>{html.escape(str(pack.deal_facts['provider']))} and {html.escape(str(pack.deal_facts['customer']))}. Human review remains required for every consequential decision.</p>
+    <p>Legal sources verified: {html.escape(_verification_range(pack))}. Scenario date: {html.escape(_scenario_date(pack))}.</p>
   </header>
   <main>
     <div class="metrics">
@@ -317,17 +320,22 @@ def render_raas_html(pack: RaaSDealPack) -> str:
       <div><h2>What could delay revenue?</h2>{_html_list(gate['revenue_delay_drivers'])}</div>
     </section>
     <section>
-      <h2>Negotiation playbook</h2>
-      <table><thead><tr><th>Rule</th><th>Category</th><th>Severity</th><th>Issue</th><th>Approvers</th></tr></thead><tbody>{playbook_rows}</tbody></table>
+      <h2 id="playbook">Negotiation playbook</h2>
+      <table aria-labelledby="playbook"><thead><tr><th scope="col">Rule</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Issue</th><th scope="col">Approvers</th></tr></thead><tbody>{playbook_rows}</tbody></table>
     </section>
     <section>
-      <h2>Finance handoff</h2>
+      <h2 id="finance">Finance handoff</h2>
       <p class="note">Questions for Finance under IFRS 15, ASC 606, and the applicable lease framework. No accounting conclusion is automated.</p>
-      <table><thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Question</th></tr></thead><tbody>{finance_rows}</tbody></table>
+      <table aria-labelledby="finance"><thead><tr><th scope="col">ID</th><th scope="col">Topic</th><th scope="col">Status</th><th scope="col">Question</th></tr></thead><tbody>{finance_rows}</tbody></table>
     </section>
     <section>
-      <h2>Regulatory readiness</h2>
-      <table><thead><tr><th>Control</th><th>Regime</th><th>Gate effect</th><th>Owner</th><th>Source</th></tr></thead><tbody>{regulatory_rows}</tbody></table>
+      <h2 id="regulatory">Regulatory readiness</h2>
+      <table aria-labelledby="regulatory"><thead><tr><th scope="col">Control</th><th scope="col">Regime</th><th scope="col">Gate effect</th><th scope="col">Owner</th><th scope="col">Source</th></tr></thead><tbody>{regulatory_rows}</tbody></table>
+    </section>
+    <section>
+      <h2 id="sources">Legal sources</h2>
+      <p class="note">Legal sources verified: {html.escape(_verification_range(pack))}. Each source links to its Official Journal text; a consolidated text, where linked, has no legal effect and is given for information only. Source digest <code>{html.escape(pack.source_digest)}</code>.</p>
+      <ul class="sources">{source_items}</ul>
     </section>
     <section><h2>Review boundary</h2><p>{html.escape(pack.disclaimer)}</p></section>
   </main>
@@ -442,6 +450,28 @@ def _verification_range(pack: RaaSDealPack) -> str:
     return (
         f"between {pack.verified_on} and {pack.last_verified_on}; "
         "each source below shows its own date"
+    )
+
+
+def _scenario_date(pack: RaaSDealPack) -> str:
+    """The synthetic deal's requested signing date, so a reader can see which
+    obligations had started by then; it is not the date of the review."""
+    return f"requested signing {pack.deal_facts['requested_signing_date']} (synthetic)"
+
+
+def _html_source_item(source: dict[str, str]) -> str:
+    consolidated = (
+        f' (<a href="{html.escape(source["consolidated_url"])}">consolidated text, for information only</a>)'
+        if source.get("consolidated_url")
+        else ""
+    )
+    return (
+        "<li>"
+        f'<strong><a href="{html.escape(source["url"])}">{html.escape(source["id"])}</a>:</strong> '
+        f"{html.escape(source['title'])}{consolidated}, {html.escape(source['pinpoint'])}. "
+        f"Legal effect: <code>{html.escape(source['legal_effect'])}</code>. "
+        f"{html.escape(source['timing'])} Verified on {html.escape(source['verified_on'])}."
+        "</li>"
     )
 
 
