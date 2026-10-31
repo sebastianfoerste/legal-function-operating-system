@@ -50,7 +50,10 @@ def board_pack(
 
 
 def dpa_review(documents: list[dict[str, Any]]) -> dict[str, Any]:
-    """Check DPA clause coverage against the bundled playbook (Art. 28 GDPR checklist)."""
+    """Check DPA clause coverage against the bundled playbook (Art. 28(3) GDPR, element by element).
+
+    The caller maps clauses to playbook keys; the result depends on that mapping.
+    """
     problems = check_dpa_documents(documents)
     if problems:
         raise InputRejected("; ".join(problems))

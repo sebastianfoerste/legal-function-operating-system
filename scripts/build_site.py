@@ -91,9 +91,10 @@ CARDS = (
     ),
     (
         "DPA clause review",
-        f"{BLOB}/src/legal_function_os/data/dpa_documents.json",
+        f"{BLOB}/examples/dpa-review.md",
         "Art. 28 Abs. 3 lit. a to h DSGVO coverage across two synthetic agreements, "
-        "returning pass, review or missing per requirement with pinpoint citations.",
+        "checked element by element: pass, review or missing per requirement, with pinpoint "
+        "citations and the statutory elements a clause does not cover.",
         "GitHub",
     ),
 )

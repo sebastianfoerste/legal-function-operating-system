@@ -41,7 +41,7 @@ three external-counsel referrals across eight synthetic requests.
 | Approval matrix view | The approval chain for every value band and risk level, unreachable combinations marked, each request in its cell | `approval_matrix.py` |
 | Supervised agent runs | Step-by-step matter runs with evidence and a binding approval step | `agent_run.py` |
 | Requester shared space | Status sharing behind a documented approval gate | `shared_space.py` |
-| DPA clause review | Art. 28 Abs. 3 lit. a–h DSGVO coverage per document | `contract_intelligence.py` |
+| DPA clause review | Art. 28 Abs. 3 lit. a–h DSGVO (and UAbs. 2) coverage per document, element by element | `contract_intelligence.py` |
 
 The workspace outputs add a deterministic request vault, guided workflows, a GC
 command center, operational lists, and a local knowledge portal. Portal answers
@@ -51,20 +51,38 @@ cite approved local resources or return an insufficient-evidence result.
 
 The clause playbook checks a processing agreement (German: *Auftragsverarbeitungsvertrag*,
 AVV) against each requirement of Article 28(3) GDPR and returns `pass`, `review`, or
-`missing` per requirement, with the pinpoint citation and the matched clause excerpt.
-A `missing` requirement counts as a blocker.
+`missing` per requirement, with the pinpoint citation, a short quote of the statutory
+wording and the matched clause excerpt. Each requirement is split into the elements
+the statute names: lit. a needs documented instructions *and* the third-country
+transfer wording, lit. f needs breach notification (Art. 33, 34) *and* DPIA or prior
+consultation (Art. 35, 36) unless the clause refers to Articles 32 to 36 as a whole,
+and lit. h needs the information to demonstrate compliance *and* audits including
+inspections. A clause passes only when every element is found; otherwise it is marked
+`review` with the missing elements listed (`missing_elements` in the JSON, a column in
+the Markdown). A matched term preceded by a negation within a few words ("no audits",
+"keine Überprüfung") is reported as negated and yields `review`. A `missing` requirement
+counts as a blocker. A ninth row covers Art. 28 Abs. 3 UAbs. 2 DSGVO (the processor
+immediately informs the controller of an instruction that infringes data protection
+law); when absent it yields `review`, not `missing`.
 
 ```bash
-PYTHONPATH=src python -m legal_function_os.cli --quiet \
-  --dpa-input src/legal_function_os/data/dpa_documents.json \
-  --dpa-output examples/dpa-review.json
+PYTHONPATH=src python -m legal_function_os.cli dpa-review --out examples
 ```
 
-The two synthetic agreements in [`src/legal_function_os/data/dpa_documents.json`](../src/legal_function_os/data/dpa_documents.json)
-produce fourteen `pass` rows, one `review` row where a security clause never
-references Art. 32 DSGVO or technical and organisational measures, and one
-`missing` row where the Art. 28 Abs. 3 lit. h audit and inspection right is absent.
-The review states a coverage result. It does not state that an agreement is lawful.
+`make demo` writes the review of the two synthetic agreements in
+[`src/legal_function_os/data/dpa_documents.json`](../src/legal_function_os/data/dpa_documents.json)
+to [`examples/dpa-review.md`](../examples/dpa-review.md) and
+[`examples/dpa-review.json`](../examples/dpa-review.json). DPA-001 passes every row.
+DPA-002 is marked `review` for lit. a (no third-country transfer wording), lit. c (no
+reference to Art. 32 DSGVO or technical and organisational measures), lit. f (breach
+notice only, no DPIA or prior consultation) and the UAbs. 2 row, and `missing` for
+lit. h. The review states a coverage result of the statutory wording. It does not state
+that an agreement is lawful, and it reads words, not meaning.
+
+The check itself is deterministic and makes no model call. When an agent prepares the
+input (for example through the `dpa_review` MCP tool), the model maps the agreement's
+clauses to the playbook keys first, and the result depends on that mapping; a human
+has to check it.
 
 ## Capacity simulation and outcome control tower
 

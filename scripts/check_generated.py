@@ -20,6 +20,8 @@ EXPECTED = (
     "approval-matrix.md",
     "approval-matrix.json",
     "approval-matrix.html",
+    "dpa-review.md",
+    "dpa-review.json",
     "raas-deal-pack.md",
     "raas-deal-pack.json",
     "raas-deal-room.html",
@@ -54,6 +56,7 @@ def main() -> int:
                 "--quiet",
             ]
         )
+        dpa_status = board_cli(["dpa-review", "--out", str(output)])
         raas_status = raas_cli(
             [
                 "--input",
@@ -63,7 +66,7 @@ def main() -> int:
                 "--quiet",
             ]
         )
-        if board_status != 0 or raas_status != 0:
+        if board_status != 0 or dpa_status != 0 or raas_status != 0:
             print("generated-artifact check could not regenerate the demo")
             return 1
 

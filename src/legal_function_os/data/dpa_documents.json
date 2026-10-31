@@ -10,7 +10,8 @@
       "data_subject_rights_assistance": "Der Auftragsverarbeiter unterstützt den Verantwortlichen mit geeigneten Maßnahmen bei der Erfüllung der Betroffenenrechte nach Kapitel III DSGVO.",
       "breach_and_dpia_assistance": "Der Auftragsverarbeiter unterstützt bei der Meldung einer Verletzung des Schutzes personenbezogener Daten und bei einer Datenschutz-Folgenabschätzung.",
       "deletion_return": "Nach Abschluss der Erbringung der Verarbeitungsleistungen erfolgt nach Wahl des Verantwortlichen die Löschung oder Rückgabe aller personenbezogenen Daten.",
-      "audit_rights": "Der Auftragsverarbeiter stellt alle erforderlichen Informationen zum Nachweis bereit und ermöglicht Überprüfungen einschließlich Inspektionen."
+      "audit_rights": "Der Auftragsverarbeiter stellt alle erforderlichen Informationen zum Nachweis bereit und ermöglicht Überprüfungen einschließlich Inspektionen.",
+      "unlawful_instruction_notice": "Der Auftragsverarbeiter informiert den Verantwortlichen unverzüglich, falls er der Auffassung ist, dass eine Weisung gegen die DSGVO oder gegen andere Datenschutzbestimmungen der Union oder der Mitgliedstaaten verstößt."
     }
   },
   {
