@@ -1,11 +1,16 @@
 PYTHON ?= python3
 PYTHONPATH := src
 
-.PHONY: install test lint package-check demo board-demo raas-demo contracts site site-check check-generated manifest-check contract-check agent-check agent-export check clean
+.PHONY: install install-dev test lint package-check demo board-demo raas-demo contracts site site-check check-generated manifest-check contract-check agent-check agent-export check clean
 
 install:
 	@echo "No third-party dependencies. Pure standard library."
 	@$(PYTHON) --version
+
+# The pinned tools behind `make lint` and `make check` (the agent gate included).
+install-dev:
+	@$(PYTHON) -m pip install -r requirements-dev.txt
+	@$(MAKE) -C supervised-agent install PYTHON=$(PYTHON)
 
 test:
 	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m unittest discover -s tests -t . -q

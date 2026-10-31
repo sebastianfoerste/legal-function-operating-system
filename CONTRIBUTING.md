@@ -21,14 +21,28 @@ forms cover bugs, rule changes and new request types.
 ```bash
 make install         # standard library only
 make test            # must pass before any PR
-make demo            # regenerate the board pack and synthetic RaaS reviewer artifacts
-make check           # verify deterministic outputs, proof paths, and patch hygiene
-make lint            # Ruff and mypy; needs: python3 -m pip install -r requirements-dev.txt
+make demo            # regenerate the committed artifacts in examples/
+make lint            # Ruff and mypy on the core; needs the pinned tools (below)
 make package-check   # build the wheel, install it in a clean environment and run it
+make check           # the full gate: tests, regenerated artifacts, manifest, contracts,
+                     # site links, the supervised agent's gate, and patch hygiene
 ```
 
-CI runs all of these, the core tests on Python 3.10 to 3.13. Record user-facing
-changes under "Unreleased" in [CHANGELOG.md](CHANGELOG.md).
+`make install`, `make test` and `make demo` need nothing beyond Python. `make lint` and
+`make check` need pinned third-party tools, which `make install-dev` installs into the
+current environment (use a virtual environment):
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+make install-dev     # requirements-dev.txt (ruff, mypy) and, for make agent-check,
+                     # supervised-agent/requirements.txt and supervised-agent/requirements-dev.txt
+make check
+```
+
+`make agent-check` (part of `make check`) runs `make -C supervised-agent check`, which
+needs Python 3.13 or later and the agent's runtime and dev dependencies. CI runs all of
+these: the core tests on Python 3.10 to 3.15, the `mcp` extra, lint, the wheel and the
+agent gate. Record user-facing changes under "Unreleased" in [CHANGELOG.md](CHANGELOG.md).
 
 ## Adding or changing a rule
 

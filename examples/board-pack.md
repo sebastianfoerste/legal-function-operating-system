@@ -6,7 +6,7 @@ _Period: Q2 2026 (synthetic)_
 
 - **8** legal requests handled · **5** high-risk
 - **5** require GC sign-off · **3** flagged for board attention
-- **3** external-counsel referrals · **1** SLA breaches
+- **3** external-counsel referrals · **1** SLA breach
 
 ## Board attention
 
