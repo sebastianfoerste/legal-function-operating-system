@@ -22,27 +22,29 @@ forms cover bugs, rule changes and new request types.
 make install         # standard library only
 make test            # must pass before any PR
 make demo            # regenerate the committed artifacts in examples/
-make lint            # Ruff and mypy on the core; needs the pinned tools (below)
+make lint            # Ruff and mypy on the core and its tests; needs the pinned tools (below)
+make coverage        # statement coverage of the core with a floor; same pinned tools
 make package-check   # build the wheel, install it in a clean environment and run it
 make check           # the full gate: tests, regenerated artifacts, manifest, contracts,
                      # site links, the supervised agent's gate, and patch hygiene
 ```
 
-`make install`, `make test` and `make demo` need nothing beyond Python. `make lint` and
-`make check` need pinned third-party tools, which `make install-dev` installs into the
-current environment (use a virtual environment):
+`make install`, `make test` and `make demo` need nothing beyond Python. `make lint`,
+`make coverage` and `make check` need pinned third-party tools, which `make install-dev`
+installs into the current environment (use a virtual environment):
 
 ```bash
 python3 -m venv .venv && . .venv/bin/activate
-make install-dev     # requirements-dev.txt (ruff, mypy) and, for make agent-check,
+make install-dev     # requirements-dev.txt (ruff, mypy, coverage) and, for make agent-check,
                      # supervised-agent/requirements.txt and supervised-agent/requirements-dev.txt
 make check
 ```
 
 `make agent-check` (part of `make check`) runs `make -C supervised-agent check`, which
 needs Python 3.13 or later and the agent's runtime and dev dependencies. CI runs all of
-these: the core tests on Python 3.10 to 3.15, the `mcp` extra, lint, the wheel and the
-agent gate. Record user-facing changes under "Unreleased" in [CHANGELOG.md](CHANGELOG.md).
+these: the core tests on Python 3.10 to 3.15, the `mcp` extra, lint and coverage, the
+wheel and the agent gate (there with the review-room browser tests required). Record
+user-facing changes under "Unreleased" in [CHANGELOG.md](CHANGELOG.md).
 
 ## Adding or changing a rule
 

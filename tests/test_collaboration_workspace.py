@@ -11,7 +11,6 @@ from legal_function_os.collaboration_workspace import (
     validate_workflow_definition,
 )
 
-
 REQUESTS = json.loads(Path("src/legal_function_os/data/sample_requests.json").read_text())
 
 

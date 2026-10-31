@@ -2,7 +2,9 @@
 
 Runs short Node Playwright scripts against a local server on 127.0.0.1. It is
 skipped when Node, its Playwright package or a Chromium build is not installed, so
-the gate does not depend on a browser. Everything it touches is synthetic.
+the gate does not depend on a browser. With ``REQUIRE_BROWSER_TESTS=1`` (set in CI,
+where Playwright is installed) that skip becomes a failure, so a broken browser
+install cannot pass silently. Everything it touches is synthetic.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from tests.pilot_support import (
 )
 
 UNAVAILABLE = 3
+REQUIRE_BROWSER_TESTS = "REQUIRE_BROWSER_TESTS"
 
 SCRIPT = r"""
 let chromium;
@@ -323,12 +326,21 @@ def _node_env() -> dict[str, str] | None:
     return env
 
 
+def _browser_unavailable(reason: str) -> None:
+    """Skip, or fail when the environment promises a browser (REQUIRE_BROWSER_TESTS=1)."""
+
+    if os.environ.get(REQUIRE_BROWSER_TESTS) == "1":
+        pytest.fail(f"{reason} (REQUIRE_BROWSER_TESTS=1, so this is a failure, not a skip)")
+    pytest.skip(reason)
+
+
 def _run_node(tmp_path, monkeypatch, service, script: str, *args: str) -> dict:
     """Serve ``service`` on 127.0.0.1, run ``script`` with the base URL and ``args``."""
 
     env = _node_env()
     if env is None:
-        pytest.skip("Node.js is not installed")
+        _browser_unavailable("Node.js is not installed")
+        return {}
     import runtime_agent.app as app
 
     monkeypatch.setattr(app, "_pilot_api", PilotApi(service))
@@ -353,7 +365,7 @@ def _run_node(tmp_path, monkeypatch, service, script: str, *args: str) -> dict:
         server.shutdown()
         server.server_close()
     if result.returncode == UNAVAILABLE:
-        pytest.skip("Node Playwright or its Chromium build is not installed")
+        _browser_unavailable("Node Playwright or its Chromium build is not installed")
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout.strip().splitlines()[-1])
 

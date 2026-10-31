@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        python-version: ["3.10", "3.11", "3.12", "3.13", "3.14", "3.15"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,9 +44,15 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-      - name: Install with the optional MCP extra and test the server
+      - name: Install the optional MCP extra at its floor and test the server
         run: |
-          python -m pip install -e ".[mcp]"
+          python -m pip install -e ".[mcp]" "mcp==1.30.0"
+          python -c "import importlib.metadata as m; print('mcp', m.version('mcp'))"
+          python -m unittest tests.test_mcp_server -v
+      - name: Upgrade to the latest 1.x release and test the server again
+        run: |
+          python -m pip install --upgrade "mcp<2"
+          python -c "import importlib.metadata as m; print('mcp', m.version('mcp'))"
           python -m unittest tests.test_mcp_server -v
       - name: Check the plugin manifests parse
         run: python -c "import json,glob; [json.load(open(f)) for f in glob.glob('.claude-plugin/*.json')+glob.glob('plugins/*/.claude-plugin/*.json')+glob.glob('plugins/*/.mcp.json')]"
@@ -60,8 +66,10 @@ jobs:
           python-version: "3.13"
       - name: Install the pinned lint tools
         run: python -m pip install -r requirements-dev.txt
-      - name: Ruff and mypy on the core package
+      - name: Ruff and mypy on the core package and its tests
         run: make lint PYTHON=python
+      - name: Statement coverage of the core, with the floor set in the Makefile
+        run: make coverage PYTHON=python
 
   package:
     runs-on: ubuntu-latest
@@ -82,8 +90,15 @@ jobs:
         with:
           python-version: "3.13"
       - name: Install supervised-agent dependencies
-        run: pip install -r supervised-agent/requirements.lock
+        run: pip install -r supervised-agent/requirements.txt
       - name: Install supervised-agent dev tooling
-        run: pip install "black>=25.0" "mypy>=1.14" "pytest>=8.0" "ruff>=0.9"
-      - name: Lint, type-check, test and compile the agent
-        run: make -C supervised-agent check PYTHON=python
+        run: pip install -r supervised-agent/requirements-dev.txt
+      - name: Install Playwright and Chromium for the review-room browser tests
+        run: |
+          npm install --no-save --prefix "$RUNNER_TEMP/pw" playwright@1.64.1
+          npx --prefix "$RUNNER_TEMP/pw" playwright install --with-deps chromium
+      - name: Lint, type-check, test and compile the agent (browser tests required)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          REQUIRE_BROWSER_TESTS: "1"
+        run: make -C supervised-agent check PYTHON=python PYTEST_ARGS=-rA
