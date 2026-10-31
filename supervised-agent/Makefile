@@ -14,8 +14,10 @@ lint:
 	$(PYTHON) -m black --check .
 	$(PYTHON) -m mypy .
 
+PYTEST_ARGS ?=
+
 test:
-	$(PYTHON) -m pytest -q
+	$(PYTHON) -m pytest -q $(PYTEST_ARGS)
 
 compile:
 	$(PYTHON) -m compileall master_orchestrator.py models.py src runtime_agent tests

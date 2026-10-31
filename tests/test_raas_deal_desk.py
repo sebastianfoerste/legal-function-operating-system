@@ -1,7 +1,7 @@
 """Tests for the deterministic industrial robotics RaaS deal-desk pack."""
 
-import json
 import io
+import json
 import tempfile
 import unittest
 from contextlib import redirect_stderr

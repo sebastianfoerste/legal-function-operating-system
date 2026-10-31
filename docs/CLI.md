@@ -84,10 +84,19 @@ external action stays blocked until a named human approval is recorded.
 
 ## legal-function-os-mcp
 
+```text
+legal-function-os-mcp [--policy PATH]
+```
+
 A local stdio MCP server with four read-only tools: `triage_requests`, `board_pack`,
 `dpa_review` and `legal_request_schema`. Input that breaks the request contract is rejected
-rather than decided. It needs the optional extra (`pip install "legal-function-os[mcp]"`),
-which is pinned to `mcp>=1.30,<2`; [ADR 0002](adr/0002-mcp-2x-path.md) records why.
+rather than decided. The tools take data, never file paths: the model calling the server
+does not choose what the process reads. Your own policy applies either to every call, with
+`--policy PATH` read once at start, or per call as an inline `policy` object in the format
+`legal-function-os init` writes; an inline policy wins, and one that cannot be applied is
+rejected like any other bad input. It needs the optional extra
+(`pip install "legal-function-os[mcp]"`), which is pinned to `mcp>=1.30,<2`;
+[ADR 0002](adr/0002-mcp-2x-path.md) records why.
 
 ## Related
 

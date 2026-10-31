@@ -39,6 +39,10 @@ python -m src.cli \
 PORT=18085 python -m runtime_agent.app
 ```
 
+The runtime answers only requests whose `Host` header names `127.0.0.1`, `localhost` or
+`[::1]` (with the bound port or none); `ALLOWED_HOSTS=name1,name2` replaces that list.
+POST bodies must be `application/json` and at most 1 MiB.
+
 Then inspect:
 
 ```bash
