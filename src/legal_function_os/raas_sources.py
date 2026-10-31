@@ -10,7 +10,6 @@ import json
 # every entry was last checked on or after it, so it is the oldest check still
 # in force. LAST_VERIFIED_ON is the latest. Neither date means that every entry
 # was checked on that day.
-INITIAL_SNAPSHOT_ON = "2026-07-20"
 # The AI Act, its amending Regulation (EU) 2026/1744 and the Machinery Regulation
 # were re-checked against the consolidated texts of Regulations (EU) 2024/1689
 # and (EU) 2023/1230 as of 27 July 2026, which incorporate that amendment.
@@ -18,9 +17,21 @@ RECHECKED_ON = "2026-10-13"
 # The Data Act, Cyber Resilience Act and GDPR entries were re-checked against the
 # texts of Regulations (EU) 2023/2854, (EU) 2024/2847 and (EU) 2016/679 in the
 # legalize-eu mirror of EUR-Lex/CELLAR, which holds no consolidated version of
-# any of them after the original publication. The Machinery Directive and the
-# Product Liability Directive are not in that mirror and keep INITIAL_SNAPSHOT_ON.
+# any of them after the original publication.
 MIRROR_RECHECKED_ON = "2026-10-18"
+# The Cyber Resilience Act, Data Act, Machinery Directive and Product Liability
+# Directive entries were re-checked on this date. EUR-Lex could not be read from
+# the checking environment, so the texts used were: for the Cyber Resilience Act
+# and the Data Act, the springlex.eu article pages of Regulations (EU) 2024/2847
+# (Articles 69 and 71) and (EU) 2023/2854 (Article 50), which name the Official
+# Journal as the authentic text, plus the European Commission's page on CRA
+# reporting obligations for the single reporting platform; for the Machinery
+# Directive's end date, Article 51(2) of Regulation (EU) 2023/1230 in the
+# gesetze.legal mirror together with the corrigendum of 4 July 2023 (OJ L 169,
+# p. 35, item 5), read as a copy of the Official Journal page; for the Product
+# Liability Directive, the corrigendum of 7 May 2026 (OJ L, 2026/90364), read as
+# a copy of the Official Journal page, which corrects Article 2(1).
+CURRENCY_RECHECKED_ON = "2026-10-31"
 
 DISCLAIMER = (
     "This public-safe demonstration uses synthetic facts and illustrative internal "
@@ -40,11 +51,15 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/reg/2023/2854/oj/eng",
         "pinpoint": "Articles 3 to 5, 13, and 50",
         "legal_effect": "directly_applicable_regulation",
-        "verified_on": MIRROR_RECHECKED_ON,
+        "verified_on": CURRENCY_RECHECKED_ON,
         "timing": (
             "Generally applies from 12 September 2025. Article 3(1) applies to "
             "connected products and related services placed on the market after "
-            "12 September 2026."
+            "12 September 2026. Chapter IV (unfair contractual terms, including "
+            "Article 13) applies to contracts concluded after 12 September 2025, "
+            "and from 12 September 2027 to contracts concluded on or before "
+            "12 September 2025 that are of indefinite duration or due to expire at "
+            "least 10 years from 11 January 2024 (Article 50)."
         ),
     },
     {
@@ -53,10 +68,15 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/dir/2006/42/oj/eng",
         "pinpoint": "Articles 5 and 12, Annex I",
         "legal_effect": "directive_implemented_in_national_law",
-        "verified_on": INITIAL_SNAPSHOT_ON,
+        "verified_on": CURRENCY_RECHECKED_ON,
         "timing": (
             "Current EU machinery framework during the synthetic 2026 review, "
-            "implemented through national law."
+            "implemented through national law. Applies until 19 January 2027: "
+            "repealed with effect from 20 January 2027 by Regulation (EU) "
+            "2023/1230, Article 51(2) (date as corrected by the corrigendum of "
+            "4 July 2023). Products placed on the market in conformity with the "
+            "Directive before 20 January 2027 may continue to be made available "
+            "(Article 52(1) of that Regulation)."
         ),
     },
     {
@@ -130,13 +150,17 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "id": "EU-CRA",
         "title": "Regulation (EU) 2024/2847, Cyber Resilience Act",
         "url": "https://eur-lex.europa.eu/eli/reg/2024/2847/oj/eng",
-        "pinpoint": "Articles 13, 14, 32, and 71",
+        "pinpoint": "Articles 13, 14, 16, 32, 69, and 71",
         "legal_effect": "directly_applicable_regulation",
-        "verified_on": MIRROR_RECHECKED_ON,
+        "verified_on": CURRENCY_RECHECKED_ON,
         "timing": (
-            "Chapter IV applies from 11 June 2026. Article 14 applies from "
-            "11 September 2026. The Regulation generally applies from "
-            "11 December 2027."
+            "Chapter IV applies from 11 June 2026. Article 14 (reporting of "
+            "actively exploited vulnerabilities and severe incidents) applies from "
+            "11 September 2026, and under Article 69(3) also to products with "
+            "digital elements placed on the market before 11 December 2027. "
+            "Notifications go through the single reporting platform set up by "
+            "ENISA under Article 16, operational since 11 September 2026. The "
+            "Regulation generally applies from 11 December 2027 (Article 71)."
         ),
     },
     {
@@ -145,11 +169,13 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng",
         "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
         "legal_effect": "directive_requires_national_implementation",
-        "verified_on": INITIAL_SNAPSHOT_ON,
+        "verified_on": CURRENCY_RECHECKED_ON,
         "timing": (
-            "Member States must transpose the Directive by 9 December 2026. "
-            "The resulting national rules apply to products placed on the market "
-            "or put into service after 9 December 2026."
+            "Member States must transpose the Directive by 9 December 2026 "
+            "(Article 22). It applies to products placed on the market or put "
+            "into service after 8 December 2026 (Article 2(1), as corrected by the "
+            "corrigendum of 7 May 2026); products placed on the market or put into "
+            "service on or before that date are outside its scope."
         ),
     },
     {

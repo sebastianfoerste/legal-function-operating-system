@@ -43,7 +43,7 @@ Every name and fact is synthetic.
 
 1. [`examples/raas-deal-pack.md`](examples/raas-deal-pack.md), the human-readable decision pack.
 2. [`examples/raas-deal-pack.json`](examples/raas-deal-pack.json), the typed machine-readable result.
-3. [`examples/raas-deal-room.html`](examples/raas-deal-room.html), an offline local reviewer cockpit.
+3. [`examples/raas-deal-room.html`](examples/raas-deal-room.html), the reviewer deal room, also published on the Pages site with the verification dates of its legal sources.
 4. [`examples/raas-deal-desk.svg`](examples/raas-deal-desk.svg), the generated visual proof surface.
 5. [`examples/raas-source-manifest.json`](examples/raas-source-manifest.json), the dated primary-source manifest.
 
