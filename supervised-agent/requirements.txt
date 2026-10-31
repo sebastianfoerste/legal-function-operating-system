@@ -19,9 +19,9 @@ cryptography==50.0.2
     # via google-auth
 distro==1.9.0
     # via google-genai
-google-auth==2.53.0
+google-auth[requests]==2.62.0
     # via google-genai
-google-genai==2.7.0
+google-genai==2.33.0
     # via -r requirements.in
 h11==0.16.0
     # via httpcore
