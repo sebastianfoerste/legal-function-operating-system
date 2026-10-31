@@ -3,11 +3,11 @@ PYTHON := $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else e
 .PHONY: lock install check test lint format compile
 
 lock:
-	uv pip compile requirements.in -o requirements.lock
+	uv pip compile requirements.in -o requirements.txt --python-version 3.13
 
 install:
 	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install -r requirements.lock
+	$(PYTHON) -m pip install -r requirements.txt -r requirements-dev.txt
 
 lint:
 	$(PYTHON) -m ruff check .

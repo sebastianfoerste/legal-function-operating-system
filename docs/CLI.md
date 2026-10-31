@@ -87,7 +87,7 @@ external action stays blocked until a named human approval is recorded.
 A local stdio MCP server with four read-only tools: `triage_requests`, `board_pack`,
 `dpa_review` and `legal_request_schema`. Input that breaks the request contract is rejected
 rather than decided. It needs the optional extra (`pip install "legal-function-os[mcp]"`),
-which is pinned to `mcp>=1.9,<2`; [ADR 0002](adr/0002-mcp-2x-path.md) records why.
+which is pinned to `mcp>=1.30,<2`; [ADR 0002](adr/0002-mcp-2x-path.md) records why.
 
 ## Related
 

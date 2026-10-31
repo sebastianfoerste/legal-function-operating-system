@@ -1,0 +1,47 @@
+name: audit
+
+# Checks the pinned requirement files against the PyPI advisory database with a
+# pinned pip-audit. The core package has no runtime dependencies; the files below
+# are the supervised agent's compiled runtime lockfile, its dev tools and the
+# root lint tools, plus the floor of the optional `mcp` extra read from
+# pyproject.toml. The weekly run catches advisories published after the last push.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  schedule:
+    - cron: "17 6 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install the pinned auditor
+        run: python -m pip install pip-audit==2.10.1
+      - name: Write the floor of the optional mcp extra as a pinned requirement
+        run: |
+          python - <<'PY'
+          import pathlib, re, tomllib
+          spec = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          (extra,) = spec["project"]["optional-dependencies"]["mcp"]
+          floor = re.search(r">=\s*([0-9.]+)", extra).group(1)
+          parts = floor.split(".") + ["0", "0"]
+          pathlib.Path("mcp-floor.txt").write_text(f"mcp=={'.'.join(parts[:3])}\n", encoding="utf-8")
+          print(pathlib.Path("mcp-floor.txt").read_text(encoding="utf-8"))
+          PY
+      - name: Audit the pinned requirement files, one file per run
+        # One run per file: pip-audit refuses two files that pin the same package
+        # at different versions, and the agent and the root pin mypy separately.
+        run: |
+          for file in supervised-agent/requirements.txt supervised-agent/requirements-dev.txt requirements-dev.txt mcp-floor.txt; do
+            echo "== $file"
+            python -m pip_audit --no-deps --disable-pip -r "$file"
+          done
