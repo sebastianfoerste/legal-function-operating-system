@@ -18,7 +18,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install -r requirements.lock pytest ruff black mypy
+          pip install -r requirements.txt pytest ruff black mypy
 
       - name: Gate 1 Static analysis
         run: ruff check .

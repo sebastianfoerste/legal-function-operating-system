@@ -3,7 +3,7 @@
 ## Run the demo
 
 ```bash
-python -m pip install -r requirements.lock
+python -m pip install -r requirements.txt
 python master_orchestrator.py
 ```
 

@@ -1,0 +1,6 @@
+# Tools for `make -C supervised-agent check` only (ruff, black, mypy, pytest).
+# Runtime dependencies are compiled from requirements.in into requirements.txt.
+black==26.10.1
+mypy==2.4.1
+pytest==9.2.0
+ruff==0.17.3
