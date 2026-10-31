@@ -8,6 +8,10 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 
+- An MCP server, `legal-function-os-mcp` (optional `mcp` extra), with four read-only tools: `triage_requests`, `board_pack`, `dpa_review` and `legal_request_schema`. Input that breaks the request contract is rejected rather than decided. A Claude Code plugin with a marketplace (`.claude-plugin/marketplace.json`, `plugins/legal-function-os/`) installs the server and four skills (#17).
+- `docs/OVERVIEW.md`: the sections that left the README (what is inside, the DPA example, the comparison with LLM legal skills, the MCP section, the suite list, known limitations, human-authored judgement). The known limitations now say that the transfer rule treats every transfer of personal data outside the EEA as HIGH risk, without distinguishing adequacy decisions.
+- `make install-dev` installs the pinned tools behind `make lint`, `make coverage` and `make check`; `CONTRIBUTING.md` documents the full gate.
+- The Pages index carries a `<meta name="description">` and a footer line with the commit and date it was built from (`GITHUB_SHA` in CI, otherwise "Local build").
 - `legal-function-os-mcp --policy PATH` applies a policy file to every tool call, read once at start; `triage_requests` and `board_pack` also take an inline `policy` object, checked in full before use.
 - `make coverage`: statement coverage of the core with a floor (96 %), pinned `coverage` in `requirements-dev.txt`, run in the CI lint job.
 - CI installs a pinned Playwright and Chromium in the agent job and runs the review-room browser tests; with `REQUIRE_BROWSER_TESTS=1` a missing browser is a failure, not a skip.
@@ -38,6 +42,8 @@ All notable changes to this project are recorded here. The format follows
 
 ### Changed
 
+- The README is under 350 words: the one-command try-out, an example, the plugin and MCP commands, a clone quickstart that works on a clean machine (`make install && make test && make demo`), links and the licence. The claim that the `mcp` extra needs Python 3.13 under uvx is gone: it runs on Python 3.10 to 3.15 with `mcp` 1.30.0; the plugin's `.mcp.json` still pins 3.13.
+- The plugin marketplace description no longer suggests an approval-matrix tool (the approval chain comes from `triage_requests`), and each skill names the tool it calls.
 - The MCP tools `triage_requests` and `board_pack` no longer take a `policy_path`: a model must not pick file paths for the server to read (unreleased; no compatibility shim).
 - `make lint` runs Ruff over `tests/` too, and mypy checks `raas_renderers` like every other module (the loop variables that kept it excluded have their own names now).
 - The supervised agent's runtime lockfile is `supervised-agent/requirements.txt`, compiled from `requirements.in` with `uv pip compile` (`make -C supervised-agent lock`); `requirements.lock` is gone. The lockfile was recompiled with anyio, certifi, cryptography, idna, pyasn1, python-dotenv, requests and urllib3 raised to releases without known advisories. The agent's dev tools are pinned in `supervised-agent/requirements-dev.txt`, and `.github/dependabot.yml` no longer scans the agent from the root entry.
@@ -56,6 +62,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- The board pack's executive summary said "**1** SLA breaches"; counts of one are singular now (also for requests handled and external-counsel referrals).
 - A supervised-agent test used a made-up personal name as the rejected reviewer id; it uses "Reviewer A" now.
 - Dependabot's pip updates had failed on every run since 2026-10-16: `supervised-agent/requirements.txt` only said `-r requirements.lock`, and Dependabot follows `-r` only to `.txt` or `.in` files. With the compiled lockfile named `requirements.txt`, Dependabot reads it as the output of `requirements.in`.
 - The pilot's service-event ledger counted legal's time from when a requester opened a draft instead of from submission, and ended a wait on the business at the first answer while other clarifications were still open. The rehearsal outcome report and the review room now measure from submission and wait until the last open clarification is answered or resolved.
