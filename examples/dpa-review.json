@@ -1,0 +1,464 @@
+{
+  "schema": "legal-function-os.dpa-review.v1",
+  "document_count": 2,
+  "rows": [
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "documented_instructions",
+      "label": "Verarbeitung nur auf dokumentierte Weisung",
+      "label_en": "Processing only on documented instructions",
+      "citation": "Art. 28 Abs. 3 lit. a DSGVO",
+      "required": true,
+      "statute": "processes the personal data only on documented instructions from the controller, including with regard to transfers of personal data to a third country or an international organisation",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "documented_instructions",
+          "label": "Dokumentierte Weisung des Verantwortlichen",
+          "status": "found"
+        },
+        {
+          "key": "third_country_transfers",
+          "label": "Einschließlich Übermittlungen in Drittländer oder an internationale Organisationen",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Der Auftragsverarbeiter verarbeitet personenbezogene Daten ausschließlich auf dokumentierte Weisung des Verantwortlichen, einschließlich in Bezug auf Übermittlungen in Drittländer.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "confidentiality_commitment",
+      "label": "Vertraulichkeitsverpflichtung der Beschäftigten",
+      "label_en": "Confidentiality commitment of authorised persons",
+      "citation": "Art. 28 Abs. 3 lit. b DSGVO",
+      "required": true,
+      "statute": "ensures that persons authorised to process the personal data have committed themselves to confidentiality or are under an appropriate statutory obligation of confidentiality",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "confidentiality",
+          "label": "Verpflichtung zur Vertraulichkeit oder gesetzliche Verschwiegenheitspflicht",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Der Auftragsverarbeiter stellt sicher, dass sich die zur Verarbeitung befugten Personen zur Vertraulichkeit verpflichtet haben oder einer angemessenen gesetzlichen Verschwiegenheitspflicht unterliegen.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "security_measures",
+      "label": "Technische und organisatorische Maßnahmen",
+      "label_en": "Security of processing (Art. 32)",
+      "citation": "Art. 28 Abs. 3 lit. c DSGVO",
+      "required": true,
+      "statute": "takes all measures required pursuant to Article 32",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "article_32_measures",
+          "label": "Maßnahmen nach Art. 32 DSGVO (technische und organisatorische Maßnahmen)",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Der Auftragsverarbeiter ergreift alle nach Art. 32 DSGVO erforderlichen technische und organisatorische Maßnahmen, dokumentiert in Anlage 2.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "subprocessor_authorization",
+      "label": "Genehmigung von Unterauftragsverarbeitern",
+      "label_en": "Authorisation of sub-processors",
+      "citation": "Art. 28 Abs. 3 lit. d DSGVO",
+      "required": true,
+      "statute": "respects the conditions referred to in paragraphs 2 and 4 for engaging another processor",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "subprocessor_authorization",
+          "label": "Vorherige Genehmigung weiterer Auftragsverarbeiter",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Die Beauftragung weiterer Unterauftragsverarbeiter erfolgt nur mit vorheriger gesonderter oder allgemeiner schriftlicher Genehmigung des Verantwortlichen.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "data_subject_rights_assistance",
+      "label": "Unterstützung bei Betroffenenrechten",
+      "label_en": "Assistance with data subject rights",
+      "citation": "Art. 28 Abs. 3 lit. e DSGVO",
+      "required": true,
+      "statute": "assists the controller by appropriate technical and organisational measures for the fulfilment of the controller's obligation to respond to requests for exercising the data subject's rights laid down in Chapter III",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "data_subject_rights",
+          "label": "Unterstützung bei Anfragen zu Betroffenenrechten (Kapitel III)",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Der Auftragsverarbeiter unterstützt den Verantwortlichen mit geeigneten Maßnahmen bei der Erfüllung der Betroffenenrechte nach Kapitel III DSGVO.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "breach_and_dpia_assistance",
+      "label": "Unterstützung bei den Pflichten nach Art. 32 bis 36 DSGVO",
+      "label_en": "Assistance with the obligations under Articles 32 to 36",
+      "citation": "Art. 28 Abs. 3 lit. f DSGVO",
+      "required": true,
+      "statute": "assists the controller in ensuring compliance with the obligations pursuant to Articles 32 to 36 taking into account the nature of processing and the information available to the processor",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "breach_notification",
+          "label": "Meldung und Benachrichtigung bei Verletzungen des Schutzes personenbezogener Daten (Art. 33, 34)",
+          "status": "found"
+        },
+        {
+          "key": "dpia_and_prior_consultation",
+          "label": "Datenschutz-Folgenabschätzung und vorherige Konsultation (Art. 35, 36)",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Der Auftragsverarbeiter unterstützt bei der Meldung einer Verletzung des Schutzes personenbezogener Daten und bei einer Datenschutz-Folgenabschätzung.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "deletion_return",
+      "label": "Löschung oder Rückgabe nach Auftragsende",
+      "label_en": "Deletion or return after the end of the services",
+      "citation": "Art. 28 Abs. 3 lit. g DSGVO",
+      "required": true,
+      "statute": "at the choice of the controller, deletes or returns all the personal data to the controller after the end of the provision of services relating to processing, and deletes existing copies",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "deletion_or_return",
+          "label": "Löschung oder Rückgabe aller personenbezogenen Daten nach Wahl des Verantwortlichen",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Nach Abschluss der Erbringung der Verarbeitungsleistungen erfolgt nach Wahl des Verantwortlichen die Löschung oder Rückgabe aller personenbezogenen Daten.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "audit_rights",
+      "label": "Nachweis- und Kontrollrechte",
+      "label_en": "Information to demonstrate compliance, audits and inspections",
+      "citation": "Art. 28 Abs. 3 lit. h DSGVO",
+      "required": true,
+      "statute": "makes available to the controller all information necessary to demonstrate compliance with the obligations laid down in this Article and allow for and contribute to audits, including inspections, conducted by the controller or another auditor mandated by the controller",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "information_to_demonstrate_compliance",
+          "label": "Informationen zum Nachweis der Einhaltung",
+          "status": "found"
+        },
+        {
+          "key": "audits_and_inspections",
+          "label": "Überprüfungen einschließlich Inspektionen",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Der Auftragsverarbeiter stellt alle erforderlichen Informationen zum Nachweis bereit und ermöglicht Überprüfungen einschließlich Inspektionen.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-001",
+      "document_title": "Auftragsverarbeitungsvertrag Cloud-Hosting (synthetisch)",
+      "requirement_key": "unlawful_instruction_notice",
+      "label": "Hinweispflicht bei rechtswidriger Weisung",
+      "label_en": "Duty to flag an instruction that infringes data protection law",
+      "citation": "Art. 28 Abs. 3 UAbs. 2 DSGVO",
+      "required": false,
+      "statute": "the processor shall immediately inform the controller if, in its opinion, an instruction infringes this Regulation or other Union or Member State data protection provisions",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "informs_of_infringing_instruction",
+          "label": "Unverzügliche Information des Verantwortlichen über eine rechtswidrige Weisung",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Der Auftragsverarbeiter informiert den Verantwortlichen unverzüglich, falls er der Auffassung ist, dass eine Weisung gegen die DSGVO oder gegen andere Datenschutzbestimmungen der Union oder der Mitgliedstaaten verstößt.",
+      "source_ref": "synthetic-dpa:DPA-001",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "documented_instructions",
+      "label": "Verarbeitung nur auf dokumentierte Weisung",
+      "label_en": "Processing only on documented instructions",
+      "citation": "Art. 28 Abs. 3 lit. a DSGVO",
+      "required": true,
+      "statute": "processes the personal data only on documented instructions from the controller, including with regard to transfers of personal data to a third country or an international organisation",
+      "status": "review",
+      "elements": [
+        {
+          "key": "documented_instructions",
+          "label": "Dokumentierte Weisung des Verantwortlichen",
+          "status": "found"
+        },
+        {
+          "key": "third_country_transfers",
+          "label": "Einschließlich Übermittlungen in Drittländer oder an internationale Organisationen",
+          "status": "missing"
+        }
+      ],
+      "missing_elements": [
+        "third_country_transfers"
+      ],
+      "negated_elements": [],
+      "clause_excerpt": "The processor shall process personal data only on documented instructions from the controller.",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "confidentiality_commitment",
+      "label": "Vertraulichkeitsverpflichtung der Beschäftigten",
+      "label_en": "Confidentiality commitment of authorised persons",
+      "citation": "Art. 28 Abs. 3 lit. b DSGVO",
+      "required": true,
+      "statute": "ensures that persons authorised to process the personal data have committed themselves to confidentiality or are under an appropriate statutory obligation of confidentiality",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "confidentiality",
+          "label": "Verpflichtung zur Vertraulichkeit oder gesetzliche Verschwiegenheitspflicht",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "Personnel authorised to process personal data are bound by an obligation of confidentiality.",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "security_measures",
+      "label": "Technische und organisatorische Maßnahmen",
+      "label_en": "Security of processing (Art. 32)",
+      "citation": "Art. 28 Abs. 3 lit. c DSGVO",
+      "required": true,
+      "statute": "takes all measures required pursuant to Article 32",
+      "status": "review",
+      "elements": [
+        {
+          "key": "article_32_measures",
+          "label": "Maßnahmen nach Art. 32 DSGVO (technische und organisatorische Maßnahmen)",
+          "status": "missing"
+        }
+      ],
+      "missing_elements": [
+        "article_32_measures"
+      ],
+      "negated_elements": [],
+      "clause_excerpt": "The processor maintains an information security programme reviewed annually by management.",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "subprocessor_authorization",
+      "label": "Genehmigung von Unterauftragsverarbeitern",
+      "label_en": "Authorisation of sub-processors",
+      "citation": "Art. 28 Abs. 3 lit. d DSGVO",
+      "required": true,
+      "statute": "respects the conditions referred to in paragraphs 2 and 4 for engaging another processor",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "subprocessor_authorization",
+          "label": "Vorherige Genehmigung weiterer Auftragsverarbeiter",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "The processor may engage a sub-processor subject to the controller's prior general written authorisation and a thirty day objection period.",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "data_subject_rights_assistance",
+      "label": "Unterstützung bei Betroffenenrechten",
+      "label_en": "Assistance with data subject rights",
+      "citation": "Art. 28 Abs. 3 lit. e DSGVO",
+      "required": true,
+      "statute": "assists the controller by appropriate technical and organisational measures for the fulfilment of the controller's obligation to respond to requests for exercising the data subject's rights laid down in Chapter III",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "data_subject_rights",
+          "label": "Unterstützung bei Anfragen zu Betroffenenrechten (Kapitel III)",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "The processor assists the controller in responding to data subject requests within ten business days.",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "breach_and_dpia_assistance",
+      "label": "Unterstützung bei den Pflichten nach Art. 32 bis 36 DSGVO",
+      "label_en": "Assistance with the obligations under Articles 32 to 36",
+      "citation": "Art. 28 Abs. 3 lit. f DSGVO",
+      "required": true,
+      "statute": "assists the controller in ensuring compliance with the obligations pursuant to Articles 32 to 36 taking into account the nature of processing and the information available to the processor",
+      "status": "review",
+      "elements": [
+        {
+          "key": "breach_notification",
+          "label": "Meldung und Benachrichtigung bei Verletzungen des Schutzes personenbezogener Daten (Art. 33, 34)",
+          "status": "found"
+        },
+        {
+          "key": "dpia_and_prior_consultation",
+          "label": "Datenschutz-Folgenabschätzung und vorherige Konsultation (Art. 35, 36)",
+          "status": "missing"
+        }
+      ],
+      "missing_elements": [
+        "dpia_and_prior_consultation"
+      ],
+      "negated_elements": [],
+      "clause_excerpt": "The processor notifies the controller without undue delay after becoming aware of a personal data breach.",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "deletion_return",
+      "label": "Löschung oder Rückgabe nach Auftragsende",
+      "label_en": "Deletion or return after the end of the services",
+      "citation": "Art. 28 Abs. 3 lit. g DSGVO",
+      "required": true,
+      "statute": "at the choice of the controller, deletes or returns all the personal data to the controller after the end of the provision of services relating to processing, and deletes existing copies",
+      "status": "pass",
+      "elements": [
+        {
+          "key": "deletion_or_return",
+          "label": "Löschung oder Rückgabe aller personenbezogenen Daten nach Wahl des Verantwortlichen",
+          "status": "found"
+        }
+      ],
+      "missing_elements": [],
+      "negated_elements": [],
+      "clause_excerpt": "At the controller's election the processor shall delete or return all personal data at the end of the services.",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "audit_rights",
+      "label": "Nachweis- und Kontrollrechte",
+      "label_en": "Information to demonstrate compliance, audits and inspections",
+      "citation": "Art. 28 Abs. 3 lit. h DSGVO",
+      "required": true,
+      "statute": "makes available to the controller all information necessary to demonstrate compliance with the obligations laid down in this Article and allow for and contribute to audits, including inspections, conducted by the controller or another auditor mandated by the controller",
+      "status": "missing",
+      "elements": [
+        {
+          "key": "information_to_demonstrate_compliance",
+          "label": "Informationen zum Nachweis der Einhaltung",
+          "status": "missing"
+        },
+        {
+          "key": "audits_and_inspections",
+          "label": "Überprüfungen einschließlich Inspektionen",
+          "status": "missing"
+        }
+      ],
+      "missing_elements": [
+        "information_to_demonstrate_compliance",
+        "audits_and_inspections"
+      ],
+      "negated_elements": [],
+      "clause_excerpt": "",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    },
+    {
+      "document_id": "DPA-002",
+      "document_title": "Data Processing Agreement Analytics Vendor (synthetic)",
+      "requirement_key": "unlawful_instruction_notice",
+      "label": "Hinweispflicht bei rechtswidriger Weisung",
+      "label_en": "Duty to flag an instruction that infringes data protection law",
+      "citation": "Art. 28 Abs. 3 UAbs. 2 DSGVO",
+      "required": false,
+      "statute": "the processor shall immediately inform the controller if, in its opinion, an instruction infringes this Regulation or other Union or Member State data protection provisions",
+      "status": "review",
+      "elements": [
+        {
+          "key": "informs_of_infringing_instruction",
+          "label": "Unverzügliche Information des Verantwortlichen über eine rechtswidrige Weisung",
+          "status": "missing"
+        }
+      ],
+      "missing_elements": [
+        "informs_of_infringing_instruction"
+      ],
+      "negated_elements": [],
+      "clause_excerpt": "",
+      "source_ref": "synthetic-dpa:DPA-002",
+      "reviewer_note": null
+    }
+  ],
+  "blocker_count": 1,
+  "requires_human_review": true,
+  "external_action_allowed": false
+}

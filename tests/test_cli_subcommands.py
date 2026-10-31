@@ -200,7 +200,9 @@ class DpaReview(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertIn("- **2** documents · **1** blocker (missing requirements)", stdout)
         self.assertIn(
-            "| Nachweis- und Kontrollrechte | Art. 28 Abs. 3 lit. h DSGVO | MISSING | — |", stdout
+            "| Nachweis- und Kontrollrechte | Art. 28 Abs. 3 lit. h DSGVO | MISSING | "
+            "Informationen zum Nachweis der Einhaltung; Überprüfungen einschließlich Inspektionen | — |",
+            stdout,
         )
         code, stdout, _ = run_cli(["dpa-review", "--format", "json"])
         self.assertEqual(json.loads(stdout)["blocker_count"], 1)
