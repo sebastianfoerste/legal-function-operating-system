@@ -1,7 +1,7 @@
 PYTHON ?= python3
 PYTHONPATH := src
 
-.PHONY: install test lint package-check demo board-demo raas-demo contracts site site-check check-generated manifest-check contract-check agent-check agent-export check clean
+.PHONY: install test lint coverage package-check demo board-demo raas-demo contracts site site-check check-generated manifest-check contract-check agent-check agent-export check clean
 
 install:
 	@echo "No third-party dependencies. Pure standard library."
@@ -12,8 +12,14 @@ test:
 
 # Needs the pinned tools: $(PYTHON) -m pip install -r requirements-dev.txt
 lint:
-	@$(PYTHON) -m ruff check src/legal_function_os scripts
+	@$(PYTHON) -m ruff check src/legal_function_os scripts tests
 	@$(PYTHON) -m mypy
+
+# Statement coverage of the core package. Needs the pinned coverage tool from
+# requirements-dev.txt. The floor is the integer part of the measured level.
+coverage:
+	@PYTHONPATH=$(PYTHONPATH) $(PYTHON) -m coverage run --source=src/legal_function_os -m unittest discover -s tests -t . -q
+	@$(PYTHON) -m coverage report --fail-under=96
 
 # Builds the wheel, installs it in a fresh virtual environment and runs it there.
 package-check:

@@ -84,12 +84,6 @@ files = ["src/legal_function_os"]
 warn_unused_configs = true
 
 [[tool.mypy.overrides]]
-# One loop variable is reused across row types in this module. It stays excluded
-# until those loops get their own names.
-module = "legal_function_os.raas_renderers"
-ignore_errors = true
-
-[[tool.mypy.overrides]]
 # Optional extra; not installed in the lint job.
 module = ["mcp.*"]
 ignore_missing_imports = true

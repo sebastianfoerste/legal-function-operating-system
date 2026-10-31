@@ -220,7 +220,7 @@ def test_rejection_and_correction_need_a_reason(tmp_path):
 @pytest.mark.parametrize(
     ("reviewer_id", "evidence_class", "message"),
     [
-        ("Jane Doe", "practising_lawyer", "pseudonym of the form R01"),
+        ("Reviewer A", "practising_lawyer", "pseudonym of the form R01"),
         ("R01\n", "practising_lawyer", "pseudonym of the form R01"),
         ("R00", "practising_lawyer", "reserved for synthetic examples"),
         ("R000", "author_self_review", "reserved for synthetic examples"),

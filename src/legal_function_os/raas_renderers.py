@@ -77,16 +77,16 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
         "| Rule | Category | Severity | Issue | Standard position | Fallback | Approvals |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
-    for item in pack.clause_reviews:
+    for review in pack.clause_reviews:
         lines.append(
             _table_row(
-                item.rule_id,
-                item.category,
-                item.severity,
-                item.issue,
-                item.standard_position,
-                item.fallback_position,
-                ", ".join(item.required_approvals),
+                review.rule_id,
+                review.category,
+                review.severity,
+                review.issue,
+                review.standard_position,
+                review.fallback_position,
+                ", ".join(review.required_approvals),
             )
         )
 
@@ -101,15 +101,15 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
             "| --- | --- | --- | --- | --- | --- |",
         ]
     )
-    for item in pack.finance_handoff:
+    for finance_issue in pack.finance_handoff:
         lines.append(
             _table_row(
-                item.issue_id,
-                item.topic,
-                item.status,
-                item.question,
-                item.legal_action,
-                item.framework,
+                finance_issue.issue_id,
+                finance_issue.topic,
+                finance_issue.status,
+                finance_issue.question,
+                finance_issue.legal_action,
+                finance_issue.framework,
             )
         )
 
@@ -122,18 +122,18 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
-    for item in pack.regulatory_readiness:
+    for control in pack.regulatory_readiness:
         lines.append(
             _table_row(
-                item.control_id,
-                item.regime,
-                item.actor,
-                item.status,
-                item.gate_effect,
-                item.obligation_or_question,
-                item.owner,
-                item.target_date,
-                f"[{item.source_id}]({item.source_url})",
+                control.control_id,
+                control.regime,
+                control.actor,
+                control.status,
+                control.gate_effect,
+                control.obligation_or_question,
+                control.owner,
+                control.target_date,
+                f"[{control.source_id}]({control.source_url})",
             )
         )
 
