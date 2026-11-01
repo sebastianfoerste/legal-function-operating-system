@@ -22,26 +22,20 @@ from legal_function_os.rules import approval_chain, assess_risk, decide
 
 SCHEMA = "legal-function-os.approval-matrix.v1"
 RISKS = ("LOW", "MEDIUM", "HIGH")
-# The request fields assess_risk reads; tests fail if it starts reading another one.
+# The request fields assess_risk reads, in the order _risk_inputs varies them. Tests fail
+# if assess_risk reads a field that is not enumerated here.
 RISK_FIELDS = ("value_band", "personal_data", "non_eea_transfer", "uncapped_liability", "type")
 
 
 def _risk_inputs(policy: Policy) -> list[dict[str, Any]]:
     """Every combination of the risk fields: each band, flag and kind of request type."""
 
-    # "" stands for every type that is neither elevated nor a dispute.
-    types = list(dict.fromkeys(("", *policy.elevated_types, "dispute")))
+    # None stands for every type that is neither elevated nor a dispute: a policy names
+    # its types as text, so None can never be one of them.
+    types = list(dict.fromkeys((None, *policy.elevated_types, "dispute")))
     return [
-        {
-            "value_band": band,
-            "personal_data": personal,
-            "non_eea_transfer": non_eea,
-            "uncapped_liability": uncapped,
-            "type": request_type,
-        }
-        for band in policy.value_bands
-        for personal, non_eea, uncapped in product((False, True), repeat=3)
-        for request_type in types
+        dict(zip(RISK_FIELDS, values, strict=True))
+        for values in product(policy.value_bands, *[(False, True)] * 3, types)
     ]
 
 
@@ -90,7 +84,8 @@ def build_approval_matrix(
     for band in rules.value_bands:
         cells = []
         for risk in RISKS:
-            reachable = risk in reached[band]
+            # decide() placed a request here, so it is reachable whatever the enumeration says.
+            reachable = risk in reached[band] or (band, risk) in placed
             cells.append(
                 {
                     "risk": risk,
@@ -109,7 +104,9 @@ def build_approval_matrix(
         "Personal data processed",
     ]
     if rules.elevated_types:
-        medium_any.append("Request type " + ", ".join(rules.elevated_types))
+        medium_any.append(
+            "Request type " + ", ".join(t if t.strip() else "(no type)" for t in rules.elevated_types)
+        )
     return {
         "schema": SCHEMA,
         "policy": rules.name,
@@ -155,12 +152,15 @@ def _chain_text(chain: list[str]) -> str:
 
 
 def _md_cell(value: Any) -> str:
-    return str(value).replace("|", "\\|").replace("\n", " ")
+    """Text for one line of Markdown: whitespace runs (line breaks included) become one
+    space, and a pipe cannot end a table cell."""
+
+    return " ".join(str(value).split()).replace("|", "\\|")
 
 
 def _cell_md(cell: dict[str, Any]) -> str:
     if not cell["reachable"]:
-        return "Not reachable"
+        return _md_cell("Not reachable. " + cell["unreachable_reason"])
     text = _chain_text(cell["approval_chain"])
     if cell["requests"]:
         text += " (" + ", ".join(cell["requests"]) + ")"
@@ -171,17 +171,17 @@ def render_approval_markdown(matrix: dict[str, Any]) -> str:
     lines = [
         "# Approval matrix",
         "",
-        f"Policy: {matrix['policy']}. {matrix['review_gate']}",
+        f"Policy: {_md_cell(matrix['policy'])}. {matrix['review_gate']}",
         "",
         "## Who is added to the chain",
         "",
-        *(f"- {step['when']}: {step['adds']}" for step in matrix["approval_ladder"]),
+        *(f"- {_md_cell(step['when'])}: {step['adds']}" for step in matrix["approval_ladder"]),
         "",
         "## What sets the risk",
         "",
     ]
     for step in matrix["risk_ladder"]:
-        lines.append(f"- {_risk_step(step)}")
+        lines.append(f"- {_md_cell(_risk_step(step))}")
     lines += [
         "",
         "## Chain by value band and risk",
@@ -215,6 +215,22 @@ def _esc(value: Any) -> str:
     return html.escape(str(value))
 
 
+# Text this short, such as "REQ-1001" or "50k-250k", stays on one line above the phone
+# layout instead of breaking at its hyphen. It fits the narrowest column there, so it
+# never pushes the page sideways; longer text wraps wherever it must.
+KEEP_WHOLE = 12
+
+
+def _token_html(value: Any) -> str:
+    text = str(value)
+    cls = "token nowrap" if len(text) <= KEEP_WHOLE else "token"
+    return f'<span class="{cls}">{_esc(text)}</span>'
+
+
+def _ids_html(ids: list[str]) -> str:
+    return ", ".join(_token_html(rid) for rid in ids)
+
+
 def _cell_html(cell: dict[str, Any]) -> str:
     label = f' data-label="{cell["risk"]} risk"'
     if not cell["reachable"]:
@@ -228,9 +244,10 @@ def _cell_html(cell: dict[str, Any]) -> str:
     if cell["requests"]:
         count = len(cell["requests"])
         cls = ' class="matched"'
+        # Neutral words: a request landing in a cell is placed there, not approved.
         matched = (
-            f'<p class="match">✓ {count} portfolio request{"" if count == 1 else "s"}: '
-            f'{_esc(", ".join(cell["requests"]))}</p>'
+            f'<p class="match">{count} portfolio request{" lands" if count == 1 else "s land"} '
+            f'here: {_ids_html(cell["requests"])}</p>'
         )
     return f'<td{cls}{label}><ol class="chain">{steps}</ol>{matched}</td>'
 
@@ -246,7 +263,7 @@ def render_approval_html(matrix: dict[str, Any]) -> str:
     )
     header = "".join(f'<th scope="col">{risk} risk</th>' for risk in RISKS)
     rows = "".join(
-        f'<tr><th scope="row" data-label="Value band">{_esc(row["value_band"])}</th>'
+        f'<tr><th scope="row" data-label="Value band">{_token_html(row["value_band"])}</th>'
         + "".join(_cell_html(cell) for cell in row["cells"])
         + "</tr>"
         for row in matrix["rows"]
@@ -254,9 +271,9 @@ def render_approval_html(matrix: dict[str, Any]) -> str:
     portfolio = (
         "".join(
             "<tr>"
-            f'<td class="nowrap" data-label="Request">{_esc(item["request_id"])}</td>'
+            f'<td data-label="Request">{_ids_html([item["request_id"]])}</td>'
             f'<td data-label="Title">{_esc(item["title"])}</td>'
-            f'<td class="nowrap" data-label="Value band">{_esc(item["value_band"])}</td>'
+            f'<td data-label="Value band">{_token_html(item["value_band"])}</td>'
             f'<td class="nowrap" data-label="Risk">{_esc(item["risk"])}</td>'
             f'<td data-label="Approval chain">{_esc(_chain_text(item["approval_chain"]))}</td>'
             "</tr>"
@@ -285,7 +302,8 @@ ol.ladder {{ margin:0; padding-left:22px; }} ol.ladder li {{ margin:4px 0; }}
 table {{ width:100%; border-collapse:collapse; }}
 th, td {{ padding:10px; border:1px solid var(--line); text-align:left; vertical-align:top; }}
 thead th {{ background:var(--panel); }}
-th[scope="row"] {{ background:var(--panel); white-space:nowrap; }}
+th[scope="row"] {{ min-width:10ch; background:var(--panel); }}
+.token {{ display:inline-block; max-width:100%; overflow-wrap:anywhere; }}
 ol.chain {{ margin:0; padding-left:20px; }}
 td.matched {{ background:var(--accent-soft); box-shadow:inset 4px 0 0 var(--accent); }}
 td.unreachable {{ color:var(--muted); }}
@@ -310,7 +328,7 @@ p.match {{ margin:8px 0 0; font-weight:600; }}
 <section aria-labelledby="ladder-h"><h2 id="ladder-h">Who is added to the chain</h2><ol class="ladder">{approval}</ol></section>
 <section aria-labelledby="risk-h"><h2 id="risk-h">What sets the risk</h2><ol class="ladder">{risk}</ol></section>
 <section aria-labelledby="matrix-h"><h2 id="matrix-h">Chain by value band and risk</h2>
-<p class="muted">Each cell is the approval chain the rules give. Cells marked ✓ hold portfolio requests.</p>
+<p class="muted">Each cell is the approval chain the rules give. A shaded cell lists the portfolio requests that land in it.</p>
 <table><thead><tr><th scope="col">Value band</th>{header}</tr></thead><tbody>{rows}</tbody></table></section>
 <section aria-labelledby="portfolio-h"><h2 id="portfolio-h">Portfolio requests</h2>
 <table><thead><tr><th scope="col">Request</th><th scope="col">Title</th><th scope="col">Value band</th><th scope="col">Risk</th><th scope="col">Approval chain</th></tr></thead><tbody>{portfolio}</tbody></table></section>

@@ -62,6 +62,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- Approval matrix: `approval-matrix --policy policy.json` without `--input` failed on the bundled sample requests when the policy renamed the value bands; it now shows the matrix with no request placed. A blank entry in `elevated_types` marked reachable cells "Not reachable", and a cell holding a portfolio request is now always shown as reachable. The Markdown gives the reason a cell is not reachable and keeps a band name or policy value with a line break on one line. On the HTML page, long band names wrap instead of being cut off on phones or scrolling the page sideways, request IDs no longer break at the hyphen, and placed requests are listed as "lands here" instead of with ✓, which elsewhere means pass.
 - The board pack's executive summary said "**1** SLA breaches"; counts of one are singular now (also for requests handled and external-counsel referrals).
 - A supervised-agent test used a made-up personal name as the rejected reviewer id; it uses "Reviewer A" now.
 - Dependabot's pip updates had failed on every run since 2026-10-16: `supervised-agent/requirements.txt` only said `-r requirements.lock`, and Dependabot follows `-r` only to `.txt` or `.in` files. With the compiled lockfile named `requirements.txt`, Dependabot reads it as the output of `requirements.in`.

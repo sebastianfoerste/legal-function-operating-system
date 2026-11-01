@@ -117,10 +117,12 @@ they will not pass a policy with different ones.
 
 ## Where a policy applies
 
-`--policy` works with `triage`, `board-pack`, `validate`, `capacity` and
-`control-tower`, and with the original all-in-one flags (`legal-function-os --policy
-policy.json --input requests.json --out reports`), where it applies to every output
-they write. Run `legal-function-os --help` for every command.
+`--policy` works with `triage`, `board-pack`, `validate`, `capacity`,
+`control-tower` and `approval-matrix`, and with the original all-in-one flags
+(`legal-function-os --policy policy.json --input requests.json --out reports`), where
+it applies to every output they write. `legal-function-os approval-matrix --policy
+policy.json --out reports` shows who must sign off under your thresholds; without
+`--input` it places no request. Run `legal-function-os --help` for every command.
 
 Treat the file like code. Keep it under version control, review a change before it
 is applied, and record who approved the thresholds in an `x_` field. A CI job can

@@ -346,7 +346,13 @@ Handler = Callable[[argparse.Namespace], int]
 
 def _approval_matrix(args: argparse.Namespace) -> int:
     policy = _load_policy(args.policy)
-    requests, _ = _load_valid_requests(args.input, policy)
+    if args.input is None and args.policy is not None:
+        # The matrix depends only on the policy; the bundled sample requests use the
+        # default value bands, so they are not placed in another policy's matrix.
+        print("note: no --input given, so no request is placed in the matrix", file=sys.stderr)
+        requests: list[dict[str, Any]] = []
+    else:
+        requests, _ = _load_valid_requests(args.input, policy)
     matrix = build_approval_matrix(requests, policy)
     if args.out:
         for path in write_approval_matrix(matrix, Path(args.out)).values():

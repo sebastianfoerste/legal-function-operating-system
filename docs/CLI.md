@@ -32,7 +32,7 @@ Without `--input`, the bundled synthetic requests are used.
 | `dpa-review` | Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses | `--out DIR`; `--input` takes agreements, not requests; no `--policy` |
 | `capacity` | Compare capacity scenarios and name the binding constraint | `--scenarios PATH` (required with `--input`), `--out DIR` |
 | `control-tower` | Business-time SLAs, waiting time and value from a service-event ledger | `--events PATH` and `--config PATH` (both required with `--input`), `--out DIR` |
-| `approval-matrix` | Who must sign off for each value band and risk level, from the rules and the policy, with each request placed in its cell | `--out DIR` (writes `approval-matrix.md`, `.json` and `.html`) |
+| `approval-matrix` | Who must sign off for each value band and risk level, from the rules and the policy, with each request placed in its cell. With `--policy` and no `--input`, no request is placed | `--out DIR` (writes `approval-matrix.md`, `.json` and `.html`) |
 | `init` | Write a policy file from a short interview | `--out PATH` (default `policy.json`), `--defaults`, `--force`; no `--input` |
 
 Examples:

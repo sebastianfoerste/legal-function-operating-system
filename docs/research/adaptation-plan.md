@@ -439,7 +439,9 @@ playbook position next to each change, and the evidence next to each resolution.
 - **Built.**
   - `src/legal_function_os/approval_matrix.py` writes `examples/approval-matrix.md`,
     `.json` and `.html` from `make demo`. The `approval-matrix` command and the
-    `--approval-matrix-output` flag write the same for any policy and requests.
+    `--approval-matrix-output` flag write the same for any policy and requests. With
+    `--policy` and no `--input`, the command places no request, since the bundled
+    sample requests use the default value bands.
   - Each cell is `rules.approval_chain` for one value band and risk level, so the matrix
     cannot drift from the rules.
   - The chain depends on value band and risk only, so the flags enter through risk. The
@@ -454,6 +456,13 @@ playbook position next to each change, and the evidence next to each resolution.
     self-contained. It was added to `EXPECTED`, `HOSTED`, `CARDS` and
     `verification_artifacts`.
   - Tests: `tests/test_approval_matrix.py`.
+  - A review of the built page found 14 defects, fixed in a follow-up: a blank
+    elevated type broke reachability; a cell holding a request is now always
+    reachable; Markdown flattens line breaks and gives the reason a cell is not
+    reachable; long band names and request IDs wrap instead of being cut off or
+    breaking at the hyphen; the placement marker no longer uses ✓, which elsewhere in
+    the project means pass; and the tests now cover a non-default policy, exact ladder
+    text and every enumerated input.
 
 ### F9. Static intake page (specced)
 
