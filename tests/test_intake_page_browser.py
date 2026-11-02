@@ -73,6 +73,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.focusAfterLink = await focused();
   await page.locator("#error-summary a", { hasText: "Choose what you need help with" }).click();
   out.focusAfterRadioLink = await focused();
+  out.urlAfterSummaryLink = page.url();
 
   // Enter in a text field goes nowhere: the page has no form.
   await page.locator("#f-title").fill("DPA with Example Hosting GmbH (synthetic)");
@@ -136,6 +137,8 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   // Change reaches the chosen answer, so Space would not change it.
   await page.locator("#review-list .review-row").nth(1).getByRole("link").click();
   out.focusAfterChange = await focused();
+  // The link's own handler moves focus; following the #fragment would also focus it.
+  out.urlAfterChange = page.url();
   const saved = await save();
   out.saved = saved.text;
   out.savedName = saved.name;
@@ -275,6 +278,7 @@ class IntakePageBrowserTests(unittest.TestCase):
         self.assertEqual(self.out["typeDescribed"], "f-type-hint f-type-error")
         self.assertEqual(self.out["focusAfterLink"], "f-title")
         self.assertEqual(self.out["focusAfterRadioLink"], "f-type-0")
+        self.assertEqual(self.out["urlAfterSummaryLink"], self.path.as_uri())
         self.assertEqual(
             self.out["secondErrors"],
             [
@@ -331,6 +335,7 @@ class IntakePageBrowserTests(unittest.TestCase):
         self.assertEqual(self.out["file"], render_download(request))
         self.assertEqual(self.out["saved"], render_download(request))
         self.assertEqual(self.out["focusAfterChange"], "f-type-2")
+        self.assertEqual(self.out["urlAfterChange"], self.path.as_uri())
         self.assertEqual(self.out["savedName"], download_name(request))
         self.assertEqual(self.out["savedName"], "legal-request-dpa-with-example-hosting-gmbh-synthetic.json")
         self.assertEqual(
