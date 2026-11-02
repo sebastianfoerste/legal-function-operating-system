@@ -398,8 +398,8 @@ COMMANDS: dict[str, tuple[str, Handler]] = {
 }
 
 
-def _add_input(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--input", metavar="PATH", help=INPUT_HELP)
+def _add_input(parser: argparse.ArgumentParser, input_help: str = INPUT_HELP) -> None:
+    parser.add_argument("--input", metavar="PATH", help=input_help)
     parser.add_argument("--policy", metavar="PATH", help=POLICY_HELP)
 
 
@@ -503,7 +503,7 @@ def command_parser() -> argparse.ArgumentParser:
     _add_format(tower, out="legal-outcome-control-tower.md, .json and .html")
 
     matrix = parsers["approval-matrix"]
-    _add_input(matrix)
+    _add_input(matrix, INPUT_HELP.removesuffix(".") + ", or none with --policy.")
     _add_format(matrix, out="approval-matrix.md, .json and .html")
 
     init = parsers["init"]

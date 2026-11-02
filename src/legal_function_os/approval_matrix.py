@@ -23,7 +23,7 @@ from legal_function_os.rules import approval_chain, assess_risk, decide
 SCHEMA = "legal-function-os.approval-matrix.v1"
 RISKS = ("LOW", "MEDIUM", "HIGH")
 # The request fields assess_risk reads, in the order _risk_inputs varies them. Tests fail
-# if assess_risk reads a field that is not enumerated here.
+# if assess_risk reads a field that is not enumerated here through get, [] or in.
 RISK_FIELDS = ("value_band", "personal_data", "non_eea_transfer", "uncapped_liability", "type")
 
 
@@ -104,9 +104,7 @@ def build_approval_matrix(
         "Personal data processed",
     ]
     if rules.elevated_types:
-        medium_any.append(
-            "Request type " + ", ".join(t if t.strip() else "(no type)" for t in rules.elevated_types)
-        )
+        medium_any.append("Request type " + ", ".join(_type_label(t) for t in rules.elevated_types))
     return {
         "schema": SCHEMA,
         "policy": rules.name,
@@ -141,6 +139,15 @@ def build_approval_matrix(
     }
 
 
+def _type_label(request_type: str) -> str:
+    """An elevated type as the reader can see it. assess_risk matches types exactly and
+    reads a missing type as "", so "" means no type; other blank entries are quoted."""
+
+    if request_type == "":
+        return "(no type)"
+    return request_type if request_type.strip() else json.dumps(request_type)
+
+
 def _risk_step(step: dict[str, Any]) -> str:
     if not step["any_of"]:
         return f"{step['risk']} otherwise."
@@ -151,11 +158,17 @@ def _chain_text(chain: list[str]) -> str:
     return " → ".join(chain)
 
 
-def _md_cell(value: Any) -> str:
-    """Text for one line of Markdown: whitespace runs (line breaks included) become one
-    space, and a pipe cannot end a table cell."""
+def _md_line(value: Any) -> str:
+    """Text that stays on its Markdown line: whitespace runs, line breaks included,
+    become one space."""
 
-    return " ".join(str(value).split()).replace("|", "\\|")
+    return " ".join(str(value).split())
+
+
+def _md_cell(value: Any) -> str:
+    """Text for a Markdown table cell: on one line, and a pipe cannot end the cell."""
+
+    return _md_line(value).replace("|", "\\|")
 
 
 def _cell_md(cell: dict[str, Any]) -> str:
@@ -171,17 +184,17 @@ def render_approval_markdown(matrix: dict[str, Any]) -> str:
     lines = [
         "# Approval matrix",
         "",
-        f"Policy: {_md_cell(matrix['policy'])}. {matrix['review_gate']}",
+        f"Policy: {_md_line(matrix['policy'])}. {matrix['review_gate']}",
         "",
         "## Who is added to the chain",
         "",
-        *(f"- {_md_cell(step['when'])}: {step['adds']}" for step in matrix["approval_ladder"]),
+        *(f"- {_md_line(step['when'])}: {step['adds']}" for step in matrix["approval_ladder"]),
         "",
         "## What sets the risk",
         "",
     ]
     for step in matrix["risk_ladder"]:
-        lines.append(f"- {_md_cell(_risk_step(step))}")
+        lines.append(f"- {_md_line(_risk_step(step))}")
     lines += [
         "",
         "## Chain by value band and risk",
@@ -216,19 +229,25 @@ def _esc(value: Any) -> str:
 
 
 # Text this short, such as "REQ-1001" or "50k-250k", stays on one line above the phone
-# layout instead of breaking at its hyphen. It fits the narrowest column there, so it
-# never pushes the page sideways; longer text wraps wherever it must.
+# layout instead of breaking at its hyphen; longer text wraps wherever it must. Usual IDs
+# and band names of this length fit the narrowest matrix column, though twelve very wide
+# characters (a run of Ms and Ws) can widen the matrix slightly just above the phone layout.
 KEEP_WHOLE = 12
+# The portfolio's Request column holds one ID per row, so it keeps longer IDs such as
+# "MAT-2026-0001" whole; without nowrap the table would squeeze the column and split them.
+KEEP_REQUEST_ID_WHOLE = 16
 
 
-def _token_html(value: Any) -> str:
+def _token_html(value: Any, keep: int = KEEP_WHOLE, suffix: str = "") -> str:
     text = str(value)
-    cls = "token nowrap" if len(text) <= KEEP_WHOLE else "token"
-    return f'<span class="{cls}">{_esc(text)}</span>'
+    cls = "token nowrap" if len(text) <= keep else "token"
+    return f'<span class="{cls}">{_esc(text + suffix)}</span>'
 
 
 def _ids_html(ids: list[str]) -> str:
-    return ", ".join(_token_html(rid) for rid in ids)
+    # The comma sits inside the span, so a line can break after it but never before it.
+    last = len(ids) - 1
+    return " ".join(_token_html(rid, suffix="," if i < last else "") for i, rid in enumerate(ids))
 
 
 def _cell_html(cell: dict[str, Any]) -> str:
@@ -271,7 +290,7 @@ def render_approval_html(matrix: dict[str, Any]) -> str:
     portfolio = (
         "".join(
             "<tr>"
-            f'<td data-label="Request">{_ids_html([item["request_id"]])}</td>'
+            f'<td data-label="Request">{_token_html(item["request_id"], KEEP_REQUEST_ID_WHOLE)}</td>'
             f'<td data-label="Title">{_esc(item["title"])}</td>'
             f'<td data-label="Value band">{_token_html(item["value_band"])}</td>'
             f'<td class="nowrap" data-label="Risk">{_esc(item["risk"])}</td>'

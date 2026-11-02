@@ -76,10 +76,11 @@ def _rename_bands(policy: Policy, names: dict[str, str]) -> Policy:
 
 
 def _spread_policy() -> Policy:
-    """Eight bands with every approval and risk threshold on a band of its own, so a
-    ladder or cell that reads the wrong threshold shows."""
+    """Ten bands with every band threshold of the policy on a band of its own, the
+    counsel and escalation ones included, so a ladder or cell that reads the wrong
+    threshold shows."""
 
-    bands = ("none", *(f"tier-{n}" for n in range(1, 8)))
+    bands = ("none", *(f"tier-{n}" for n in range(1, 10)))
     return replace(
         default_policy(),
         name="Spread test policy",
@@ -90,9 +91,9 @@ def _spread_policy() -> Policy:
         medium_risk_from=Threshold("tier-2", "Medium from tier 2."),
         dispute_high_risk_from=Threshold("tier-4", "Dispute high from tier 4."),
         high_risk_from=Threshold("tier-5", "High from tier 5."),
-        dispute_counsel_from="tier-4",
-        board_awareness_from=Threshold("tier-6", "Board awareness from tier 6."),
-        dispute_board_attention_from="tier-5",
+        dispute_counsel_from="tier-7",
+        board_awareness_from=Threshold("tier-8", "Board awareness from tier 8."),
+        dispute_board_attention_from="tier-9",
         elevated_types=("corporate",),
     )
 
@@ -206,12 +207,24 @@ class ApprovalMatrixTests(unittest.TestCase):
             self.assertEqual(read, set(RISK_FIELDS))
 
     def test_a_blank_elevated_type_hides_no_reachable_cell(self) -> None:
-        policy = replace(default_policy(), elevated_types=("", "corporate", "  "))
-        matrix = build_approval_matrix(_requests(), policy)
+        # Every dispute is HIGH, so only a type that is neither elevated nor a dispute can
+        # be LOW; no request is placed, so only the enumeration decides reachability.
+        base = default_policy()
+        policy = replace(
+            base,
+            elevated_types=("", "corporate", "  "),
+            dispute_high_risk_from=replace(base.dispute_high_risk_from, value_band=base.value_bands[0]),
+        )
+        matrix = build_approval_matrix([], policy)
         self.assertEqual(_unreachable(matrix), _unreachable(self.matrix))
-        self.assertTrue(_cells(matrix)[("none", "LOW")]["reachable"])
+        for band in base.value_bands[:3]:
+            self.assertTrue(_cells(matrix)[(band, "LOW")]["reachable"], band)
         medium = next(step for step in matrix["risk_ladder"] if step["risk"] == "MEDIUM")
-        self.assertEqual(medium["any_of"][-1], "Request type (no type), corporate, (no type)")
+        # "" matches a request without a type; another blank entry matches only itself.
+        self.assertEqual(medium["any_of"][-1], 'Request type (no type), corporate, "  "')
+        self.assertEqual(assess_risk({"value_band": "none"}, policy)[0], "MEDIUM")
+        self.assertEqual(assess_risk({"value_band": "none", "type": "  "}, policy)[0], "MEDIUM")
+        self.assertEqual(assess_risk({"value_band": "none", "type": " "}, policy)[0], "LOW")
 
     def test_a_cell_holding_a_request_is_never_marked_unreachable(self) -> None:
         # Even if the enumeration missed a combination, a placed request shows its cell.
@@ -310,7 +323,7 @@ class ApprovalMatrixTests(unittest.TestCase):
         self.assertEqual(assess_risk(plain, policy)[0], "LOW")
 
     def test_each_portfolio_request_sits_in_the_cell_its_decision_names(self) -> None:
-        names = {"none": "none", "<50k": "tier-1", "50k-250k": "tier-3", "250k-1m": "tier-4", ">1m": "tier-7"}
+        names = {"none": "none", "<50k": "tier-1", "50k-250k": "tier-3", "250k-1m": "tier-4", ">1m": "tier-9"}
         spread = [{**r, "value_band": names[r["value_band"]]} for r in _requests()]
         for policy, requests in ((self.policy, _requests()), (_spread_policy(), spread)):
             with self.subTest(policy=policy.name):
@@ -360,20 +373,35 @@ class ApprovalMatrixTests(unittest.TestCase):
             "| Reviewer → Legal Ops Lead → General Counsel → Board note (REQ-1001, REQ-1005) |",
         )
 
-        broken = "50k-\r\n250k"
+        names = {"none": "none", "<50k": "<50k", "50k-250k": "50k-\r\n250k", "250k-1m": "250k-1m", ">1m": ">\r1m"}
+        base = default_policy()
         policy = _rename_bands(
-            replace(default_policy(), name="Acme\n# Not a heading"),
-            {"none": "none", "<50k": "<50k", "50k-250k": broken, "250k-1m": "250k-1m", ">1m": ">1m"},
+            replace(base, name="Acme | Co\n# Not a heading", elevated_types=(*base.elevated_types, "cor\nporate")),
+            names,
         )
-        markdown = render_approval_markdown(build_approval_matrix([], policy))
+        requests = [{**r, "value_band": names[r["value_band"]]} for r in _requests()]
+        markdown = render_approval_markdown(build_approval_matrix(requests, policy))
+        lines = markdown.splitlines()
         self.assertNotIn("\r", markdown)
-        self.assertEqual([line for line in markdown.splitlines() if line.startswith("# ")], ["# Approval matrix"])
-        self.assertIn("Policy: Acme # Not a heading. ", markdown)
-        self.assertIn('- Value band "50k- 250k" or above: Legal Ops Lead', markdown.splitlines())
-        self.assertTrue(any(line.startswith("| 50k- 250k | ") for line in markdown.splitlines()))
-        for line in markdown.splitlines():
-            if line.startswith("| "):
-                self.assertEqual(line.replace("\\|", "").count("|"), 5, line)
+        self.assertEqual([line for line in lines if line.startswith("# ")], ["# Approval matrix"])
+        # Outside a table a pipe needs no escape.
+        self.assertIn("Policy: Acme | Co # Not a heading. ", markdown)
+        self.assertIn('- Value band "50k- 250k" or above: Legal Ops Lead', lines)
+        self.assertIn('- Value band "> 1m" or above: Board note', lines)
+        self.assertIn(
+            '- HIGH if any of: Personal data transferred outside the EEA; Value band "> 1m" or above; '
+            'Uncapped liability; A dispute at value band "250k-1m" or above.',
+            lines,
+        )
+        self.assertTrue(any(line.endswith("Request type corporate, fundraising, ai_governance, cor porate.") for line in lines))
+        self.assertTrue(any(line.startswith("| 50k- 250k | ") for line in lines))
+        self.assertTrue(any(line.startswith("| REQ-1001 | ") and "| > 1m | HIGH |" in line for line in lines))
+        matrix_part, portfolio_part = markdown.split("## Portfolio requests")
+        for part, pipes in ((matrix_part, 5), (portfolio_part, 6)):
+            rows = [line for line in part.splitlines() if line.startswith("| ")]
+            self.assertTrue(rows)
+            for line in rows:
+                self.assertEqual(line.replace("\\|", "").count("|"), pipes, line)
 
     def test_rendering_is_deterministic_escaped_and_self_contained(self) -> None:
         policy = replace(default_policy(), name='Policy <script>alert(1)</script> | "x"')
@@ -396,11 +424,13 @@ class ApprovalMatrixTests(unittest.TestCase):
         self.assertIn("the matrix approves nothing", page)
         # A placed request is said to land in a cell; ✓ means pass elsewhere in the project.
         self.assertNotIn("✓", page)
+        # The comma sits inside the span, so a line never starts with it.
         self.assertIn(
-            '2 portfolio requests land here: <span class="token nowrap">REQ-1001</span>, '
+            '2 portfolio requests land here: <span class="token nowrap">REQ-1001,</span> '
             '<span class="token nowrap">REQ-1005</span>',
             page,
         )
+        self.assertNotIn("</span>,", page)
         self.assertIn('1 portfolio request lands here: <span class="token nowrap">REQ-1008</span>', page)
         self.assertIn('<td data-label="Request"><span class="token nowrap">REQ-1001</span></td>', page)
 
@@ -415,6 +445,19 @@ class ApprovalMatrixTests(unittest.TestCase):
             if holds:
                 matched -= set(re.findall(r"REQ-\d+", cell["text"]))
         self.assertEqual(matched, set())
+        unreachable = [cell for cell in matrix_cells if cell["attrs"].get("class") == "unreachable"]
+        self.assertEqual(len(unreachable), len(_unreachable(self.matrix)))
+        for cell in unreachable:
+            self.assertTrue(cell["text"].startswith("Not reachable. "), cell)
+        # On phones each row stacks and every cell shows its column as a label.
+        style = page[page.index("<style>") : page.index("</style>")]
+        narrow = style[style.index("@media (max-width:640px)") :]
+        for rule in (
+            "table, tbody, tr, th, td { display:block; width:100%; }",
+            "thead { display:none; }",
+            "td[data-label]::before, th[data-label]::before { content:attr(data-label);",
+        ):
+            self.assertIn(rule, narrow)
         columns = ["Request", "Title", "Value band", "Risk", "Approval chain"]
         self.assertEqual(len(portfolio_cells), len(self.matrix["requests"]) * len(columns))
         for index, cell in enumerate(portfolio_cells):
@@ -429,10 +472,22 @@ class ApprovalMatrixTests(unittest.TestCase):
         )
         requests = [{**r, "value_band": long_band} for r in _requests()[:2]]
         requests[0]["id"] = long_id
+        for rid in ("LEGAL-2026-00001", "LEGAL-2026-000001"):
+            requests.append({**_requests()[2], "id": rid})
         page = render_approval_html(build_approval_matrix(requests, policy))
         # Short text stays whole above the phone layout; long text can wrap anywhere.
         self.assertIn('<span class="token nowrap">50k-250k</span>', page)
-        self.assertIn('<span class="token nowrap">REQ-1002</span>', page)
+        self.assertIn('<td data-label="Request"><span class="token nowrap">REQ-1002</span></td>', page)
+        # The portfolio's Request column keeps IDs of up to 16 characters whole; a matrix
+        # cell, up to 12.
+        self.assertIn('<td data-label="Request"><span class="token nowrap">LEGAL-2026-00001</span></td>', page)
+        self.assertIn('<td data-label="Request"><span class="token">LEGAL-2026-000001</span></td>', page)
+        self.assertIn('<span class="token">LEGAL-2026-000001,</span> <span class="token">LEGAL-2026-00001</span>', page)
+        # Whether an ID stays whole depends on the ID, not on the comma after it.
+        self.assertEqual(
+            approval_matrix._ids_html(["REQ-2026-001", "REQ-2026-002"]),
+            '<span class="token nowrap">REQ-2026-001,</span> <span class="token nowrap">REQ-2026-002</span>',
+        )
         self.assertEqual(page.count(f'<span class="token">{long_band}</span>'), 3)
         self.assertEqual(page.count(f'<span class="token">{long_id}</span>'), 2)
         style = page[page.index("<style>") : page.index("</style>")]
@@ -480,6 +535,11 @@ class ApprovalMatrixTests(unittest.TestCase):
             self.assertEqual(code, 0, stderr)
             self.assertNotIn("no --input given", stderr)
             self.assertEqual(len(json.loads(stdout)["requests"]), len(renamed))
+
+            out = io.StringIO()
+            with contextlib.redirect_stdout(out), self.assertRaises(SystemExit):
+                cli_main(["approval-matrix", "--help"])
+            self.assertIn("Default: the bundled synthetic requests, or none with --policy.", " ".join(out.getvalue().split()))
 
             # The bundled sample requests are still checked against the default policy.
             code, stdout, stderr = _run(["approval-matrix", "--format", "json"])
