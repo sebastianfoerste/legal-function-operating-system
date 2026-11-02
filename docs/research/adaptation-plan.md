@@ -77,7 +77,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F6 | Audit-chain timeline (H8, part) | 3 | Observed: Temporal UI | M | pass | 4.5 | differentiator | **Built** |
 | F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | **Built** |
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | **Built** |
-| F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | Specced |
+| F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | **Built** |
 | F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | Specced |
 | F11 | Local inbound message adapter, from a synthetic export to `legal-request.v1` drafts | 3 | Claimed: Wordsmith, Checkbox | M | pass (inbound only) | 3 | table stakes | Specced |
 
@@ -466,7 +466,7 @@ playbook position next to each change, and the evidence next to each resolution.
     which elsewhere in the project means pass; and the tests now cover a policy with
     every threshold on its own band, the exact ladder text and every enumerated input.
 
-### F9. Static intake page (specced)
+### F9. Static intake page (built)
 
 - **Plan.**
   - A page generated from `validation.request_schema()` plus a per-`type` question file
@@ -474,6 +474,46 @@ playbook position next to each change, and the evidence next to each resolution.
   - It emits `legal-request.v1` JSON for download only.
   - It needs portal resources keyed by `type` before it can offer deflection.
 - **Risk.** Any new schema field must stay optional (v1 compatibility).
+- **Built.**
+  - `src/legal_function_os/intake_page.py` writes `examples/intake-page.html` from
+    `make demo`, and the `intake-page` command writes it for any policy and question
+    file. The format and its rules are [ADR 0006](../adr/0006-intake-question-files.md).
+  - The request fields, their order and controls come from `request_schema()`; value
+    bands and request types from the policy. The question file
+    (`src/legal_function_os/data/intake_questions.json`) adds only wording, a question set
+    per type, `also_required` and `show_if` conditions, which may name only an answer
+    given above the question. A test places every contract field, so a new one fails the
+    build until it is placed.
+  - The decision fields are always asked, with nothing preselected. Type answers go into
+    `facts`, sorted by key as the pilot's bridge writes them; the commercial-contract
+    questions are the pilot's required facts, and a test reads them from
+    `supervised-agent/src/pilot/models.py`.
+  - The page shows an error summary (D1 pattern), a "Check your answers" step with the
+    exact file, and saves it locally. It has no form and no network code, and a hashed
+    Content-Security-Policy blocks every connection.
+  - Tests: `tests/test_intake_page.py` runs every answer the page accepts (about 10,000
+    per policy) through `validate_requests`, and runs the page's own script in Node on
+    the same answers against the Python reference; `tests/test_intake_page_browser.py`
+    drives the page in Chromium in the CI agent job.
+- **Done differently.**
+  - One question file keyed by type, not one file per type (type keys are free text).
+  - The page numbers nothing: every file is `REQ-DRAFT` and legal renumbers.
+  - No deflection yet; it is specced as F9a.
+  - No submit and no legacy all-in-one flag: the page does not read requests.
+
+### F9a. Deflection by type (specced)
+
+- **Plan.** Offer approved guidance for the chosen request type before the requester
+  saves a file, for example a template or an answered question.
+- **Prerequisites.**
+  - Guidance resources with an approval record, a `source_ref` and an optional `type`
+    key, additive to the knowledge portal's `portal.share.v1`. Today's portal resources
+    are other requests' passages with `approved: True` set in code, so they cannot be
+    shown to a requester (ADR 0003).
+  - The page shows the resources for the chosen type with their source, abstains when
+    there are none, and never blocks, replaces or delays the download.
+- **Risk.** Deflection text without an approval record would be advice the page gives on
+  its own; the portal's rule (cite an approved resource or abstain) applies.
 
 ### F10. Triage verbs (specced)
 
@@ -510,7 +550,7 @@ playbook position next to each change, and the evidence next to each resolution.
 
 | Hypothesis | Verdict | Evidence |
 | --- | --- | --- |
-| H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified**: no branching exists to build on, so it is specced as F9 | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
+| H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file; deflection is specced as F9a | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
 | H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu (Claimed); Plane (Observed) |
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
@@ -544,8 +584,8 @@ playbook position next to each change, and the evidence next to each resolution.
 - ~~Where presence data lives, and whether a view counts as an audit event (F4).~~ Decided in ADR 0005.
 - New pilot states for decline, duplicate and snooze, and their mapping in the shared
   contract (F10).
-- Per-`type` question files: format, location, and how they relate to `request_schema()`
-  (F9).
+- ~~Per-`type` question files: format, location, and how they relate to `request_schema()`
+  (F9).~~ Decided in ADR 0006.
 - Requester-stage vocabulary shared between the pilot and the core `shared_space.py`,
   including German labels (F3).
 

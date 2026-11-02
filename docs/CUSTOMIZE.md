@@ -118,7 +118,7 @@ they will not pass a policy with different ones.
 ## Where a policy applies
 
 `--policy` works with `triage`, `board-pack`, `validate`, `capacity`,
-`control-tower` and `approval-matrix`, and with the original all-in-one flags
+`control-tower`, `approval-matrix` and `intake-page`, and with the original all-in-one flags
 (`legal-function-os --policy policy.json --input requests.json --out reports`), where
 it applies to every output they write. `legal-function-os approval-matrix --policy
 policy.json --out reports` shows who must sign off under your thresholds; without
@@ -128,3 +128,42 @@ Treat the file like code. Keep it under version control, review a change before 
 is applied, and record who approved the thresholds in an `x_` field. A CI job can
 run `legal-function-os validate --policy policy.json --input requests.csv` to stop a
 broken policy or request log before a report is built.
+
+## Your own intake questions
+
+`legal-function-os intake-page --policy policy.json --out reports` writes
+`reports/intake-page.html`: a page a business requester opens in a browser to prepare
+a request. It asks the request fields, offers your value bands and request types, and
+asks a few more questions for the chosen type. It checks the answers, shows the exact
+file, and saves it on the requester's device as a request file that `validate` and
+`triage` read. It sends nothing and decides nothing: the requester gives the file to
+legal. Every file has the id `REQ-DRAFT`, so give each one a register number before you
+combine files; `validate` reports a duplicate id otherwise.
+
+The questions come from
+[`intake_questions.json`](../src/legal_function_os/data/intake_questions.json). Copy it,
+change it and pass it with `--questions questions.json`. Run `legal-function-os
+intake-page --questions questions.json` without `--out` to print the question sheet,
+which is easier to review than the JSON. The format is described in
+[ADR 0006](adr/0006-intake-question-files.md):
+
+- `fields` words the request fields: `label`, `hint` and `error` for each. The decision
+  fields (title, type, value band, the three flags and urgency) are always asked and
+  required. `counterparty`, `requested_by`, `description` and `deadline` are asked when
+  you word them, and `"required": true` makes one required. `value_band` and `urgency`
+  take `options`, a label for each value. `type` needs `not_sure`, the label of the
+  answer that leaves the type out.
+- `types` has one entry per request type of your policy: a `label`, an optional
+  `also_required` list (for example `["counterparty"]` for contracts) and `questions`.
+- A question has a `key` (lower case, digits and `_`), a `label`, a `kind` (`text`,
+  `textarea`, `yes_no` or `choice` with `options`), and optionally `hint`, `error` and
+  `"required": false` (questions are required by default). The answers are saved in
+  `facts` as `"key: value"`.
+- `"show_if": {"field": "non_eea_transfer", "in": [true]}` shows a question only for some
+  answers. It can name a decision field with choices, or a yes/no or choice question
+  earlier in the same type, never a later one.
+
+Every problem in the file is reported with its place, for example
+`types.dpa.questions[1].show_if.field: "sub_processors" is asked later (questions[3])`,
+and nothing is written. A type your policy does not have, or a policy type with no
+questions, is a note. Keys that start with `x_` are ignored.

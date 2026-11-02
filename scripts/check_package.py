@@ -35,6 +35,7 @@ BUILD_INPUTS = ("pyproject.toml", "README.md", "LICENSE", "src")
 SMOKE_RUNS: tuple[tuple[str, ...], ...] = (
     ("legal-function-os", "--version"),
     ("legal-function-os", "--quiet"),
+    ("legal-function-os", "intake-page"),
     ("raas-deal-desk", "--quiet"),
     ("legal-function-os-mcp", "--help"),
 )

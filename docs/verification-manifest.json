@@ -16,6 +16,8 @@
     { "path": "examples/legal-outcome-control-tower.html", "label": "Outcome control tower browser view" },
     { "path": "examples/approval-matrix.md", "label": "Approval matrix by value band and risk" },
     { "path": "examples/approval-matrix.html", "label": "Approval matrix browser view" },
+    { "path": "examples/intake-page.html", "label": "Request intake page (saves a request file; sends nothing)" },
+    { "path": "src/legal_function_os/data/intake_questions.json", "label": "Bundled intake questions per request type" },
     { "path": "examples/raas-deal-pack.md", "label": "Industrial RaaS deal decision pack" },
     { "path": "examples/raas-deal-desk.svg", "label": "Deal decision cockpit" },
     { "path": "examples/raas-deal-room.html", "label": "RaaS reviewer deal room" },

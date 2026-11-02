@@ -4,6 +4,7 @@
     legal-function-os triage --input requests.csv
     legal-function-os board-pack --input requests.json --out reports
     legal-function-os validate --input requests.csv --format json
+    legal-function-os intake-page --out reports  writes a page that saves a request file
     legal-function-os dpa-review --input agreements.json
     legal-function-os capacity --input requests.json --scenarios scenarios.json
     legal-function-os control-tower --input requests.json --events events.json --config config.json
@@ -49,6 +50,13 @@ from legal_function_os.contract_intelligence import (
     render_dpa_markdown,
 )
 from legal_function_os.intake import InputError, load_requests
+from legal_function_os.intake_page import (
+    IntakeQuestionsError,
+    build_intake_form,
+    load_intake_questions,
+    render_intake_markdown,
+    write_intake_page,
+)
 from legal_function_os.outcome_control_tower import (
     build_outcome_control_tower,
     render_outcome_markdown,
@@ -202,6 +210,26 @@ def _board_pack(args: argparse.Namespace) -> int:
         _emit(payload if args.format == "json" else markdown)
     if args.fail_on_breach and pack.totals["sla_breaches"] > 0:
         return 1
+    return 0
+
+
+def _intake_page(args: argparse.Namespace) -> int:
+    policy = _load_policy(args.policy)
+    try:
+        questions, source = load_intake_questions(args.questions)
+        form = build_intake_form(questions, policy, source)
+    except IntakeQuestionsError as exc:
+        for problem in exc.problems:
+            print(f"error: {exc.source}: {problem}", file=sys.stderr)
+        print("The intake questions cannot be used. Nothing was written.", file=sys.stderr)
+        raise _Failure(2) from None
+    for note in form["notes"]:
+        print(f"note: {note}", file=sys.stderr)
+    if args.out:
+        for path in write_intake_page(form, Path(args.out)).values():
+            print(f"wrote {path}", file=sys.stderr)
+    else:
+        _emit(_json(form) if args.format == "json" else render_intake_markdown(form))
     return 0
 
 
@@ -375,6 +403,10 @@ COMMANDS: dict[str, tuple[str, Handler]] = {
         "Check requests against the request format without deciding anything.",
         _validate,
     ),
+    "intake-page": (
+        "Write a page that helps a requester prepare a request file; it sends and decides nothing.",
+        _intake_page,
+    ),
     "dpa-review": (
         "Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses.",
         _dpa_review,
@@ -463,6 +495,15 @@ def command_parser() -> argparse.ArgumentParser:
     validate = parsers["validate"]
     _add_input(validate)
     _add_format(validate, out=None)
+
+    intake = parsers["intake-page"]
+    intake.add_argument("--policy", metavar="PATH", help=POLICY_HELP)
+    intake.add_argument(
+        "--questions",
+        metavar="PATH",
+        help="Intake questions JSON (see docs/CUSTOMIZE.md). Default: the bundled synthetic questions.",
+    )
+    _add_format(intake, out="intake-page.html")
 
     dpa = parsers["dpa-review"]
     dpa.add_argument(

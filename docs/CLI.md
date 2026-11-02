@@ -5,7 +5,7 @@ JSON and write files locally. They make no network or model calls.
 
 | Command | What it does |
 | --- | --- |
-| `legal-function-os` | Request triage, board pack, DPA review, capacity, control tower, approval matrix and policy interview |
+| `legal-function-os` | Request triage, board pack, DPA review, capacity, control tower, approval matrix, intake page and policy interview |
 | `raas-deal-desk` | The industrial RaaS deal decision pack |
 | `legal-function-os-mcp` | The same rules as a local stdio MCP server (optional `mcp` extra) |
 
@@ -29,6 +29,7 @@ Without `--input`, the bundled synthetic requests are used.
 | `triage` | Risk, priority, queue, SLA, approval chain and external counsel per request, with the reasons | `--id ID` (repeatable) shows only those requests |
 | `board-pack` | Roll the decisions up into a board operations pack | `--period LABEL`, `--out DIR`, `--fail-on-breach` |
 | `validate` | Check requests against the request contract without deciding anything | none |
+| `intake-page` | Write a page that helps a requester prepare a request file and saves it on their device; it sends and decides nothing ([ADR 0006](adr/0006-intake-question-files.md)) | `--questions PATH` (default: the bundled questions), `--out DIR` (writes `intake-page.html`); no `--input`. Without `--out` it prints the question sheet, or the resolved form with `--format json` |
 | `dpa-review` | Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses | `--out DIR`; `--input` takes agreements, not requests; no `--policy` |
 | `capacity` | Compare capacity scenarios and name the binding constraint | `--scenarios PATH` (required with `--input`), `--out DIR` |
 | `control-tower` | Business-time SLAs, waiting time and value from a service-event ledger | `--events PATH` and `--config PATH` (both required with `--input`), `--out DIR` |
@@ -43,6 +44,7 @@ legal-function-os validate --input requests.csv --format json
 legal-function-os board-pack --input requests.json --out reports --fail-on-breach
 legal-function-os init --defaults --out policy.json
 legal-function-os approval-matrix --policy policy.json --out reports
+legal-function-os intake-page --policy policy.json --questions questions.json --out reports
 legal-function-os triage --policy policy.json --input requests.csv --id REQ-1001
 ```
 

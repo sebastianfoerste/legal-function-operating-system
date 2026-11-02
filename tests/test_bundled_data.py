@@ -17,6 +17,7 @@ BUNDLED = (
     "raas_deal.json",
     "dpa_documents.json",
     "default_policy.json",
+    "intake_questions.json",
 )
 
 
