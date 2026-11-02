@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from dataclasses import replace
 from html.parser import HTMLParser
 from itertools import product
 from pathlib import Path
@@ -78,6 +79,12 @@ TEXTS = (
     "\U0001f600",
     "\x00",
     "\xa0x\xa0",
+    "a\udfffb",
+    "x\ud800",
+    "a\ud800\ue000",
+    "a" * 49 + " b" + "c" * 20,
+    "A" * 60,
+    "\u00dcber " * 20,
 )
 # Radio values the page never writes; each must count as no answer.
 BAD_INDEXES = ("-1", "01", "99", "1.0", " 0", "0 ", "true")
@@ -86,6 +93,17 @@ BAD_INDEXES = ("-1", "01", "99", "1.0", " 0", "0 ", "true")
 def bundled() -> dict[str, Any]:
     questions, _ = load_intake_questions()
     return copy.deepcopy(questions)
+
+
+def keys_questions() -> dict[str, Any]:
+    """The bundled questions plus two keys where sorting the text and sorting the key differ."""
+
+    questions = bundled()
+    questions["types"]["dpa"]["questions"] += [
+        {"key": "item1", "label": "Item one", "kind": "text", "required": False},
+        {"key": "item", "label": "Item", "kind": "text", "required": False},
+    ]
+    return questions
 
 
 def form_for(questions: dict[str, Any] | None = None, policy: Any = None) -> dict[str, Any]:
@@ -398,6 +416,23 @@ class QuestionFileTests(unittest.TestCase):
                 lambda qs: qs[4].update(show_if={"field": 3, "in": [True]}),
                 f"{where}[4].show_if.field: expected the name of an earlier answer, got a number",
             ),
+            "another type's question": (
+                lambda qs: qs[1].update(show_if={"field": "security_review_done", "in": [True]}),
+                f'{where}[1].show_if.field: "security_review_done" is not asked before this question',
+            ),
+            "a number for a yes or no": (
+                lambda qs: qs[4].update(show_if={"field": "sub_processors", "in": [1]}),
+                f"{where}[4].show_if.in[0]: 1 is not an answer to 'sub_processors'; use one of true, false",
+            ),
+            # The controller's own problem is reported once, not again at what depends on it.
+            "a controller with a wrong kind": (
+                lambda qs: qs[3].update(kind="yesno"),
+                f"{where}[3].kind: expected one of text, textarea, yes_no, choice, got 'yesno'",
+            ),
+            "a controller with one option": (
+                lambda qs: qs[0].update(options=["Only"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Only"]}),
+                f"{where}[0].options: expected a list of 2 to 20 answers, got a list",
+            ),
         }
         for name, (change, message) in cases.items():
             with self.subTest(name):
@@ -450,6 +485,10 @@ class QuestionFileTests(unittest.TestCase):
             ),
             "no kind": ({}, ("kind",), [f"{where}.kind: missing"]),
             "one option": ({"options": ["Only"]}, (), [f"{where}.options: expected a list of 2 to 20 answers, got a list"]),
+            "21 options": (
+                {"options": [f"Answer {n}" for n in range(21)]}, (),
+                [f"{where}.options: expected a list of 2 to 20 answers, got a list"],
+            ),
             "a blank option": ({"options": ["A", " "]}, (), [f"{where}.options[1]: expected non-empty text, got text"]),
             "an option with spaces": ({"options": ["A", " B"]}, (), [f"{where}.options[1]: has spaces at the start or end"]),
             "an option twice": ({"options": ["A", "A"]}, (), [f"{where}.options[1]: 'A' is listed twice"]),
@@ -512,6 +551,18 @@ class QuestionFileTests(unittest.TestCase):
             ),
             "type without a not-sure label": (lambda f: f["type"].pop("not_sure"), ["fields.type.not_sure: missing"]),
             "a field that is not an object": (lambda f: f.update(title="Title"), ["fields.title: expected an object, got text"]),
+            "two bands with one label": (
+                lambda f: f["value_band"]["options"].update({"250k-1m": "Over EUR 1 million"}),
+                ["fields.value_band: 'Over EUR 1 million' labels both '250k-1m' and '>1m'; give each answer its own label"],
+            ),
+            "two urgencies with one label": (
+                lambda f: f["urgency"]["options"].update(low="Within a few days"),
+                ["fields.urgency: 'Within a few days' labels both 'high' and 'low'; give each answer its own label"],
+            ),
+            "not sure labelled like a type": (
+                lambda f: f["type"].update(not_sure="A dispute or claim"),
+                ["fields.type: 'A dispute or claim' labels both 'dispute' and None; give each answer its own label"],
+            ),
         }
         for name, (edit, expected) in cases.items():
             with self.subTest(name):
@@ -535,6 +586,8 @@ class QuestionFileTests(unittest.TestCase):
         questions = bundled()
         questions["fields"]["x_note"] = {"anything": True}
         questions["types"]["_draft"] = {"label": "Not yet"}
+        questions["fields"]["urgency"]["options"]["x_note"] = "labels reviewed in October"
+        questions["fields"]["value_band"]["options"]["_comment"] = "kept for reviewers"
         del questions["fields"]["value_band"]["options"]
         form = form_for(questions)
         band = next(f for f in form["fields"] if f["name"] == "value_band")
@@ -608,7 +661,31 @@ class QuestionFileTests(unittest.TestCase):
             + [f"fields.{name}: missing; the page always asks it" for name in ()],
         )
         self.assertEqual(problems({"schema": QUESTIONS_SCHEMA}), ["name: missing", "fields: missing", "types: missing"])
+        # null is a wrong type, not a missing key: a page with no fields or no types is refused.
+        questions = bundled()
+        questions["fields"] = None
+        questions["types"] = None
+        self.assertEqual(problems(questions), ["fields: expected an object, got null", "types: expected an object, got null"])
 
+    def test_policy_text_the_page_carries_is_checked(self) -> None:
+        policy = default_policy()
+        cases = {
+            "a link in the name": (
+                {"name": "ACME policy, see https://wiki.example"},
+                ["policy name 'ACME policy, see https://wiki.example': must not contain a link (http:// or https://); the page is self-contained"],
+            ),
+            "a surrogate in a type": (
+                {"routing": {**policy.routing, "x\ud800": "General"}},
+                ["policy request type 'x\\ud800': contains an unpaired surrogate; the page could not save it"],
+            ),
+            "a link in a band": (
+                {"value_bands": (*policy.value_bands, "see http://x")},
+                ["policy value band 'see http://x': must not contain a link (http:// or https://); the page is self-contained"],
+            ),
+        }
+        for name, (change, expected) in cases.items():
+            with self.subTest(name):
+                self.assertEqual(problems(bundled(), replace(policy, **change)), expected)
     def test_unreadable_files_are_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             bad = Path(tmp) / "questions.json"
@@ -713,6 +790,24 @@ class AnswerTests(unittest.TestCase):
         request = request_from_answers(self.form, answers)
         self.assertEqual(request["title"], "a\ufffdb")
         render_download(request).encode("utf-8")  # the file is always valid UTF-8
+
+    def test_facts_are_sorted_by_key_like_the_bridge(self) -> None:
+        form = form_for(keys_questions())
+        answers = complete(form, "dpa")
+        answers["questions"].update(item="x", item1="y")
+        facts = request_from_answers(form, answers)["facts"]
+        # Text order would put "item1: y" first, because a digit sorts before ":".
+        self.assertLess(facts.index("item: x"), facts.index("item1: y"))
+        given = {f.split(": ", 1)[0]: f.split(": ", 1)[1] for f in facts}
+        self.assertEqual(facts, [f"{key}: {value}" for key, value in sorted(given.items()) if value])
+
+    def test_question_keys_and_hints_at_their_limits(self) -> None:
+        questions = bundled()
+        questions["types"]["dpa"]["questions"][1]["key"] = "a" * 40
+        questions["types"]["dpa"]["hint"] = "Have the agreement at hand."
+        form = form_for(questions)
+        self.assertEqual(form["types"][2]["questions"][1]["name"], "a" * 40)
+        self.assertIn('<p class="hint">Have the agreement at hand.</p>', render_intake_html(form))
 
     def test_the_facts_match_the_pilot_bridge(self) -> None:
         tree = ast.parse(PILOT_MODELS.read_text(encoding="utf-8"))
@@ -824,6 +919,19 @@ class PageTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             render_intake_html({**self.form, "policy": "Policy at HTTPS://example.org"})
 
+    def test_a_slot_name_in_the_text_stays_text(self) -> None:
+        questions = bundled()
+        questions["fields"]["title"]["hint"] = "Not __SCRIPT__ or __SPEC__ or __TYPES__"
+        questions["name"] = "Questions __POLICY__"
+        form = form_for(questions)
+        page = render_intake_html(form)
+        parsed = parse(page)
+        data = next(s for a, s in parsed.scripts if a.get("type") == "application/json")
+        self.assertEqual(json.loads(data), form)
+        self.assertEqual([s for a, s in parsed.scripts if not a], [page_script()])
+        self.assertIn("Not __SCRIPT__ or __SPEC__ or __TYPES__", "".join(parsed.text))
+        self.assertIn("Questions: Questions __POLICY__.", " ".join(" ".join(parsed.text).split()))
+
     def test_text_cannot_break_out_of_the_page(self) -> None:
         questions = bundled()
         questions["fields"]["title"]["label"] = "Title </script><b>bold</b> & \u2028 \"quoted\""
@@ -867,6 +975,14 @@ class PageTests(unittest.TestCase):
         self.assertEqual(hidden, conditional)
         self.assertIn("@media (max-width:640px)", self.parsed.style)
         self.assertIn("[hidden] { display:none !important; }", self.parsed.style)
+        # Each hint is linked to its control, and each error starts hidden.
+        attrs = {a["id"]: a for _, a in self.parsed.elements if a.get("id")}
+        items = [*self.form["fields"], *(q for t in self.form["types"] for q in t["questions"])]
+        for item in items:
+            expected = f"{item['id']}-hint" if item["hint"] else None
+            self.assertEqual(attrs[item["id"]].get("aria-describedby"), expected, item["id"])
+            self.assertIn("hidden", attrs[f"{item['id']}-error"])
+            self.assertIn(f"{item['id']}-error-text", attrs)
 
     def test_the_words_never_claim_to_send_or_decide(self) -> None:
         text = " ".join(" ".join(self.parsed.text).split())
@@ -898,6 +1014,11 @@ class PageTests(unittest.TestCase):
     def test_the_question_sheet_says_what_the_page_asks(self) -> None:
         sheet = render_intake_markdown(self.form)
         self.assertIn("- **Short title** (`title`), required.", sheet)
+        self.assertIn(
+            "- **Value of the contract or claim** (`value_band`), required. Choices: No money involved; "
+            "Under EUR 50,000; EUR 50,000 to EUR 250,000; EUR 250,000 to EUR 1 million; Over EUR 1 million.",
+            sheet,
+        )
         self.assertIn("- **Other party** (`counterparty`), optional.", sheet)
         self.assertIn("## Data processing agreement (DPA) (`dpa`)", sheet)
         self.assertIn("Also required for this type: Other party.", sheet)
@@ -950,6 +1071,18 @@ class CliTests(unittest.TestCase):
             self.assertEqual(code, 2)
             self.assertIn("cannot read the file", err)
 
+    def test_policy_text_with_a_link_stops_before_anything_is_written(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "policy.json"
+            data = default_policy().to_dict()
+            data["name"] = "ACME policy, see https://wiki.example"
+            path.write_text(json.dumps(data), encoding="utf-8")
+            out_dir = Path(tmp) / "out"
+            code, out, err = run_cli(["intake-page", "--policy", str(path), "--out", str(out_dir)])
+            self.assertEqual((code, out), (2, ""))
+            self.assertIn("policy name 'ACME policy, see https://wiki.example': must not contain a link", err)
+            self.assertFalse(out_dir.exists())
+
     def test_a_policy_sets_the_bands_and_types(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             path = Path(tmp) / "policy.json"
@@ -967,13 +1100,13 @@ class ScriptTests(unittest.TestCase):
     HARNESS = r"""
 const fs = require("fs");
 const vm = require("vm");
-const [scriptPath, formPath, vectorsPath, outPath] = process.argv.slice(2);
+const [scriptPath, formPath, vectorsPath, outPath, names] = process.argv.slice(2);
 const context = {};
 vm.createContext(context);
 vm.runInContext(fs.readFileSync(scriptPath, "utf8"), context);
 if (typeof context.intakeCore !== "function") { process.exit(4); }
 const results = {};
-for (const name of ["form", "custom"]) {
+for (const name of names.split(",")) {
   const core = context.intakeCore(JSON.parse(fs.readFileSync(formPath + "." + name, "utf8")));
   results[name] = JSON.parse(fs.readFileSync(vectorsPath + "." + name, "utf8")).map((a) => ({
     download: core.download(a), check: core.check(a), name: core.name(a), rows: core.rows(a),
@@ -994,7 +1127,7 @@ fs.writeFileSync(outPath, JSON.stringify(results));
             self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_the_script_saves_what_this_module_saves(self) -> None:
-        forms = {"form": form_for(), "custom": form_for(policy=custom_policy())}
+        forms = {"form": form_for(), "custom": form_for(policy=custom_policy()), "keys": form_for(keys_questions())}
         with tempfile.TemporaryDirectory() as tmp:
             base = Path(tmp)
             (base / "page.js").write_text(page_script(), encoding="utf-8")
@@ -1006,7 +1139,7 @@ fs.writeFileSync(outPath, JSON.stringify(results));
                 (base / f"vectors.json.{name}").write_text(json.dumps(vectors[name]), encoding="utf-8")
             result = subprocess.run(
                 ["node", str(base / "harness.cjs"), str(base / "page.js"), str(base / "form.json"),
-                 str(base / "vectors.json"), str(base / "out.json")],
+                 str(base / "vectors.json"), str(base / "out.json"), ",".join(forms)],
                 capture_output=True, text=True,
             )
             self.assertEqual(result.returncode, 0, result.stderr)

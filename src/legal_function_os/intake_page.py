@@ -6,9 +6,9 @@ request type from a question file (``data/intake_questions.json`` by default). I
 checks the answers, shows the exact file, and saves it on the requester's device as
 ``legal-request.v1`` JSON, which ``legal-function-os validate`` and ``triage`` read.
 
-Nothing is sent. The page has no form and no network code, and its
-Content-Security-Policy blocks every connection, so a local download is its only
-output. It decides nothing: no risk, priority, queue or approval chain is shown, and a
+Nothing is sent. The page has no form and no network or navigation code, and its
+Content-Security-Policy blocks every fetch, form post, frame and resource load and any
+injected script, so a local download is its only output. It decides nothing: no risk, priority, queue or approval chain is shown, and a
 person in legal reviews every file. A question may depend only on an answer given
 above it (forward-only conditions), which ``build_intake_form`` checks when the page is
 built, so a requester never has to go back up the page.
@@ -80,6 +80,9 @@ _SURROGATE = re.compile("[\ud800-\udfff]")
 _SLUG = re.compile("[^A-Za-z0-9]+")
 
 _TOP_KEYS = ("schema", "name", "description", "fields", "types")
+# A key that is not in the file at all, which check.obj already reports as missing; a
+# key that is there with the value null is a wrong type like any other.
+_ABSENT = object()
 _FIELD_KEYS = ("label", "hint", "error")
 _TYPE_KEYS = ("label", "hint", "also_required", "questions")
 _QUESTION_KEYS = ("key", "label", "hint", "error", "kind", "options", "required", "show_if")
@@ -212,7 +215,7 @@ def _default_error(label: str, control: str) -> str:
 
 def _field_entries(check: _Check, raw: Any, properties: dict[str, Any]) -> dict[str, dict]:
     if not isinstance(raw, dict):
-        if raw is not None:
+        if raw is not _ABSENT:
             check.problem("fields", f"expected an object, got {_kind(raw)}")
         return {}
     askable = (*ALWAYS_ASKED, *OPTIONAL_FIELDS)
@@ -253,6 +256,8 @@ def _option_labels(
     labels = {}
     for value in raw:
         if value not in values:
+            if str(value).startswith(EXTENSION_PREFIXES):
+                continue
             if exact:
                 check.problem(
                     _join(place, str(value)),
@@ -320,7 +325,7 @@ def _condition(
     key: str,
     questions: list[Any],
     index: int,
-    domains: dict[str, list[Any]],
+    domains: dict[str, list[Any] | None],
     fields: dict[str, dict],
 ) -> dict[str, Any] | None:
     cond = check.obj(raw, where, ("field", "in"), ("field", "in"))
@@ -353,6 +358,8 @@ def _condition(
         check.problem(place, f"expected a non-empty list of answers, got {_kind(values)}")
         return None
     domain = domains[name]
+    if domain is None:
+        return None
     kept: list[Any] = []
     for i, value in enumerate(values):
         if any(value is v or (type(value) is type(v) and value == v) for v in kept):
@@ -376,7 +383,7 @@ def _question(
     questions: list[Any],
     index: int,
     seen: set[str],
-    domains: dict[str, list[Any]],
+    domains: dict[str, list[Any] | None],
     fields: dict[str, dict],
     properties: dict[str, Any],
 ) -> dict[str, Any] | None:
@@ -434,8 +441,13 @@ def _question(
     # A later question can depend on this one only if its answers are a closed set. The
     # set is known even when this question has another problem, so that problem is
     # reported once, not again at every question that depends on it.
-    if key and key not in domains and options:
-        domains[key] = [o["value"] for o in options]
+    if key and key not in domains and kind not in ("text", "textarea"):
+        complete = kind == "yes_no" or (
+            kind == "choice" and isinstance(entry.get("options"), list) and len(options) == len(entry["options"])
+        )
+        # None: a question with choices whose own kind or options are wrong. A condition
+        # naming it adds no second problem; the build fails at the question itself.
+        domains[key] = [o["value"] for o in options] if complete and options else None
     cond = None
     if "show_if" in entry:
         cond = _condition(check, entry["show_if"], _join(where, "show_if"), str(key), questions, index, domains, fields)
@@ -465,11 +477,11 @@ def _types(
     check: _Check, raw: Any, policy: Policy, fields: list[dict[str, Any]], properties: dict[str, Any]
 ) -> list[dict[str, Any]]:
     if not isinstance(raw, dict):
-        if raw is not None:
+        if raw is not _ABSENT:
             check.problem("types", f"expected an object, got {_kind(raw)}")
         return []
     by_name = {f["name"]: f for f in fields}
-    base_domains: dict[str, list[Any]] = {
+    base_domains: dict[str, list[Any] | None] = {
         f["name"]: [o["value"] for o in f["options"]] for f in fields if f["name"] in CONTROLLERS
     }
     resolved: dict[str, dict[str, Any]] = {}
@@ -536,6 +548,22 @@ def _types(
     return types
 
 
+def _check_policy(check: _Check, policy: Policy) -> None:
+    """The policy text the page shows or saves: its name, value bands and request types.
+    parse_policy accepts any text there, but the page carries no link, and a file with
+    an unpaired surrogate could not be saved."""
+
+    named = [("policy name", policy.name)]
+    named += [("policy value band", band) for band in policy.value_bands]
+    named += [("policy request type", key) for key in policy.routing]
+    for what, value in named:
+        place = f"{what} {ascii(value)}"
+        if _SURROGATE.search(value):
+            check.problem(place, "contains an unpaired surrogate; the page could not save it")
+        elif "http://" in value.lower() or "https://" in value.lower():
+            check.problem(place, "must not contain a link (http:// or https://); the page is self-contained")
+
+
 def build_intake_form(
     questions: Any, policy: Policy | None = None, source: str = BUNDLED_SOURCE
 ) -> dict[str, Any]:
@@ -549,13 +577,25 @@ def build_intake_form(
     if "schema" in top and top["schema"] != QUESTIONS_SCHEMA:
         check.problem("schema", f"expected {QUESTIONS_SCHEMA!r}, got {top['schema']!r}")
     name = check.text(top, "name", "")
-    entries = _field_entries(check, top.get("fields"), properties)
+    _check_policy(check, rules)
+    entries = _field_entries(check, top.get("fields", _ABSENT), properties)
     fields = _fields(check, entries, properties, rules)
-    types = _types(check, top.get("types"), rules, fields, properties)
+    types = _types(check, top.get("types", _ABSENT), rules, fields, properties)
     for item in fields:
         if item["name"] == "type":
             item["options"] = [{"label": t["label"], "value": t["key"]} for t in types]
             item["options"].append({"label": item.pop("not_sure"), "value": None})
+    # Two answers with one label would look alike on the page and in the review.
+    for item in fields:
+        seen: dict[str, Any] = {}
+        for option in item.get("options", []):
+            label = option["label"]
+            if label and label in seen:
+                check.problem(
+                    _join("fields", item["name"]),
+                    f"{label!r} labels both {seen[label]!r} and {option['value']!r}; give each answer its own label",
+                )
+            seen.setdefault(label, option["value"])
     if check.problems:
         raise IntakeQuestionsError(source, check.problems)
     return {
@@ -658,17 +698,17 @@ def request_from_answers(form: dict[str, Any], answers: dict[str, Any]) -> dict[
 
     An answer that is not given is left out, never null or "". The answers to the
     type questions become ``facts`` as "key: value", sorted by key as the pilot's
-    bridge writes them.
+    bridge writes them (``sorted(intake.facts.items())``).
     """
 
     state = evaluate(form, answers)
     values = state["values"]
-    facts = []
+    pairs = []
     if state["type"] is not None:
         for question, shown in zip(form["types"][state["type"]]["questions"], state["visible"], strict=True):
             if shown and question["name"] in values:
-                facts.append(f"{question['name']}: {_fact_text(question, values[question['name']])}")
-    facts.sort()
+                pairs.append((question["name"], _fact_text(question, values[question["name"]])))
+    facts = [f"{key}: {text}" for key, text in sorted(pairs)]
     fields = {item["name"] for item in form["fields"]}
     request: dict[str, Any] = {}
     for name in form["order"]:
@@ -894,17 +934,19 @@ def render_intake_html(form: dict[str, Any]) -> str:
         f"default-src 'none'; script-src '{_sha256(script)}'; style-src '{_sha256(style)}'; "
         "img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'"
     )
-    page = (
-        _PAGE.replace("__CSP__", csp)
-        .replace("__STYLE__", style)
-        .replace("__FIELDS__", "".join(_field_html(item) for item in form["fields"]))
-        .replace("__TYPES__", "".join(_type_html(t) for t in form["types"]))
-        .replace("__DRAFT__", _esc(form["draft_id"]))
-        .replace("__POLICY__", _esc(form["policy"]))
-        .replace("__QUESTIONS__", _esc(form["questions"]))
-        .replace("__SPEC__", _spec_json(form))
-        .replace("__SCRIPT__", script)
-    )
+    slots = {
+        "CSP": csp,
+        "STYLE": style,
+        "FIELDS": "".join(_field_html(item) for item in form["fields"]),
+        "TYPES": "".join(_type_html(t) for t in form["types"]),
+        "DRAFT": _esc(form["draft_id"]),
+        "POLICY": _esc(form["policy"]),
+        "QUESTIONS": _esc(form["questions"]),
+        "SPEC": _spec_json(form),
+        "SCRIPT": script,
+    }
+    # One pass, so text inserted into one slot is never read as another slot's name.
+    page = re.sub(r"__([A-Z]+)__", lambda m: slots[m.group(1)], _PAGE)
     lowered = page.lower()
     if "http://" in lowered or "https://" in lowered:
         raise ValueError("the intake page would load or link something from the network")
@@ -912,9 +954,11 @@ def render_intake_html(form: dict[str, Any]) -> str:
 
 
 def write_intake_page(form: dict[str, Any], output_dir: Path) -> dict[str, Path]:
+    # Rendered and encoded first, so a page that cannot be built leaves nothing behind.
+    data = render_intake_html(form).encode("utf-8")
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / PAGE_FILE
-    path.write_text(render_intake_html(form), encoding="utf-8")
+    path.write_bytes(data)
     return {"html": path}
 
 
@@ -957,7 +1001,7 @@ dl.review { margin:0; }
 pre.file { margin:0; padding:12px; background:var(--panel); border:1px solid var(--line); border-radius:6px; font:13px/1.45 var(--font-mono); white-space:pre-wrap; overflow-wrap:anywhere; }
 .actions { margin-top:20px; }
 .actions p { margin:8px 0 0; }
-.status { margin:16px 0; font-weight:700; }
+.status { margin:16px 0; font-weight:700; overflow-wrap:anywhere; }
 .visually-hidden { position:absolute !important; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 footer { margin-top:28px; font-size:14px; }
 @media (max-width:640px) {
@@ -1015,7 +1059,14 @@ __TYPES__
 _SCRIPT = r"""(function () {
   "use strict";
   var WS = "__WS__";
-  var EDGES = new RegExp("^[" + WS + "]+|[" + WS + "]+$", "g");
+  var SPACE = {}, w;
+  for (w = 0; w < WS.length; w++) SPACE[WS.charAt(w)] = true;
+  function trim(text) {
+    var start = 0, end = text.length;
+    while (start < end && SPACE[text.charAt(start)] === true) start++;
+    while (end > start && SPACE[text.charAt(end - 1)] === true) end--;
+    return text.slice(start, end);
+  }
 
   function wellFormed(text) {
     var out = "", i, c, d;
@@ -1033,7 +1084,7 @@ _SCRIPT = r"""(function () {
     }
     return out;
   }
-  function clean(value) { return wellFormed(typeof value === "string" ? value : "").replace(EDGES, ""); }
+  function clean(value) { return trim(wellFormed(typeof value === "string" ? value : "")); }
   function has(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
   function listed(list, value) {
     for (var i = 0; i < list.length; i++) if (list[i] === value) return true;
@@ -1102,17 +1153,18 @@ _SCRIPT = r"""(function () {
       return problems;
     }
     function build(answers) {
-      var state = evaluate(answers), out = {}, facts = [], names = {}, i;
+      var state = evaluate(answers), out = {}, pairs = [], facts = [], names = {}, i;
       if (state.type !== null) {
         var qs = form.types[state.type].questions;
         for (i = 0; i < qs.length; i++) {
           if (state.visible[i] && has(state.values, qs[i].name)) {
             var v = state.values[qs[i].name];
-            facts.push(qs[i].name + ": " + (qs[i].kind === "yes_no" ? (v ? "yes" : "no") : String(v)));
+            pairs.push([qs[i].name, qs[i].kind === "yes_no" ? (v ? "yes" : "no") : String(v)]);
           }
         }
       }
-      facts.sort();
+      pairs.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+      for (i = 0; i < pairs.length; i++) facts.push(pairs[i][0] + ": " + pairs[i][1]);
       for (i = 0; i < form.fields.length; i++) names[form.fields[i].name] = true;
       for (i = 0; i < form.order.length; i++) {
         var name = form.order[i];
@@ -1160,7 +1212,7 @@ _SCRIPT = r"""(function () {
 
   var form = JSON.parse(document.getElementById("intake-spec").textContent);
   var app = core(form);
-  var items = {}, described = {}, baseTitle = document.title, chosenType = null, reviewed = null, objectUrl = null, errored = [];
+  var items = {}, described = {}, place = {}, summaryItems = {}, baseTitle = document.title, announced = null, reviewed = null, objectUrl = null, errored = [];
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, text) {
     var node = document.createElement(tag);
@@ -1178,9 +1230,21 @@ _SCRIPT = r"""(function () {
   var i, j;
   for (i = 0; i < form.fields.length; i++) remember(form.fields[i]);
   for (i = 0; i < form.types.length; i++) {
-    for (j = 0; j < form.types[i].questions.length; j++) remember(form.types[i].questions[j]);
+    for (j = 0; j < form.types[i].questions.length; j++) {
+      remember(form.types[i].questions[j]);
+      place[form.types[i].questions[j].id] = [i, j];
+    }
   }
-  function target(id) { return items[id].control === "radio" ? id + "-0" : id; }
+  // A radio group is reached at its chosen answer, or at its first one.
+  function target(id) {
+    var item = items[id];
+    if (item.control !== "radio") return id;
+    for (var n = 0; n < item.options.length; n++) {
+      var radio = $(id + "-" + n);
+      if (radio && radio.checked) return id + "-" + n;
+    }
+    return id + "-0";
+  }
   function focus(id) { var node = $(target(id)); if (node) node.focus(); }
   function read(item) {
     if (item.control === "radio") {
@@ -1214,36 +1278,58 @@ _SCRIPT = r"""(function () {
       var mark = $(form.fields[n].id + "-optional");
       if (mark) mark.hidden = req[form.fields[n].name];
     }
-    if (state.type !== chosenType) {
-      chosenType = state.type;
-      if (state.type !== null) {
-        var count = 0;
-        for (n = 0; n < state.visible.length; n++) if (state.visible[n]) count++;
-        var label = form.types[state.type].label;
-        say(count ? count + (count === 1 ? " more question" : " more questions") + " for " + label + " appear after the questions about the request." : "No further questions for " + label + ".");
-      }
-    }
+    dropHiddenErrors(state);
     if (reviewed !== null && app.download(a) !== reviewed) {
       $("review").hidden = true;
       reviewed = null;
       say("You changed an answer. Check your answers again before you save the file.");
     }
   }
+  // Said once the requester leaves the type question, not at every arrow key in it.
+  function announceType() {
+    var state = app.evaluate(answers()), n, count = 0;
+    if (state.type === announced) return;
+    announced = state.type;
+    if (state.type === null) { say("No further questions for this answer."); return; }
+    for (n = 0; n < state.visible.length; n++) if (state.visible[n]) count++;
+    var label = form.types[state.type].label;
+    say(count === 0 ? "No further questions for " + label + "." :
+      count + (count === 1 ? " more question for " + label + " appears" : " more questions for " + label + " appear") +
+      " after the questions about the request.");
+  }
+  function unmark(id) {
+    $(id + "-error").hidden = true;
+    $(id + "-error-text").textContent = "";
+    $(id + "-field").classList.remove("has-error");
+    if (described[id]) $(id).setAttribute("aria-describedby", described[id]);
+    else $(id).removeAttribute("aria-describedby");
+    if (items[id].control !== "radio") $(id).removeAttribute("aria-invalid");
+  }
   function clearErrors() {
-    for (var n = 0; n < errored.length; n++) {
-      var id = errored[n];
-      $(id + "-error").hidden = true;
-      $(id + "-error-text").textContent = "";
-      $(id + "-field").classList.remove("has-error");
-      if (described[id]) $(id).setAttribute("aria-describedby", described[id]);
-      else $(id).removeAttribute("aria-describedby");
-      if (items[id].control !== "radio") $(id).removeAttribute("aria-invalid");
-    }
+    for (var n = 0; n < errored.length; n++) unmark(errored[n]);
     errored = [];
+    summaryItems = {};
     var summary = $("error-summary");
     summary.hidden = true;
     clear(summary);
     document.title = baseTitle;
+  }
+  // A question hidden since the last check is no longer asked for.
+  function dropHiddenErrors(state) {
+    var kept = [], n;
+    for (n = 0; n < errored.length; n++) {
+      var id = errored[n], at = place[id];
+      if (at && (at[0] !== state.type || !state.visible[at[1]])) {
+        unmark(id);
+        summaryItems[id].parentNode.removeChild(summaryItems[id]);
+        delete summaryItems[id];
+      } else {
+        kept.push(id);
+      }
+    }
+    if (kept.length === errored.length) return;
+    errored = kept;
+    if (!errored.length) clearErrors();
   }
   function showErrors(problems) {
     var summary = $("error-summary"), list = el("ul", {}), n;
@@ -1255,6 +1341,7 @@ _SCRIPT = r"""(function () {
       var li = el("li", {});
       li.appendChild(link);
       list.appendChild(li);
+      summaryItems[p.id] = li;
       $(p.id + "-error-text").textContent = p.message;
       $(p.id + "-error").hidden = false;
       $(p.id + "-field").classList.add("has-error");
@@ -1290,7 +1377,14 @@ _SCRIPT = r"""(function () {
   }
   $("questions").addEventListener("input", sync);
   $("questions").addEventListener("change", sync);
+  $("f-type").addEventListener("focusout", function (e) {
+    if (!e.relatedTarget || !$("f-type").contains(e.relatedTarget)) announceType();
+  });
+  // Going back to the page restores its answers without an input event.
+  window.addEventListener("pageshow", sync);
   $("check").addEventListener("click", function () {
+    sync();
+    announceType();
     var a = answers(), problems = app.check(a);
     clearErrors();
     if (problems.length) { $("review").hidden = true; reviewed = null; showErrors(problems); return; }

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-+/xDCxQoMe7CdfP2ZKrRRG21M5JEii7qONpeFkIHnLA='; style-src 'sha256-ZP/dJ3T/uXZoj3jFlCpQH7kdW5nbNWw9DT1H3W+RWHU='; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-AWHj/NJB2w7I7ViWi2eOZbG7EDHTeJxFshAajVQE2eY='; style-src 'sha256-cpJxwEelcxbn86nxSVPfg5XCg1mC5EIL0rKizUl9yAA='; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Prepare a legal request</title>
 <style>:root{color-scheme:light dark;
 --bg:#fbf9f7;--surface:#ffffff;--panel:#f5f0ec;--ink:#211d1c;--muted:#6e6462;
@@ -56,7 +56,7 @@ dl.review { margin:0; }
 pre.file { margin:0; padding:12px; background:var(--panel); border:1px solid var(--line); border-radius:6px; font:13px/1.45 var(--font-mono); white-space:pre-wrap; overflow-wrap:anywhere; }
 .actions { margin-top:20px; }
 .actions p { margin:8px 0 0; }
-.status { margin:16px 0; font-weight:700; }
+.status { margin:16px 0; font-weight:700; overflow-wrap:anywhere; }
 .visually-hidden { position:absolute !important; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 footer { margin-top:28px; font-size:14px; }
 @media (max-width:640px) {
@@ -99,7 +99,14 @@ footer { margin-top:28px; font-size:14px; }
 <script>(function () {
   "use strict";
   var WS = "\u0009\u000a\u000b\u000c\u000d\u001c\u001d\u001e\u001f\u0020\u0085\u00a0\u1680\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff";
-  var EDGES = new RegExp("^[" + WS + "]+|[" + WS + "]+$", "g");
+  var SPACE = {}, w;
+  for (w = 0; w < WS.length; w++) SPACE[WS.charAt(w)] = true;
+  function trim(text) {
+    var start = 0, end = text.length;
+    while (start < end && SPACE[text.charAt(start)] === true) start++;
+    while (end > start && SPACE[text.charAt(end - 1)] === true) end--;
+    return text.slice(start, end);
+  }
 
   function wellFormed(text) {
     var out = "", i, c, d;
@@ -117,7 +124,7 @@ footer { margin-top:28px; font-size:14px; }
     }
     return out;
   }
-  function clean(value) { return wellFormed(typeof value === "string" ? value : "").replace(EDGES, ""); }
+  function clean(value) { return trim(wellFormed(typeof value === "string" ? value : "")); }
   function has(obj, key) { return Object.prototype.hasOwnProperty.call(obj, key); }
   function listed(list, value) {
     for (var i = 0; i < list.length; i++) if (list[i] === value) return true;
@@ -186,17 +193,18 @@ footer { margin-top:28px; font-size:14px; }
       return problems;
     }
     function build(answers) {
-      var state = evaluate(answers), out = {}, facts = [], names = {}, i;
+      var state = evaluate(answers), out = {}, pairs = [], facts = [], names = {}, i;
       if (state.type !== null) {
         var qs = form.types[state.type].questions;
         for (i = 0; i < qs.length; i++) {
           if (state.visible[i] && has(state.values, qs[i].name)) {
             var v = state.values[qs[i].name];
-            facts.push(qs[i].name + ": " + (qs[i].kind === "yes_no" ? (v ? "yes" : "no") : String(v)));
+            pairs.push([qs[i].name, qs[i].kind === "yes_no" ? (v ? "yes" : "no") : String(v)]);
           }
         }
       }
-      facts.sort();
+      pairs.sort(function (a, b) { return a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0; });
+      for (i = 0; i < pairs.length; i++) facts.push(pairs[i][0] + ": " + pairs[i][1]);
       for (i = 0; i < form.fields.length; i++) names[form.fields[i].name] = true;
       for (i = 0; i < form.order.length; i++) {
         var name = form.order[i];
@@ -244,7 +252,7 @@ footer { margin-top:28px; font-size:14px; }
 
   var form = JSON.parse(document.getElementById("intake-spec").textContent);
   var app = core(form);
-  var items = {}, described = {}, baseTitle = document.title, chosenType = null, reviewed = null, objectUrl = null, errored = [];
+  var items = {}, described = {}, place = {}, summaryItems = {}, baseTitle = document.title, announced = null, reviewed = null, objectUrl = null, errored = [];
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, text) {
     var node = document.createElement(tag);
@@ -262,9 +270,21 @@ footer { margin-top:28px; font-size:14px; }
   var i, j;
   for (i = 0; i < form.fields.length; i++) remember(form.fields[i]);
   for (i = 0; i < form.types.length; i++) {
-    for (j = 0; j < form.types[i].questions.length; j++) remember(form.types[i].questions[j]);
+    for (j = 0; j < form.types[i].questions.length; j++) {
+      remember(form.types[i].questions[j]);
+      place[form.types[i].questions[j].id] = [i, j];
+    }
   }
-  function target(id) { return items[id].control === "radio" ? id + "-0" : id; }
+  // A radio group is reached at its chosen answer, or at its first one.
+  function target(id) {
+    var item = items[id];
+    if (item.control !== "radio") return id;
+    for (var n = 0; n < item.options.length; n++) {
+      var radio = $(id + "-" + n);
+      if (radio && radio.checked) return id + "-" + n;
+    }
+    return id + "-0";
+  }
   function focus(id) { var node = $(target(id)); if (node) node.focus(); }
   function read(item) {
     if (item.control === "radio") {
@@ -298,36 +318,58 @@ footer { margin-top:28px; font-size:14px; }
       var mark = $(form.fields[n].id + "-optional");
       if (mark) mark.hidden = req[form.fields[n].name];
     }
-    if (state.type !== chosenType) {
-      chosenType = state.type;
-      if (state.type !== null) {
-        var count = 0;
-        for (n = 0; n < state.visible.length; n++) if (state.visible[n]) count++;
-        var label = form.types[state.type].label;
-        say(count ? count + (count === 1 ? " more question" : " more questions") + " for " + label + " appear after the questions about the request." : "No further questions for " + label + ".");
-      }
-    }
+    dropHiddenErrors(state);
     if (reviewed !== null && app.download(a) !== reviewed) {
       $("review").hidden = true;
       reviewed = null;
       say("You changed an answer. Check your answers again before you save the file.");
     }
   }
+  // Said once the requester leaves the type question, not at every arrow key in it.
+  function announceType() {
+    var state = app.evaluate(answers()), n, count = 0;
+    if (state.type === announced) return;
+    announced = state.type;
+    if (state.type === null) { say("No further questions for this answer."); return; }
+    for (n = 0; n < state.visible.length; n++) if (state.visible[n]) count++;
+    var label = form.types[state.type].label;
+    say(count === 0 ? "No further questions for " + label + "." :
+      count + (count === 1 ? " more question for " + label + " appears" : " more questions for " + label + " appear") +
+      " after the questions about the request.");
+  }
+  function unmark(id) {
+    $(id + "-error").hidden = true;
+    $(id + "-error-text").textContent = "";
+    $(id + "-field").classList.remove("has-error");
+    if (described[id]) $(id).setAttribute("aria-describedby", described[id]);
+    else $(id).removeAttribute("aria-describedby");
+    if (items[id].control !== "radio") $(id).removeAttribute("aria-invalid");
+  }
   function clearErrors() {
-    for (var n = 0; n < errored.length; n++) {
-      var id = errored[n];
-      $(id + "-error").hidden = true;
-      $(id + "-error-text").textContent = "";
-      $(id + "-field").classList.remove("has-error");
-      if (described[id]) $(id).setAttribute("aria-describedby", described[id]);
-      else $(id).removeAttribute("aria-describedby");
-      if (items[id].control !== "radio") $(id).removeAttribute("aria-invalid");
-    }
+    for (var n = 0; n < errored.length; n++) unmark(errored[n]);
     errored = [];
+    summaryItems = {};
     var summary = $("error-summary");
     summary.hidden = true;
     clear(summary);
     document.title = baseTitle;
+  }
+  // A question hidden since the last check is no longer asked for.
+  function dropHiddenErrors(state) {
+    var kept = [], n;
+    for (n = 0; n < errored.length; n++) {
+      var id = errored[n], at = place[id];
+      if (at && (at[0] !== state.type || !state.visible[at[1]])) {
+        unmark(id);
+        summaryItems[id].parentNode.removeChild(summaryItems[id]);
+        delete summaryItems[id];
+      } else {
+        kept.push(id);
+      }
+    }
+    if (kept.length === errored.length) return;
+    errored = kept;
+    if (!errored.length) clearErrors();
   }
   function showErrors(problems) {
     var summary = $("error-summary"), list = el("ul", {}), n;
@@ -339,6 +381,7 @@ footer { margin-top:28px; font-size:14px; }
       var li = el("li", {});
       li.appendChild(link);
       list.appendChild(li);
+      summaryItems[p.id] = li;
       $(p.id + "-error-text").textContent = p.message;
       $(p.id + "-error").hidden = false;
       $(p.id + "-field").classList.add("has-error");
@@ -374,7 +417,14 @@ footer { margin-top:28px; font-size:14px; }
   }
   $("questions").addEventListener("input", sync);
   $("questions").addEventListener("change", sync);
+  $("f-type").addEventListener("focusout", function (e) {
+    if (!e.relatedTarget || !$("f-type").contains(e.relatedTarget)) announceType();
+  });
+  // Going back to the page restores its answers without an input event.
+  window.addEventListener("pageshow", sync);
   $("check").addEventListener("click", function () {
+    sync();
+    announceType();
     var a = answers(), problems = app.check(a);
     clearErrors();
     if (problems.length) { $("review").hidden = true; reviewed = null; showErrors(problems); return; }

@@ -160,8 +160,10 @@ which is easier to review than the JSON. The format is described in
   `"required": false` (questions are required by default). The answers are saved in
   `facts` as `"key: value"`.
 - `"show_if": {"field": "non_eea_transfer", "in": [true]}` shows a question only for some
-  answers. It can name a decision field with choices, or a yes/no or choice question
-  earlier in the same type, never a later one.
+  answers. It can name the value band, one of the three yes/no flags, the urgency, or a
+  yes/no or choice question earlier in the same type, never a later one and never the
+  request type (put the question under the type instead). A value-band condition must
+  use your policy's bands.
 
 Every problem in the file is reported with its place, for example
 `types.dpa.questions[1].show_if.field: "sub_processors" is asked later (questions[3])`,

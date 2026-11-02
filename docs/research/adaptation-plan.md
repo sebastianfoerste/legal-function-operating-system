@@ -480,21 +480,22 @@ playbook position next to each change, and the evidence next to each resolution.
     file. The format and its rules are [ADR 0006](../adr/0006-intake-question-files.md).
   - The request fields, their order and controls come from `request_schema()`; value
     bands and request types from the policy. The question file
-    (`src/legal_function_os/data/intake_questions.json`) adds only wording, a question set
-    per type, `also_required` and `show_if` conditions, which may name only an answer
-    given above the question. A test places every contract field, so a new one fails the
+    (`src/legal_function_os/data/intake_questions.json`) adds wording, a question set per
+    type, `also_required` and `show_if` conditions, which may name only an answer given
+    above the question; it can leave an optional field unasked, never a decision field. A test places every contract field, so a new one fails the
     build until it is placed.
   - The decision fields are always asked, with nothing preselected. Type answers go into
     `facts`, sorted by key as the pilot's bridge writes them; the commercial-contract
     questions are the pilot's required facts, and a test reads them from
     `supervised-agent/src/pilot/models.py`.
   - The page shows an error summary (D1 pattern), a "Check your answers" step with the
-    exact file, and saves it locally. It has no form and no network code, and a hashed
-    Content-Security-Policy blocks every connection.
-  - Tests: `tests/test_intake_page.py` runs every answer the page accepts (about 10,000
-    per policy) through `validate_requests`, and runs the page's own script in Node on
-    the same answers against the Python reference; `tests/test_intake_page_browser.py`
-    drives the page in Chromium in the CI agent job.
+    exact file, and saves it locally. It has no form and no network or navigation code,
+    and a hashed Content-Security-Policy blocks every fetch, form post and resource load.
+  - Tests: `tests/test_intake_page.py` checks about 11,500 answer combinations per
+    policy against an independent statement of what is missing, runs the roughly 1,500
+    the page accepts through `validate_requests`, and runs all of them through the page's
+    own script in Node against the Python reference; `tests/test_intake_page_browser.py`
+    drives the page in Chromium in the CI agent job, including going back to it.
 - **Done differently.**
   - One question file keyed by type, not one file per type (type keys are free text).
   - The page numbers nothing: every file is `REQ-DRAFT` and legal renumbers.

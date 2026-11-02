@@ -43,9 +43,10 @@ Three constraints shape it here:
 - **The contract and the policy own the fields.** Which request fields exist, their
   order and their control come from `request_schema()`. Value bands and request types
   come from the policy, as validation reads them, and urgencies from the rules. The
-  question file adds only words, per-type questions, `also_required` (optional fields a
-  type makes required, such as the other party for a contract) and conditions. It cannot
-  add, hide, relax or rename a request field.
+  question file adds words, per-type questions, `also_required` (optional fields a type
+  makes required, such as the other party for a contract) and conditions. It cannot add,
+  relax or rename a request field or hide a decision field; it can leave an optional
+  field unasked or make it required.
 - **Every request field has a place**, checked by a test: always asked and required
   (`title`, `type`, `value_band`, the three flags, `urgency`), optional (`counterparty`,
   `requested_by`, `description`, `deadline`), legal's own and never asked (`sla_breached`,
@@ -59,10 +60,12 @@ Three constraints shape it here:
   silently lowers it. A team can change that wording in its own file.
 - **Type answers go into `facts`** as `"key: value"`, sorted by key, as the pilot's bridge
   writes them (`parent_bridge.parent_request`). A type question can never write a
-  top-level field, so editing the question file cannot change risk, priority or routing.
+  top-level field. The labels of the value bands, urgencies and request types do decide
+  what a requester's choice saves, so a change to them needs the same review as a policy
+  change; two answers with one label are refused.
 - **Conditions are data, forward-only.** `"show_if": {"field": NAME, "in": [VALUES]}`
-  names an answer given above the question: a decision field with choices, or an earlier
-  yes/no or choice question of the same type. `type` is not a condition (put the question
+  names an answer given above the question: the value band, one of the three yes/no
+  flags, the urgency, or an earlier yes/no or choice question of the same type. `type` is not a condition (put the question
   under the type), free text cannot control anything, and every value is checked against
   the controller's answers. A question whose controller is hidden is hidden. The checker
   reports a later, unknown or self reference with its path, so the dependency graph is
@@ -70,14 +73,20 @@ Three constraints shape it here:
 - **The checker is the authority**, in the style of `policy.parse_policy`: every problem
   with its JSON path, did-you-mean hints, `x_` and `_` keys ignored, no published JSON
   Schema for now. A policy mismatch is a note, not an error: a type the policy lacks is
-  not used, and a policy type with no question set is offered under its key.
+  not used, and a policy type with no question set is offered under its key. A condition
+  on the value band must name bands of the policy in use, even under a type it lacks.
+  Policy text the page carries (its name, bands and type keys) must hold no link and no
+  unpaired surrogate.
 - **v1 evolves additively.** New optional keys may be added within v1. Removing or
   renaming a key, or changing what one means, needs v2. An optional request field missing
   from a file is not asked (a note), so a later optional contract field does not break a
   team's file; a decision field missing from a file is an error.
-- **The page sends nothing.** It has no `<form>` and no network code, and its
-  Content-Security-Policy (hashes of its one script and style; `default-src`,
-  `connect-src` and `form-action` set to `'none'`) blocks every connection. Its only
+- **The page sends nothing.** It has no `<form>` and no network or navigation code (no
+  `location`, no `window.open`), and its Content-Security-Policy (hashes of its one
+  script and style; `default-src`, `connect-src` and `form-action` set to `'none'`)
+  blocks every fetch, form post, frame and resource load and any injected script. CSP
+  has no directive for top-level navigation, so the script's own code is what keeps the
+  page from opening anything. Its only
   output is a local download of a JSON array holding one `legal-request.v1` object, which
   `validate` and `triage` read. Unanswered optional fields are left out, never null.
 - **The page script and `intake_page.py` implement the same rules.** A test runs the
