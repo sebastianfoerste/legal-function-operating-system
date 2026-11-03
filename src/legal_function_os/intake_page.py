@@ -114,6 +114,10 @@ def load_intake_questions(path: str | None = None) -> tuple[Any, str]:
         text = file.read_text(encoding="utf-8-sig")
     except OSError as exc:
         raise IntakeQuestionsError(source, [f"cannot read the file: {exc.strerror or exc}"]) from None
+    except UnicodeDecodeError as exc:
+        raise IntakeQuestionsError(
+            source, [f"cannot read the file: it is not UTF-8 text (byte {exc.object[exc.start]:#04x} at position {exc.start})"]
+        ) from None
     try:
         return json.loads(text), source
     except json.JSONDecodeError as exc:
@@ -329,7 +333,8 @@ def _condition(
     fields: dict[str, dict],
 ) -> dict[str, Any] | None:
     cond = check.obj(raw, where, ("field", "in"), ("field", "in"))
-    if not cond:
+    # A missing key is already reported by check.obj.
+    if not cond or "field" not in cond:
         return None
     name = cond.get("field")
     place = _join(where, "field")
@@ -351,6 +356,8 @@ def _condition(
             check.problem(place, f'"{name}" is asked later (questions[{later[0]}]); {rule} (forward-only)')
         else:
             check.problem(place, f'"{name}" is not asked before this question{_hint(name, list(domains))}')
+        return None
+    if "in" not in cond:
         return None
     values = cond.get("in")
     place = _join(where, "in")

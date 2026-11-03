@@ -24,7 +24,7 @@ from legal_function_os.intake_page import (
     review_rows,
     write_intake_page,
 )
-from tests.test_intake_page import form_for
+from tests.test_intake_page import custom_policy, form_for
 
 UNAVAILABLE = 3
 REQUIRE_BROWSER_TESTS = "REQUIRE_BROWSER_TESTS"
@@ -45,6 +45,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errors.push("console: " + m.text()); });
   page.on("request", (r) => requests.push(r.url()));
   await page.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => console.error("csp " + e.violatedDirective)));
+  await page.addInitScript(() => { const revoke = URL.revokeObjectURL; window.revoked = []; URL.revokeObjectURL = (u) => { window.revoked.push(u); revoke.call(URL, u); }; });
   await page.goto(url);
   const group = (name) => page.getByRole("group", { name });
   const focused = () => page.evaluate(() => document.activeElement.id);
@@ -52,7 +53,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   const summary = () => page.locator("#error-summary li").allTextContents();
   const save = async () => {
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Save request file" }).click()]);
-    return { text: fs.readFileSync(await download.path(), "utf8"), name: download.suggestedFilename() };
+    return { text: fs.readFileSync(await download.path(), "utf8"), name: download.suggestedFilename(), url: download.url() };
   };
 
   out.optionalMarks = await page.locator("#f-counterparty-optional").count();
@@ -62,6 +63,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   // Nothing answered: the error summary takes focus, and each error is wired to its field.
   await page.getByRole("button", { name: "Check your answers" }).click();
   out.firstErrors = await summary();
+  out.summaryHeading = await page.locator("#error-summary h2").allTextContents();
   out.focusAfterCheck = await focused();
   out.titleWithErrors = await page.title();
   out.titleInvalid = await attr("#f-title", "aria-invalid");
@@ -69,6 +71,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.titleErrorText = await page.locator("#f-title-error-text").textContent();
   out.titleFieldClass = await attr("#f-title-field", "class");
   out.typeDescribed = await attr("#f-type", "aria-describedby");
+  out.titleError = await page.locator("#f-title-error").evaluate((e) => [e.hidden, e.textContent]);
   await page.locator("#error-summary a").first().click();
   out.focusAfterLink = await focused();
   await page.locator("#error-summary a", { hasText: "Choose what you need help with" }).click();
@@ -118,6 +121,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.titleErrorHidden = await page.locator("#f-title-error").isHidden();
   out.titleDescribedAfterFix = await attr("#f-title", "aria-describedby");
   out.titleInvalidAfterFix = await attr("#f-title", "aria-invalid");
+  out.typeInvalidAfterFix = await attr("#f-type", "aria-invalid");
   out.titleFieldClassAfterFix = await attr("#f-title-field", "class");
 
   // A question hidden since the check is no longer asked for.
@@ -157,16 +161,22 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.typeStatusAtReview = await page.locator("#type-status").textContent();
   out.review = await page.locator("#review-list .review-row").evaluateAll((rows) => rows.map((r) => [r.children[0].textContent, r.children[1].textContent]));
   out.file = await page.locator("#file").textContent();
+  out.changeLinks = await page.locator("#review-list a").allTextContents();
 
   // Change reaches the chosen answer, so Space would not change it.
   await page.locator("#review-list .review-row").nth(1).getByRole("link").click();
   out.focusAfterChange = await focused();
+  // The chosen answer is reached when it is the last one too.
+  await page.locator("#review-list .review-row", { hasText: "Who decides how the data is used?" }).getByRole("link").click();
+  out.focusAfterLastChange = await focused();
   // The link's own handler moves focus; following the #fragment would also focus it.
   out.urlAfterChange = page.url();
   const saved = await save();
   out.saved = saved.text;
   out.savedName = saved.name;
   out.savedStatus = await page.locator("#status").textContent();
+  await save();
+  out.afterSecondSave = [await page.evaluate((u) => window.revoked.includes(u), saved.url), await page.locator("a[download]").count()];
   out.overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
   out.background = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
 
@@ -210,13 +220,17 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.getByRole("button", { name: "Check your answers" }).click();
   out.longName = (await save()).name;
   out.overflowAt320 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  // Save reads the answers again, so one changed without an event is shown, not saved unseen.
+  await page.evaluate(() => { document.getElementById("f-urgency-3").checked = true; });
+  await page.getByRole("button", { name: "Save request file" }).click();
+  out.saveAfterSilentChange = [await page.locator("#review").isVisible(), await page.locator("#status").textContent()];
 
   // Choosing "not sure" drops errors that were only the type's.
   await page.getByLabel("What is the data used for?").fill("");
   await page.getByRole("button", { name: "Check your answers" }).click();
   out.typeOnlyErrors = await summary();
   await group("What do you need help with?").getByLabel("Something else, or not sure").check();
-  out.afterNotSure = { hidden: await page.locator("#error-summary").isHidden(), title: await page.title() };
+  out.afterNotSure = { hidden: await page.locator("#error-summary").isHidden(), title: await page.title(), dpa: await page.locator("#type-2").isVisible() };
 
   // Announcing the type when focus moves to Check does not move Check from under the
   // pointer, so one click at the end of the page still checks the answers.
@@ -228,11 +242,18 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.mouse.up();
   out.reviewAfterOneClick = await page.locator("#review").isVisible();
   out.typeStatusAfterOneClick = await page.locator("#type-status").textContent();
+  // An edit that leaves the file as it is keeps the review: the title is trimmed.
+  await page.locator("#f-title").fill("A".repeat(300) + " ");
+  out.reviewAfterSpace = [await page.locator("#review").isVisible(), await page.locator("#status").textContent()];
 
   // One question is "appears", not "appear".
   await group("What do you need help with?").getByLabel("Brands, patents or software rights").check();
   await page.getByLabel("What do you need from legal?").focus();
   out.oneQuestionStatus = await page.locator("#type-status").textContent();
+  // A browser that does not focus a pressed button: Check announces, and the review still clears it.
+  await group("What do you need help with?").getByLabel("Something else, or not sure").check();
+  await page.evaluate(() => document.getElementById("check").click());
+  out.typeStatusAfterUnfocusedCheck = [await page.locator("#review").isVisible(), await page.locator("#type-status").textContent()];
 
   // Check reads the page as it is, even after a change that fired no event.
   const fresh = await page.context().newPage();
@@ -243,6 +264,15 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.silentChange = { dpa: await fresh.locator("#type-2").isVisible(), errors: await fresh.locator("#error-summary li").allTextContents() };
   await fresh.close();
 
+  // A type with no questions says so.
+  const other = await page.context().newPage();
+  other.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+  await other.goto("file://" + process.argv[4]);
+  await other.getByRole("group", { name: "What do you need help with?" }).getByLabel("regulatory").check();
+  await other.locator("#f-title").focus();
+  out.noQuestionsStatus = await other.locator("#type-status").textContent();
+  await other.close();
+
   out.requests = requests;
   out.errors = errors;
   await browser.close();
@@ -251,7 +281,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
-def run_page(path: Path, elsewhere: Path) -> dict | None:
+def run_page(path: Path, elsewhere: Path, other: Path) -> dict | None:
     """The browser run's results, or None when no browser is available."""
 
     if shutil.which("node") is None:
@@ -260,7 +290,7 @@ def run_page(path: Path, elsewhere: Path) -> dict | None:
         script = Path(tmp) / "intake.cjs"
         script.write_text(SCRIPT, encoding="utf-8")
         result = subprocess.run(
-            ["node", str(script), str(path), str(elsewhere)],
+            ["node", str(script), str(path), str(elsewhere), str(other)],
             capture_output=True, text=True, timeout=180, env=os.environ.copy(),
         )
     if result.returncode == UNAVAILABLE:
@@ -278,7 +308,9 @@ class IntakePageBrowserTests(unittest.TestCase):
         path = write_intake_page(cls.form, Path(cls.tmp.name))["html"]
         elsewhere = Path(cls.tmp.name) / "elsewhere.html"
         elsewhere.write_text("<!doctype html><title>Elsewhere</title><p>Another page</p>\n", encoding="utf-8")
-        cls.out = run_page(path, elsewhere)
+        # A policy with a type that has no questions.
+        other = write_intake_page(form_for(policy=custom_policy()), Path(cls.tmp.name) / "other")["html"]
+        cls.out = run_page(path, elsewhere, other)
         if cls.out is None:
             if os.environ.get(REQUIRE_BROWSER_TESTS) == "1":
                 raise AssertionError("REQUIRE_BROWSER_TESTS=1 but Node, Playwright or Chromium is missing")
@@ -325,12 +357,15 @@ class IntakePageBrowserTests(unittest.TestCase):
         self.assertTrue(self.out["errorsHiddenAtStart"])
         self.assertEqual(self.out["firstErrors"], [p["message"] for p in check_answers(self.form, empty)])
         self.assertEqual(self.out["focusAfterCheck"], "error-summary")
+        self.assertEqual(self.out["summaryHeading"], ["There is a problem"])
         self.assertEqual(self.out["titleWithErrors"], "Error: Prepare a legal request")
         self.assertEqual(
             (self.out["titleInvalid"], self.out["titleDescribed"], self.out["titleErrorText"]),
             ("true", "f-title-hint f-title-error", "Enter a short title"),
         )
         self.assertEqual(self.out["titleFieldClass"], "field has-error")
+        # The error shows at its field, with a prefix for screen readers.
+        self.assertEqual(self.out["titleError"], [False, "Error: Enter a short title"])
         self.assertEqual(self.out["typeDescribed"], "f-type-hint f-type-error")
         self.assertEqual(self.out["focusAfterLink"], "f-title")
         self.assertEqual(self.out["focusAfterRadioLink"], "f-type-0")
@@ -350,6 +385,8 @@ class IntakePageBrowserTests(unittest.TestCase):
             (self.out["titleDescribedAfterFix"], self.out["titleInvalidAfterFix"], self.out["titleFieldClassAfterFix"]),
             ("f-title-hint", None, "field"),
         )
+        # A radio group is never marked invalid, so a fixed answer is not left marked.
+        self.assertIsNone(self.out["typeInvalidAfterFix"])
         self.assertTrue(self.out["summaryHidden"])
         self.assertEqual(self.out["marksAtReview"], 0)
         self.assertIsNone(self.out["purposeDescribedAfterFix"])
@@ -377,7 +414,7 @@ class IntakePageBrowserTests(unittest.TestCase):
             self.out["silentChange"],
             {"dpa": True, "errors": [p["message"] for p in check_answers(self.form, silent)]},
         )
-        self.assertEqual(self.out["afterNotSure"], {"hidden": True, "title": "Prepare a legal request"})
+        self.assertEqual(self.out["afterNotSure"], {"hidden": True, "title": "Prepare a legal request", "dpa": False})
 
     def test_type_questions_appear_in_place(self) -> None:
         self.assertEqual((self.out["optionalMarks"], self.out["optionalAtStart"]), (1, True))
@@ -397,11 +434,13 @@ class IntakePageBrowserTests(unittest.TestCase):
         self.assertTrue(self.out["reviewAfterOneClick"])
         # The review shows every answer, so the announcement does not outlive it.
         self.assertEqual(self.out["typeStatusAfterOneClick"], "")
+        self.assertEqual(self.out["typeStatusAfterUnfocusedCheck"], [True, ""])
         self.assertTrue(self.out["dpaShown"])
         self.assertFalse(self.out["optionalAfterDpa"])
         self.assertEqual((self.out["countriesBefore"], self.out["countriesAfter"]), (False, True))
         self.assertFalse(self.out["listAfterNo"])
         self.assertEqual(self.out["notSureStatus"], "No further questions for this answer.")
+        self.assertEqual(self.out["noQuestionsStatus"], "No further questions for regulatory.")
 
     def test_the_saved_file_is_the_reviewed_file(self) -> None:
         answers = self.answers()
@@ -410,12 +449,17 @@ class IntakePageBrowserTests(unittest.TestCase):
         self.assertEqual(self.out["statusAtReview"], "")
         self.assertEqual(self.out["typeStatusAtReview"], "")
         self.assertEqual(self.out["review"], [[r["label"], r["answer"]] for r in review_rows(self.form, answers)])
+        # Each Change link names its question for a screen reader.
+        self.assertEqual(self.out["changeLinks"], ["Change " + r["label"] for r in review_rows(self.form, answers)])
         self.assertEqual(self.out["file"], render_download(request))
         self.assertEqual(self.out["saved"], render_download(request))
         self.assertEqual(self.out["focusAfterChange"], "f-type-2")
+        self.assertEqual(self.out["focusAfterLastChange"], "q2-processing_role-2")
         self.assertEqual(self.out["urlAfterChange"], self.path.as_uri())
         self.assertEqual(self.out["savedName"], download_name(request))
         self.assertEqual(self.out["savedName"], "legal-request-dpa-with-example-hosting-gmbh-synthetic.json")
+        # A second save frees the first file's object URL, and leaves no download link in the page.
+        self.assertEqual(self.out["afterSecondSave"], [True, 0])
         self.assertEqual(
             self.out["savedStatus"],
             f"Your browser is saving {self.out['savedName']} to this device. Nothing was sent. "
@@ -428,11 +472,16 @@ class IntakePageBrowserTests(unittest.TestCase):
             self.out["changeStatus"], "You changed an answer. Check your answers again before you save the file."
         )
         self.assertEqual(self.out["statusChangesAfterTyping"], 0)
+        self.assertEqual(self.out["reviewAfterSpace"], [True, ""])
         self.assertEqual(self.out["statusAtSecondReview"], "")
         answers = self.answers(urgency="2", sub_processors="1")
         request = request_from_answers(self.form, answers)
         self.assertEqual(self.out["fileAfterNo"], render_download(request))
         self.assertEqual(self.out["reviewRowsAfterNo"], len(review_rows(self.form, answers)))
+        self.assertEqual(
+            self.out["saveAfterSilentChange"],
+            [False, "You changed an answer. Check your answers again before you save the file."],
+        )
         self.assertNotIn("sub_processor_list: Example Mail Inc.", self.out["fileAfterNo"])
 
     def test_going_back_to_the_page_shows_what_it_will_save(self) -> None:
