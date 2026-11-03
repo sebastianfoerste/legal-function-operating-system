@@ -234,6 +234,15 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.getByLabel("What do you need from legal?").focus();
   out.oneQuestionStatus = await page.locator("#type-status").textContent();
 
+  // Check reads the page as it is, even after a change that fired no event.
+  const fresh = await page.context().newPage();
+  fresh.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+  await fresh.goto(url);
+  await fresh.evaluate(() => { document.getElementById("f-type-2").checked = true; });
+  await fresh.getByRole("button", { name: "Check your answers" }).click();
+  out.silentChange = { dpa: await fresh.locator("#type-2").isVisible(), errors: await fresh.locator("#error-summary li").allTextContents() };
+  await fresh.close();
+
   out.requests = requests;
   out.errors = errors;
   await browser.close();
@@ -363,6 +372,11 @@ class IntakePageBrowserTests(unittest.TestCase):
             {"dpa": False, "vendor": True, "optional": True, "errors": [], "invalid": None, "title": "Prepare a legal request"},
         )
         self.assertEqual(self.out["typeOnlyErrors"], ["Enter what the data is used for"])
+        silent = {"fields": {"type": "2"}, "questions": {}}
+        self.assertEqual(
+            self.out["silentChange"],
+            {"dpa": True, "errors": [p["message"] for p in check_answers(self.form, silent)]},
+        )
         self.assertEqual(self.out["afterNotSure"], {"hidden": True, "title": "Prepare a legal request"})
 
     def test_type_questions_appear_in_place(self) -> None:
