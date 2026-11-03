@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from legal_function_os.bundled import bundled_path
+from legal_function_os.bundled import bundled_path, not_utf8
 from legal_function_os.intake_csv import CsvFormatError, parse_csv
 
 
@@ -78,7 +78,11 @@ def load_requests(path: str | None) -> RequestInput:
         source = bundled_path("sample_requests.json")
         return RequestInput(_parse_json(source.read_text(encoding="utf-8"), str(source)), str(source))
     if path == "-":
-        return RequestInput(_parse_json(sys.stdin.read(), "standard input"), "standard input")
+        try:
+            text = sys.stdin.read()
+        except UnicodeDecodeError as exc:
+            raise InputError(f"cannot read standard input: {not_utf8(exc)}") from None
+        return RequestInput(_parse_json(text, "standard input"), "standard input")
     if path.lower().endswith(CSV_SUFFIXES):
         return _load_csv(path)
     if path.lower().endswith(SPREADSHEET_SUFFIXES):
@@ -90,4 +94,6 @@ def load_requests(path: str | None) -> RequestInput:
         text = Path(path).read_text(encoding="utf-8-sig")
     except OSError as exc:
         raise InputError(f"cannot read {path}: {exc.strerror or exc}") from None
+    except UnicodeDecodeError as exc:
+        raise InputError(f"cannot read {path}: {not_utf8(exc)}") from None
     return RequestInput(_parse_json(text, path), path)

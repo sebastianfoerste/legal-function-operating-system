@@ -23,7 +23,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from legal_function_os.bundled import bundled_path
+from legal_function_os.bundled import bundled_path, not_utf8
 
 SCHEMA_ID = "legal-function-os.policy.v1"
 SCHEMA_URL = (
@@ -401,6 +401,8 @@ def load_policy(path: str | None = None) -> Policy:
         text = Path(path).read_text(encoding="utf-8-sig")
     except OSError as exc:
         raise PolicyError(path, [f"cannot read the file: {exc.strerror or exc}"]) from None
+    except UnicodeDecodeError as exc:
+        raise PolicyError(path, [f"cannot read the file: {not_utf8(exc)}"]) from None
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:

@@ -38,7 +38,7 @@ from legal_function_os.approval_matrix import (
     write_approval_matrix,
 )
 from legal_function_os.board_pack import build_board_pack, render_markdown, render_triage_markdown
-from legal_function_os.bundled import bundled_path
+from legal_function_os.bundled import bundled_path, not_utf8
 from legal_function_os.capacity_simulator import (
     build_capacity_simulation,
     render_capacity_markdown,
@@ -112,6 +112,8 @@ def _read_json(path: str, what: str) -> Any:
         return json.loads(Path(path).read_text(encoding="utf-8-sig"))
     except OSError as exc:
         raise _error(f"cannot read {what} {path}: {exc.strerror or exc}") from None
+    except UnicodeDecodeError as exc:
+        raise _error(f"cannot read {what} {path}: {not_utf8(exc)}") from None
     except json.JSONDecodeError as exc:
         raise _error(f"{what} {path} is not valid JSON: {exc}") from None
 
@@ -683,11 +685,15 @@ def _legacy_main(argv: list[str]) -> int:
         )
         return 2
     dpa_documents: list[dict[str, Any]] = []
-    if args.dpa_input:
-        try:
+    approvals: Any = {}
+    # Read before anything is written, so a file that cannot be read leaves no outputs.
+    try:
+        if args.dpa_input:
             dpa_documents = _load_dpa_documents(args.dpa_input)
-        except _Failure as failure:
-            return failure.status
+        if args.approvals and args.shared_space_output:
+            approvals = _read_json(args.approvals, "approvals")
+    except _Failure as failure:
+        return failure.status
 
     pack = build_board_pack(requests, period=args.period, policy=policy)
     markdown = render_markdown(pack)
@@ -785,9 +791,6 @@ def _legacy_main(argv: list[str]) -> int:
         )
 
     if args.shared_space_output:
-        approvals = {}
-        if args.approvals:
-            approvals = json.loads(Path(args.approvals).read_text(encoding="utf-8"))
         Path(args.shared_space_output).write_text(
             json.dumps(
                 build_shared_space(requests, approvals, period=args.period, policy=policy),

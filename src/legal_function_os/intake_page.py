@@ -31,7 +31,7 @@ import re
 from pathlib import Path
 from typing import Any
 
-from legal_function_os.bundled import bundled_path
+from legal_function_os.bundled import bundled_path, not_utf8
 from legal_function_os.design_tokens import TOKENS_CSS
 from legal_function_os.policy import Policy, PolicyError, default_policy
 from legal_function_os.rules import URGENCIES
@@ -115,9 +115,7 @@ def load_intake_questions(path: str | None = None) -> tuple[Any, str]:
     except OSError as exc:
         raise IntakeQuestionsError(source, [f"cannot read the file: {exc.strerror or exc}"]) from None
     except UnicodeDecodeError as exc:
-        raise IntakeQuestionsError(
-            source, [f"cannot read the file: it is not UTF-8 text (byte {exc.object[exc.start]:#04x} at position {exc.start})"]
-        ) from None
+        raise IntakeQuestionsError(source, [f"cannot read the file: {not_utf8(exc)}"]) from None
     try:
         return json.loads(text), source
     except json.JSONDecodeError as exc:
@@ -350,8 +348,12 @@ def _condition(
         check.problem(place, '"type" cannot be a condition; put the question under types.<type> instead')
         return None
     if name not in domains:
-        if name in fields or any(q.get("key") == name for q in questions[:index] if isinstance(q, dict)):
+        earlier = [q for q in questions[:index] if isinstance(q, dict) and q.get("key") == name]
+        if name in fields or any(q.get("kind") in ("text", "textarea") for q in earlier):
             check.problem(place, f'"{name}" is free text and cannot control a question; use yes_no or choice')
+        elif earlier:
+            # An earlier question whose own key is wrong: that problem is reported there.
+            pass
         elif later and later[0] > index:
             check.problem(place, f'"{name}" is asked later (questions[{later[0]}]); {rule} (forward-only)')
         else:
@@ -922,9 +924,12 @@ def _type_html(form_type: dict[str, Any]) -> str:
 
 
 def _spec_json(form: dict[str, Any]) -> str:
-    """The form as a JSON data block that cannot end its own script element."""
+    """The form as a JSON data block that cannot end its own script element. The notes
+    stay out: the script never reads them, and they quote question-file keys that are
+    not used, which no check reads for links."""
 
-    text = json.dumps(form, ensure_ascii=True, separators=(",", ":"))
+    page_form = {key: value for key, value in form.items() if key != "notes"}
+    text = json.dumps(page_form, ensure_ascii=True, separators=(",", ":"))
     return text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 

@@ -305,6 +305,15 @@ class CapacityAndControlTower(unittest.TestCase):
         )
         self.assertEqual(code, 2)
         self.assertIn("cannot read service event ledger /nonexistent.json", stderr)
+        with tempfile.TemporaryDirectory() as tmp:
+            latin = Path(tmp) / "events.json"
+            latin.write_bytes('{"approvals": "Gepr\u00fcft"}'.encode("latin-1"))
+            code, _, stderr = run_cli(["control-tower", "--input", str(SAMPLE), "--events", str(latin), "--config", str(latin)])
+        self.assertEqual(code, 2)
+        self.assertIn(
+            f"cannot read service event ledger {latin}: it is not UTF-8 text (byte 0xfc at position 19); save it as UTF-8",
+            stderr,
+        )
 
 
 class LegacyFlags(unittest.TestCase):
@@ -330,6 +339,22 @@ class LegacyFlags(unittest.TestCase):
                 self.assertEqual(
                     (Path(tmp) / name).read_bytes(), (EXAMPLES / name).read_bytes(), name
                 )
+
+    def test_an_unreadable_approvals_file_stops_before_anything_is_written(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir, space = Path(tmp) / "out", Path(tmp) / "shared-space.json"
+            broken = Path(tmp) / "approvals.json"
+            broken.write_text("{", encoding="utf-8")
+            for path, message in (
+                (Path(tmp) / "missing.json", "cannot read approvals"),
+                (broken, f"approvals {broken} is not valid JSON"),
+            ):
+                code, _, stderr = run_cli(
+                    ["--quiet", "--out", str(out_dir), "--shared-space-output", str(space), "--approvals", str(path)]
+                )
+                self.assertEqual(code, 2, path)
+                self.assertIn(message, stderr)
+                self.assertFalse(out_dir.exists() or space.exists())
 
     def test_dpa_input_error_points_at_the_subcommand(self):
         code, _, stderr = run_cli(["--quiet", "--dpa-input", str(DATA / "dpa_documents.json")])

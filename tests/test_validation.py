@@ -238,6 +238,20 @@ class WholeInput(unittest.TestCase):
             code, _, stderr = run_cli(["--input", str(Path(tmp) / "missing.json")])
             self.assertEqual(code, 2)
             self.assertIn("cannot read", stderr)
+            # A JSON file or standard input in another encoding is reported, not a traceback.
+            latin_bytes = '[{"id": "REQ-1", "title": "Pr\u00fcfung"}]'.encode("latin-1")
+            latin = Path(tmp) / "latin.json"
+            latin.write_bytes(latin_bytes)
+            not_utf8 = "it is not UTF-8 text (byte 0xfc at position 29); save it as UTF-8"
+            code, _, stderr = run_cli(["--input", str(latin)])
+            self.assertEqual(code, 2)
+            self.assertIn(f"cannot read {latin}: {not_utf8}", stderr)
+            out, err = io.StringIO(), io.StringIO()
+            stdin = io.TextIOWrapper(io.BytesIO(latin_bytes), encoding="utf-8")
+            with mock.patch("sys.stdin", stdin), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                code = cli_main(["validate", "--input", "-"])
+            self.assertEqual(code, 2)
+            self.assertIn(f"cannot read standard input: {not_utf8}", err.getvalue())
 
 
 class Suggestions(unittest.TestCase):

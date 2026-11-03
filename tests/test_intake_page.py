@@ -475,6 +475,11 @@ class QuestionFileTests(unittest.TestCase):
                 f'{where}[3].key: "urgency" is a request field; choose another key',
             ),
             # The controller's own problem is reported once, not again at what depends on it.
+            # Its own key is the problem, reported there; it is not "free text".
+            "a controller whose own key is wrong": (
+                lambda qs: qs[3].update(key="Sub_Processors") or qs[4].update(show_if={"field": "Sub_Processors", "in": [True]}),
+                f"{where}[3].key: expected lower-case letters, digits and _, starting with a letter, up to 40 characters",
+            ),
             "a controller with a wrong kind": (
                 lambda qs: qs[3].update(kind="yesno"),
                 f"{where}[3].kind: expected one of text, textarea, yes_no, choice, got 'yesno'",
@@ -1130,7 +1135,8 @@ class PageTests(unittest.TestCase):
         data = [s for a, s in self.parsed.scripts if a.get("type") == "application/json"]
         code = [(a, s) for a, s in self.parsed.scripts if a.get("type") != "application/json"]
         self.assertEqual(len(data), 1)
-        self.assertEqual(json.loads(data[0]), self.form)
+        # The whole form but its notes, which the script never reads.
+        self.assertEqual(json.loads(data[0]), {k: v for k, v in self.form.items() if k != "notes"})
         self.assertEqual(len(code), 1)
         self.assertEqual(code[0][0], {})
         self.assertEqual(code[0][1], page_script())
@@ -1185,7 +1191,7 @@ class PageTests(unittest.TestCase):
         page = render_intake_html(form)
         parsed = parse(page)
         data = next(s for a, s in parsed.scripts if a.get("type") == "application/json")
-        self.assertEqual(json.loads(data), form)
+        self.assertEqual(json.loads(data), {k: v for k, v in form.items() if k != "notes"})
         self.assertEqual([s for a, s in parsed.scripts if not a], [page_script()])
         self.assertIn("Not __SCRIPT__ or __SPEC__ or __TYPES__", "".join(parsed.text))
         self.assertIn("Questions: Questions __POLICY__.", " ".join(" ".join(parsed.text).split()))
@@ -1384,7 +1390,7 @@ class CliTests(unittest.TestCase):
             latin.write_bytes('{"name": "Fragen f\u00fcr Vertr\u00e4ge"}'.encode("latin-1"))
             code, out, err = run_cli(["intake-page", "--questions", str(latin)])
             self.assertEqual((code, out), (2, ""))
-            self.assertIn(f"error: {latin}: cannot read the file: it is not UTF-8 text (byte 0xfc at position 18)\n", err)
+            self.assertIn(f"error: {latin}: cannot read the file: it is not UTF-8 text (byte 0xfc at position 18); save it as UTF-8\n", err)
 
     def test_policy_text_with_a_link_stops_before_anything_is_written(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
@@ -1398,6 +1404,20 @@ class CliTests(unittest.TestCase):
             self.assertIn(f"error: {path}: policy name 'ACME policy, see https://wiki.example': must not contain a link", err)
             self.assertTrue(err.endswith("The policy cannot be used for the intake page. Nothing was written.\n"), err)
             self.assertFalse(out_dir.exists())
+
+    def test_unused_keys_with_a_link_are_noted_and_kept_off_the_page(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            questions = bundled()
+            questions["types"]["see https://wiki.example"] = {"label": "Wiki", "questions": []}
+            questions["fields"]["value_band"]["options"]["http://x"] = "A band the policy lacks"
+            path = Path(tmp) / "questions.json"
+            path.write_text(json.dumps(questions), encoding="utf-8")
+            code, out, err = run_cli(["intake-page", "--questions", str(path), "--out", tmp])
+            self.assertEqual((code, out), (0, ""), err)
+            self.assertIn('note: intake questions for "see https://wiki.example" are not used', err)
+            self.assertIn("note: fields.value_band.options.http://x: the policy has no value band", err)
+            page = (Path(tmp) / "intake-page.html").read_text(encoding="utf-8")
+            self.assertNotIn("http", page.lower().replace("http-equiv", ""))
 
     def test_a_page_that_cannot_be_rendered_leaves_no_folder(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
