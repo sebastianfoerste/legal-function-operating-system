@@ -149,6 +149,8 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.getByRole("button", { name: "Check your answers" }).click();
   out.summaryHidden = await page.locator("#error-summary").isHidden();
   out.marksAtReview = await page.evaluate(() => document.querySelectorAll(".field-error:not([hidden]), .has-error").length);
+  // A question with no hint is described by nothing once its error clears.
+  out.purposeDescribedAfterFix = await attr("#q2-processing_purpose", "aria-describedby");
   out.titleAfterFix = await page.title();
   out.reviewFocused = await focused();
   out.statusAtReview = await page.locator("#status").textContent();
@@ -185,6 +187,8 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.listAfterNo = await page.locator("#q2-sub_processor_list-field").isVisible();
   await page.getByRole("button", { name: "Check your answers" }).click();
   out.reviewRowsAfterNo = await page.locator("#review-list .review-row").count();
+  // The new review replaces "You changed an answer".
+  out.statusAtSecondReview = await page.locator("#status").textContent();
   out.fileAfterNo = await page.locator("#file").textContent();
 
   // Going back to the page restores the answers, and the page shows what it will save.
@@ -339,6 +343,7 @@ class IntakePageBrowserTests(unittest.TestCase):
         )
         self.assertTrue(self.out["summaryHidden"])
         self.assertEqual(self.out["marksAtReview"], 0)
+        self.assertIsNone(self.out["purposeDescribedAfterFix"])
         self.assertEqual(self.out["titleAfterFix"], "Prepare a legal request")
 
     def test_errors_for_hidden_questions_are_dropped(self) -> None:
@@ -409,6 +414,7 @@ class IntakePageBrowserTests(unittest.TestCase):
             self.out["changeStatus"], "You changed an answer. Check your answers again before you save the file."
         )
         self.assertEqual(self.out["statusChangesAfterTyping"], 0)
+        self.assertEqual(self.out["statusAtSecondReview"], "")
         answers = self.answers(urgency="2", sub_processors="1")
         request = request_from_answers(self.form, answers)
         self.assertEqual(self.out["fileAfterNo"], render_download(request))
