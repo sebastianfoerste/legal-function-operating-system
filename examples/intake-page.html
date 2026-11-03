@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-Wcdh4Z3eHfldAXf09AeZttQ05BYUkfeBl2zGVx1SpuM='; style-src 'sha256-cpJxwEelcxbn86nxSVPfg5XCg1mC5EIL0rKizUl9yAA='; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'sha256-v9/7GsENUHTi9BUMSQcdwSYS5tVCmvoASgczVcrZNr0='; style-src 'sha256-cpJxwEelcxbn86nxSVPfg5XCg1mC5EIL0rKizUl9yAA='; img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Prepare a legal request</title>
 <style>:root{color-scheme:light dark;
 --bg:#fbf9f7;--surface:#ffffff;--panel:#f5f0ec;--ink:#211d1c;--muted:#6e6462;
@@ -326,14 +326,15 @@ footer { margin-top:28px; font-size:14px; }
       say("You changed an answer. Check your answers again before you save the file.");
     }
   }
+  // undefined until a type is chosen; "not sure" is null.
+  function chosenType(state) { return read(items["f-type"]) === "" ? undefined : state.type; }
   // Said once the requester leaves the type question, not at every arrow key in it, in
   // a region of its own: a change to the visible status could move Check under the pointer.
   function announceType() {
-    var state = app.evaluate(answers()), n, count = 0;
-    // undefined until a type is chosen; "not sure" is null.
-    var now = read(items["f-type"]) === "" ? undefined : state.type;
+    var state = app.evaluate(answers()), n, count = 0, now = chosenType(state);
     if (now === announced) return;
     announced = now;
+    // Defensive: a chosen type cannot be unchosen from the page itself.
     if (now === undefined) return;
     if (now === null) { say("No further questions for this answer.", "type-status"); return; }
     for (n = 0; n < state.visible.length; n++) if (state.visible[n]) count++;
@@ -418,7 +419,9 @@ footer { margin-top:28px; font-size:14px; }
     reviewed = app.download(a);
     $("file").textContent = reviewed;
     $("review").hidden = false;
+    // The review shows every answer, so an earlier status or type announcement is stale.
     $("status").textContent = "";
+    $("type-status").textContent = "";
     $("review").focus();
   }
   $("questions").addEventListener("input", sync);
@@ -429,8 +432,13 @@ footer { margin-top:28px; font-size:14px; }
   document.addEventListener("focusin", function (e) {
     if (!$("f-type").contains(e.target)) announceType();
   });
-  // Going back to the page restores its answers without an input event.
-  window.addEventListener("pageshow", sync);
+  // Going back to the page restores its answers without an input event. A type restored
+  // that way is not a change, so it is not announced; a page kept in the back-forward
+  // cache keeps its own record of what was announced.
+  window.addEventListener("pageshow", function (e) {
+    sync();
+    if (!e.persisted) announced = chosenType(app.evaluate(answers()));
+  });
   $("check").addEventListener("click", function () {
     sync();
     announceType();

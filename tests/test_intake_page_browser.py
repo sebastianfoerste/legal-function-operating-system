@@ -152,6 +152,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.titleAfterFix = await page.title();
   out.reviewFocused = await focused();
   out.statusAtReview = await page.locator("#status").textContent();
+  out.typeStatusAtReview = await page.locator("#type-status").textContent();
   out.review = await page.locator("#review-list .review-row").evaluateAll((rows) => rows.map((r) => [r.children[0].textContent, r.children[1].textContent]));
   out.file = await page.locator("#file").textContent();
 
@@ -193,6 +194,9 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
     dpa: await page.locator("#type-2").isVisible(),
     optional: await page.locator("#f-counterparty-optional").isVisible(),
   };
+  // The restored type is not a change, so focus moving on says nothing about it.
+  await page.locator("#f-title").focus();
+  out.typeStatusAfterBack = await page.locator("#type-status").textContent();
   await page.getByRole("button", { name: "Check your answers" }).click();
   out.fileAfterBack = await page.locator("#file").textContent();
 
@@ -216,9 +220,10 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   const box = await page.getByRole("button", { name: "Check your answers" }).boundingBox();
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
   await page.mouse.down();
+  out.notSureStatus = await page.locator("#type-status").textContent();
   await page.mouse.up();
   out.reviewAfterOneClick = await page.locator("#review").isVisible();
-  out.notSureStatus = await page.locator("#type-status").textContent();
+  out.typeStatusAfterOneClick = await page.locator("#type-status").textContent();
 
   // One question is "appears", not "appear".
   await group("What do you need help with?").getByLabel("Brands, patents or software rights").check();
@@ -371,6 +376,8 @@ class IntakePageBrowserTests(unittest.TestCase):
             "1 more question for Brands, patents or software rights appears after the questions about the request.",
         )
         self.assertTrue(self.out["reviewAfterOneClick"])
+        # The review shows every answer, so the announcement does not outlive it.
+        self.assertEqual(self.out["typeStatusAfterOneClick"], "")
         self.assertTrue(self.out["dpaShown"])
         self.assertFalse(self.out["optionalAfterDpa"])
         self.assertEqual((self.out["countriesBefore"], self.out["countriesAfter"]), (False, True))
@@ -382,6 +389,7 @@ class IntakePageBrowserTests(unittest.TestCase):
         request = request_from_answers(self.form, answers)
         self.assertEqual(self.out["reviewFocused"], "review")
         self.assertEqual(self.out["statusAtReview"], "")
+        self.assertEqual(self.out["typeStatusAtReview"], "")
         self.assertEqual(self.out["review"], [[r["label"], r["answer"]] for r in review_rows(self.form, answers)])
         self.assertEqual(self.out["file"], render_download(request))
         self.assertEqual(self.out["saved"], render_download(request))
@@ -409,6 +417,7 @@ class IntakePageBrowserTests(unittest.TestCase):
 
     def test_going_back_to_the_page_shows_what_it_will_save(self) -> None:
         self.assertEqual(self.out["afterBack"], {"dpa": True, "optional": False})
+        self.assertEqual(self.out["typeStatusAfterBack"], "")
         request = request_from_answers(self.form, self.answers(urgency="2", sub_processors="1"))
         self.assertEqual(self.out["fileAfterBack"], render_download(request))
 

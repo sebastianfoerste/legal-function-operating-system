@@ -430,10 +430,35 @@ class QuestionFileTests(unittest.TestCase):
                 lambda qs: qs[3].update(kind="yesno"),
                 f"{where}[3].kind: expected one of text, textarea, yes_no, choice, got 'yesno'",
             ),
+            # Answers that are not known yet: a condition below adds no second problem,
+            # even one that names no answer at all.
             "a controller with one option": (
-                lambda qs: qs[0].update(options=["Only"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Only"]}),
+                lambda qs: qs[0].update(options=["Only"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
                 f"{where}[0].options: expected a list of 2 to 20 answers, got a list",
             ),
+            "a controller with too many options": (
+                lambda qs: qs[0].update(options=[f"Option {n}" for n in range(21)])
+                or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
+                f"{where}[0].options: expected a list of 2 to 20 answers, got a list",
+            ),
+            "a controller with an option that is not text": (
+                lambda qs: qs[0]["options"].__setitem__(2, {"label": "Not sure"})
+                or qs[1].update(show_if={"field": "processing_role", "in": ["Not sure"]}),
+                f"{where}[0].options[2]: expected non-empty text, got an object",
+            ),
+            "a controller with a blank option": (
+                lambda qs: qs[0].update(options=["A", " ", "B"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
+                f"{where}[0].options[1]: expected non-empty text, got text",
+            ),
+            "a controller with an unpaired surrogate": (
+                lambda qs: qs[0].update(options=["A", "B\ud800", "C"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
+                f"{where}[0].options[1]: contains an unpaired surrogate; the page could not save it",
+            ),
+            "a controller with a wrong kind and a typo below it": (
+                lambda qs: qs[0].update(kind="Choice") or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
+                f"{where}[0].kind: expected one of text, textarea, yes_no, choice, got 'Choice'",
+            ),
+            # A padded answer has one reading, so naming it is not a second problem.
             "a controller with a padded option": (
                 lambda qs: qs[0]["options"].__setitem__(2, " Not sure")
                 or qs[1].update(show_if={"field": "processing_role", "in": ["Not sure"]}),
@@ -443,7 +468,8 @@ class QuestionFileTests(unittest.TestCase):
         for name, (change, message) in cases.items():
             with self.subTest(name):
                 self.assertEqual(with_dpa(change), [message])
-        # A typo in a condition is still reported when the controller has another problem.
+        # A typo in a condition is still reported when a controller's answer is only padded
+        # or repeated, and each answer is offered once.
         self.assertEqual(
             with_dpa(
                 lambda qs: qs[0].update(options=["A", " B", "C"])
@@ -452,6 +478,16 @@ class QuestionFileTests(unittest.TestCase):
             [
                 f"{where}[0].options[1]: has spaces at the start or end",
                 f'{where}[1].show_if.in[1]: "Nope" is not an answer to \'processing_role\'; use one of "A", "B", "C"',
+            ],
+        )
+        self.assertEqual(
+            with_dpa(
+                lambda qs: qs[0].update(options=["A", "A", "B"])
+                or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]})
+            ),
+            [
+                f"{where}[0].options[1]: 'A' is listed twice",
+                f'{where}[1].show_if.in[0]: "Nope" is not an answer to \'processing_role\'; use one of "A", "B"',
             ],
         )
 

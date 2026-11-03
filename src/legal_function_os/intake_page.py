@@ -443,14 +443,15 @@ def _question(
     # reported once, not again at every question that depends on it.
     if key and key not in domains and kind not in ("text", "textarea"):
         listed = entry.get("options")
+        # Each answer as it reads once its own problem is fixed: a padded or repeated answer
+        # still has one reading, so a typo in a condition below is still reported. An answer
+        # that is not text, is blank or holds an unpaired surrogate has none, and neither has
+        # a wrong kind or number of answers: then the set is None, and a condition naming
+        # the question adds no second problem; the build fails at the question itself.
         if kind == "choice" and isinstance(listed, list) and 2 <= len(listed) <= MAX_OPTIONS:
-            # Each answer as it reads once its own problem is fixed, so a typo in a
-            # condition is still reported and a padded answer is not a second problem.
-            cleaned = [clean_text(o) for o in listed if isinstance(o, str) and clean_text(o)]
-            domains[key] = list(dict.fromkeys(cleaned)) or None
+            cleaned = [clean_text(o) if isinstance(o, str) and not _SURROGATE.search(o) else "" for o in listed]
+            domains[key] = list(dict.fromkeys(cleaned)) if all(cleaned) else None
         else:
-            # None: a wrong kind or options list. A condition naming it adds no second
-            # problem; the build fails at the question itself.
             domains[key] = [o["value"] for o in options] if kind == "yes_no" else None
     cond = None
     if "show_if" in entry:
@@ -1298,14 +1299,15 @@ _SCRIPT = r"""(function () {
       say("You changed an answer. Check your answers again before you save the file.");
     }
   }
+  // undefined until a type is chosen; "not sure" is null.
+  function chosenType(state) { return read(items["f-type"]) === "" ? undefined : state.type; }
   // Said once the requester leaves the type question, not at every arrow key in it, in
   // a region of its own: a change to the visible status could move Check under the pointer.
   function announceType() {
-    var state = app.evaluate(answers()), n, count = 0;
-    // undefined until a type is chosen; "not sure" is null.
-    var now = read(items["f-type"]) === "" ? undefined : state.type;
+    var state = app.evaluate(answers()), n, count = 0, now = chosenType(state);
     if (now === announced) return;
     announced = now;
+    // Defensive: a chosen type cannot be unchosen from the page itself.
     if (now === undefined) return;
     if (now === null) { say("No further questions for this answer.", "type-status"); return; }
     for (n = 0; n < state.visible.length; n++) if (state.visible[n]) count++;
@@ -1390,7 +1392,9 @@ _SCRIPT = r"""(function () {
     reviewed = app.download(a);
     $("file").textContent = reviewed;
     $("review").hidden = false;
+    // The review shows every answer, so an earlier status or type announcement is stale.
     $("status").textContent = "";
+    $("type-status").textContent = "";
     $("review").focus();
   }
   $("questions").addEventListener("input", sync);
@@ -1401,8 +1405,13 @@ _SCRIPT = r"""(function () {
   document.addEventListener("focusin", function (e) {
     if (!$("f-type").contains(e.target)) announceType();
   });
-  // Going back to the page restores its answers without an input event.
-  window.addEventListener("pageshow", sync);
+  // Going back to the page restores its answers without an input event. A type restored
+  // that way is not a change, so it is not announced; a page kept in the back-forward
+  // cache keeps its own record of what was announced.
+  window.addEventListener("pageshow", function (e) {
+    sync();
+    if (!e.persisted) announced = chosenType(app.evaluate(answers()));
+  });
   $("check").addEventListener("click", function () {
     sync();
     announceType();
