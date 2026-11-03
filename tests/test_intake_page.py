@@ -54,8 +54,9 @@ from legal_function_os.intake_page import (
     render_intake_markdown,
     request_from_answers,
     review_rows,
+    write_intake_page,
 )
-from legal_function_os.policy import default_policy, parse_policy
+from legal_function_os.policy import PolicyError, default_policy, parse_policy
 from legal_function_os.rules import URGENCIES
 from legal_function_os.validation import request_schema, validate_requests
 
@@ -113,7 +114,7 @@ def form_for(questions: dict[str, Any] | None = None, policy: Any = None) -> dic
 def problems(questions: Any, policy: Any = None) -> list[str]:
     try:
         build_intake_form(questions, policy)
-    except IntakeQuestionsError as exc:
+    except (IntakeQuestionsError, PolicyError) as exc:
         return exc.problems
     return []
 
@@ -433,10 +434,26 @@ class QuestionFileTests(unittest.TestCase):
                 lambda qs: qs[0].update(options=["Only"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Only"]}),
                 f"{where}[0].options: expected a list of 2 to 20 answers, got a list",
             ),
+            "a controller with a padded option": (
+                lambda qs: qs[0]["options"].__setitem__(2, " Not sure")
+                or qs[1].update(show_if={"field": "processing_role", "in": ["Not sure"]}),
+                f"{where}[0].options[2]: has spaces at the start or end",
+            ),
         }
         for name, (change, message) in cases.items():
             with self.subTest(name):
                 self.assertEqual(with_dpa(change), [message])
+        # A typo in a condition is still reported when the controller has another problem.
+        self.assertEqual(
+            with_dpa(
+                lambda qs: qs[0].update(options=["A", " B", "C"])
+                or qs[1].update(show_if={"field": "processing_role", "in": ["B", "Nope"]})
+            ),
+            [
+                f"{where}[0].options[1]: has spaces at the start or end",
+                f'{where}[1].show_if.in[1]: "Nope" is not an answer to \'processing_role\'; use one of "A", "B", "C"',
+            ],
+        )
 
     def test_a_condition_on_a_request_field_or_an_earlier_answer_is_accepted(self) -> None:
         questions = bundled()
@@ -555,13 +572,17 @@ class QuestionFileTests(unittest.TestCase):
                 lambda f: f["value_band"]["options"].update({"250k-1m": "Over EUR 1 million"}),
                 ["fields.value_band: 'Over EUR 1 million' labels both '250k-1m' and '>1m'; give each answer its own label"],
             ),
+            "two bands whose labels differ only in spaces": (
+                lambda f: f["value_band"]["options"].update({"250k-1m": "Over\u00a0 EUR 1 million "}),
+                ["fields.value_band: 'Over EUR 1 million' labels both '250k-1m' and '>1m'; give each answer its own label"],
+            ),
             "two urgencies with one label": (
                 lambda f: f["urgency"]["options"].update(low="Within a few days"),
                 ["fields.urgency: 'Within a few days' labels both 'high' and 'low'; give each answer its own label"],
             ),
             "not sure labelled like a type": (
                 lambda f: f["type"].update(not_sure="A dispute or claim"),
-                ["fields.type: 'A dispute or claim' labels both 'dispute' and None; give each answer its own label"],
+                ["fields.type: 'A dispute or claim' labels both 'dispute' and not_sure; give each answer its own label"],
             ),
         }
         for name, (edit, expected) in cases.items():
@@ -588,6 +609,7 @@ class QuestionFileTests(unittest.TestCase):
         questions["types"]["_draft"] = {"label": "Not yet"}
         questions["fields"]["urgency"]["options"]["x_note"] = "labels reviewed in October"
         questions["fields"]["value_band"]["options"]["_comment"] = "kept for reviewers"
+        self.assertEqual(form_for(questions)["notes"], [])
         del questions["fields"]["value_band"]["options"]
         form = form_for(questions)
         band = next(f for f in form["fields"] if f["name"] == "value_band")
@@ -682,10 +704,19 @@ class QuestionFileTests(unittest.TestCase):
                 {"value_bands": (*policy.value_bands, "see http://x")},
                 ["policy value band 'see http://x': must not contain a link (http:// or https://); the page is self-contained"],
             ),
+            "a link in a name with accents": (
+                {"name": "Richtlinie für Verträge, https://wiki.example"},
+                ["policy name 'Richtlinie für Verträge, https://wiki.example': must not contain a link (http:// or https://); the page is self-contained"],
+            ),
         }
         for name, (change, expected) in cases.items():
             with self.subTest(name):
                 self.assertEqual(problems(bundled(), replace(policy, **change)), expected)
+        # The policy is blamed, not the question file, and nothing else is checked first.
+        with self.assertRaises(PolicyError) as caught:
+            build_intake_form(None, replace(policy, name="see https://wiki.example", source="team-policy.json"))
+        self.assertEqual(caught.exception.source, "team-policy.json")
+        self.assertEqual(len(caught.exception.problems), 1)
     def test_unreadable_files_are_reported(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             bad = Path(tmp) / "questions.json"
@@ -705,8 +736,9 @@ class AnswerTests(unittest.TestCase):
 
     def test_every_answer_the_page_accepts_passes_validation(self) -> None:
         properties = list(request_schema()["properties"])
-        for policy in (default_policy(), custom_policy()):
-            form = form_for(policy=policy)
+        # The keys form has fact keys whose text order and key order differ.
+        for policy, questions in ((default_policy(), None), (custom_policy(), None), (default_policy(), keys_questions())):
+            form = form_for(questions, policy=policy)
             vectors = answer_vectors(form)
             self.assertGreater(len(vectors), 5000)
             accepted = 0
@@ -719,7 +751,8 @@ class AnswerTests(unittest.TestCase):
                 for key, value in request.items():
                     self.assertNotIn(value, (None, "", []), (key, answers))
                 if "facts" in request:
-                    self.assertEqual(request["facts"], sorted(request["facts"]))
+                    keys = [fact.split(": ", 1)[0] for fact in request["facts"]]
+                    self.assertEqual(keys, sorted(keys), answers)
                 self.assertEqual(json.loads(render_download(request)), [request])
                 if found:
                     continue
@@ -970,6 +1003,9 @@ class PageTests(unittest.TestCase):
         self.assertEqual((summary["role"], summary["tabindex"], "hidden" in summary), ("alert", "-1", True))
         status = next(a for _, a in self.parsed.elements if a.get("id") == "status")
         self.assertEqual(status["role"], "status")
+        # The type announcement has a region of its own that takes no space on the page.
+        type_status = next(a for _, a in self.parsed.elements if a.get("id") == "type-status")
+        self.assertEqual((type_status["role"], type_status["class"]), ("status", "visually-hidden"))
         conditional = {q["id"] for t in self.form["types"] for q in t["questions"] if "show_if" in q}
         hidden = {a["id"][: -len("-field")] for _, a in self.parsed.elements if a.get("id", "").endswith("-field") and "hidden" in a}
         self.assertEqual(hidden, conditional)
@@ -1080,7 +1116,15 @@ class CliTests(unittest.TestCase):
             out_dir = Path(tmp) / "out"
             code, out, err = run_cli(["intake-page", "--policy", str(path), "--out", str(out_dir)])
             self.assertEqual((code, out), (2, ""))
-            self.assertIn("policy name 'ACME policy, see https://wiki.example': must not contain a link", err)
+            self.assertIn(f"error: {path}: policy name 'ACME policy, see https://wiki.example': must not contain a link", err)
+            self.assertTrue(err.endswith("The policy cannot be used for the intake page. Nothing was written.\n"), err)
+            self.assertFalse(out_dir.exists())
+
+    def test_a_page_that_cannot_be_rendered_leaves_no_folder(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir = Path(tmp) / "out"
+            with self.assertRaises(ValueError):
+                write_intake_page({**form_for(), "policy": "see https://wiki.example"}, out_dir)
             self.assertFalse(out_dir.exists())
 
     def test_a_policy_sets_the_bands_and_types(self) -> None:

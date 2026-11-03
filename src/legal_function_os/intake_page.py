@@ -33,7 +33,7 @@ from typing import Any
 
 from legal_function_os.bundled import bundled_path
 from legal_function_os.design_tokens import TOKENS_CSS
-from legal_function_os.policy import Policy, default_policy
+from legal_function_os.policy import Policy, PolicyError, default_policy
 from legal_function_os.rules import URGENCIES
 from legal_function_os.validation import EXTENSION_PREFIXES, request_schema
 
@@ -442,12 +442,16 @@ def _question(
     # set is known even when this question has another problem, so that problem is
     # reported once, not again at every question that depends on it.
     if key and key not in domains and kind not in ("text", "textarea"):
-        complete = kind == "yes_no" or (
-            kind == "choice" and isinstance(entry.get("options"), list) and len(options) == len(entry["options"])
-        )
-        # None: a question with choices whose own kind or options are wrong. A condition
-        # naming it adds no second problem; the build fails at the question itself.
-        domains[key] = [o["value"] for o in options] if complete and options else None
+        listed = entry.get("options")
+        if kind == "choice" and isinstance(listed, list) and 2 <= len(listed) <= MAX_OPTIONS:
+            # Each answer as it reads once its own problem is fixed, so a typo in a
+            # condition is still reported and a padded answer is not a second problem.
+            cleaned = [clean_text(o) for o in listed if isinstance(o, str) and clean_text(o)]
+            domains[key] = list(dict.fromkeys(cleaned)) or None
+        else:
+            # None: a wrong kind or options list. A condition naming it adds no second
+            # problem; the build fails at the question itself.
+            domains[key] = [o["value"] for o in options] if kind == "yes_no" else None
     cond = None
     if "show_if" in entry:
         cond = _condition(check, entry["show_if"], _join(where, "show_if"), str(key), questions, index, domains, fields)
@@ -557,7 +561,7 @@ def _check_policy(check: _Check, policy: Policy) -> None:
     named += [("policy value band", band) for band in policy.value_bands]
     named += [("policy request type", key) for key in policy.routing]
     for what, value in named:
-        place = f"{what} {ascii(value)}"
+        place = f"{what} {value!r}"
         if _SURROGATE.search(value):
             check.problem(place, "contains an unpaired surrogate; the page could not save it")
         elif "http://" in value.lower() or "https://" in value.lower():
@@ -568,16 +572,21 @@ def build_intake_form(
     questions: Any, policy: Policy | None = None, source: str = BUNDLED_SOURCE
 ) -> dict[str, Any]:
     """Check a question file against the contract and ``policy`` (the bundled default
-    without one) and return the resolved form the page is built from."""
+    without one) and return the resolved form the page is built from. Raises
+    ``PolicyError`` for policy text the page cannot carry and ``IntakeQuestionsError``
+    for every problem in the question file."""
 
     rules = policy if policy is not None else default_policy()
     properties = request_schema()["properties"]
     check = _Check()
+    # A problem in the policy's own text is the policy file's, not the question file's.
+    _check_policy(check, rules)
+    if check.problems:
+        raise PolicyError(rules.source, check.problems)
     top = check.obj(questions, "", _TOP_KEYS, ("schema", "name", "fields", "types"))
     if "schema" in top and top["schema"] != QUESTIONS_SCHEMA:
         check.problem("schema", f"expected {QUESTIONS_SCHEMA!r}, got {top['schema']!r}")
     name = check.text(top, "name", "")
-    _check_policy(check, rules)
     entries = _field_entries(check, top.get("fields", _ABSENT), properties)
     fields = _fields(check, entries, properties, rules)
     types = _types(check, top.get("types", _ABSENT), rules, fields, properties)
@@ -585,17 +594,20 @@ def build_intake_form(
         if item["name"] == "type":
             item["options"] = [{"label": t["label"], "value": t["key"]} for t in types]
             item["options"].append({"label": item.pop("not_sure"), "value": None})
-    # Two answers with one label would look alike on the page and in the review.
+    # Two answers with one label would look alike on the page and in the review. HTML
+    # collapses runs of spaces, so labels that differ only there look alike too.
     for item in fields:
-        seen: dict[str, Any] = {}
+        seen: dict[str, str] = {}
         for option in item.get("options", []):
-            label = option["label"]
+            label = " ".join(option["label"].split())
+            # The not-sure answer, always last, is the only one saved as null.
+            value = "not_sure" if option["value"] is None else repr(option["value"])
             if label and label in seen:
                 check.problem(
                     _join("fields", item["name"]),
-                    f"{label!r} labels both {seen[label]!r} and {option['value']!r}; give each answer its own label",
+                    f"{label!r} labels both {seen[label]} and {value}; give each answer its own label",
                 )
-            seen.setdefault(label, option["value"])
+            seen.setdefault(label, value)
     if check.problems:
         raise IntakeQuestionsError(source, check.problems)
     return {
@@ -1048,6 +1060,7 @@ __TYPES__
 <p class="muted">Saves the file on this device. Nothing is sent.</p></div>
 </section>
 <p class="status" id="status" role="status"></p>
+<p class="visually-hidden" id="type-status" role="status"></p>
 <footer class="muted">Value bands and request types follow the policy: __POLICY__. Questions: __QUESTIONS__.</footer>
 <script type="application/json" id="intake-spec">__SPEC__</script>
 <script>__SCRIPT__</script>
@@ -1212,7 +1225,7 @@ _SCRIPT = r"""(function () {
 
   var form = JSON.parse(document.getElementById("intake-spec").textContent);
   var app = core(form);
-  var items = {}, described = {}, place = {}, summaryItems = {}, baseTitle = document.title, announced = null, reviewed = null, objectUrl = null, errored = [];
+  var items = {}, described = {}, place = {}, summaryItems = {}, baseTitle = document.title, announced, reviewed = null, objectUrl = null, errored = [];
   function $(id) { return document.getElementById(id); }
   function el(tag, attrs, text) {
     var node = document.createElement(tag);
@@ -1221,7 +1234,7 @@ _SCRIPT = r"""(function () {
     return node;
   }
   function clear(node) { while (node.firstChild) node.removeChild(node.firstChild); }
-  function say(text) { var s = $("status"); s.textContent = ""; s.textContent = text; }
+  function say(text, id) { var s = $(id || "status"); s.textContent = ""; s.textContent = text; }
   function remember(item) {
     items[item.id] = item;
     var node = $(item.id);
@@ -1278,24 +1291,28 @@ _SCRIPT = r"""(function () {
       var mark = $(form.fields[n].id + "-optional");
       if (mark) mark.hidden = req[form.fields[n].name];
     }
-    dropHiddenErrors(state);
+    dropHiddenErrors(state, req);
     if (reviewed !== null && app.download(a) !== reviewed) {
       $("review").hidden = true;
       reviewed = null;
       say("You changed an answer. Check your answers again before you save the file.");
     }
   }
-  // Said once the requester leaves the type question, not at every arrow key in it.
+  // Said once the requester leaves the type question, not at every arrow key in it, in
+  // a region of its own: a change to the visible status could move Check under the pointer.
   function announceType() {
     var state = app.evaluate(answers()), n, count = 0;
-    if (state.type === announced) return;
-    announced = state.type;
-    if (state.type === null) { say("No further questions for this answer."); return; }
+    // undefined until a type is chosen; "not sure" is null.
+    var now = read(items["f-type"]) === "" ? undefined : state.type;
+    if (now === announced) return;
+    announced = now;
+    if (now === undefined) return;
+    if (now === null) { say("No further questions for this answer.", "type-status"); return; }
     for (n = 0; n < state.visible.length; n++) if (state.visible[n]) count++;
-    var label = form.types[state.type].label;
+    var label = form.types[now].label;
     say(count === 0 ? "No further questions for " + label + "." :
       count + (count === 1 ? " more question for " + label + " appears" : " more questions for " + label + " appear") +
-      " after the questions about the request.");
+      " after the questions about the request.", "type-status");
   }
   function unmark(id) {
     $(id + "-error").hidden = true;
@@ -1314,12 +1331,13 @@ _SCRIPT = r"""(function () {
     clear(summary);
     document.title = baseTitle;
   }
-  // A question hidden since the last check is no longer asked for.
-  function dropHiddenErrors(state) {
+  // An error the check would no longer give goes: a question hidden since the last
+  // check, or a request field the chosen type no longer requires.
+  function dropHiddenErrors(state, req) {
     var kept = [], n;
     for (n = 0; n < errored.length; n++) {
       var id = errored[n], at = place[id];
-      if (at && (at[0] !== state.type || !state.visible[at[1]])) {
+      if (at ? at[0] !== state.type || !state.visible[at[1]] : !req[items[id].name]) {
         unmark(id);
         summaryItems[id].parentNode.removeChild(summaryItems[id]);
         delete summaryItems[id];
@@ -1377,8 +1395,11 @@ _SCRIPT = r"""(function () {
   }
   $("questions").addEventListener("input", sync);
   $("questions").addEventListener("change", sync);
-  $("f-type").addEventListener("focusout", function (e) {
-    if (!e.relatedTarget || !$("f-type").contains(e.relatedTarget)) announceType();
+  // Focus landing outside the type question, not a blur: a click on an answer's label
+  // blurs the chosen radio before it changes the type. Check also announces, for a
+  // browser that does not focus a button it presses.
+  document.addEventListener("focusin", function (e) {
+    if (!$("f-type").contains(e.target)) announceType();
   });
   // Going back to the page restores its answers without an input event.
   window.addEventListener("pageshow", sync);

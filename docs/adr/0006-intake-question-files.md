@@ -62,7 +62,7 @@ Three constraints shape it here:
   writes them (`parent_bridge.parent_request`). A type question can never write a
   top-level field. The labels of the value bands, urgencies and request types do decide
   what a requester's choice saves, so a change to them needs the same review as a policy
-  change; two answers with one label are refused.
+  change; two answers with one label, or labels that differ only in spaces, are refused.
 - **Conditions are data, forward-only.** `"show_if": {"field": NAME, "in": [VALUES]}`
   names an answer given above the question: the value band, one of the three yes/no
   flags, the urgency, or an earlier yes/no or choice question of the same type. `type` is not a condition (put the question
@@ -76,7 +76,7 @@ Three constraints shape it here:
   not used, and a policy type with no question set is offered under its key. A condition
   on the value band must name bands of the policy in use, even under a type it lacks.
   Policy text the page carries (its name, bands and type keys) must hold no link and no
-  unpaired surrogate.
+  unpaired surrogate; a problem there is reported against the policy file.
 - **v1 evolves additively.** New optional keys may be added within v1. Removing or
   renaming a key, or changing what one means, needs v2. An optional request field missing
   from a file is not asked (a note), so a later optional contract field does not break a

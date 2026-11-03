@@ -79,13 +79,30 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.locator("#f-title").fill("DPA with Example Hosting GmbH (synthetic)");
   await page.locator("#f-title").press("Enter");
   out.urlAfterEnter = page.url();
+  // Leaving the type question with nothing chosen says nothing.
+  out.typeStatusUnchosen = await page.locator("#type-status").textContent();
 
-  // The type is announced once the requester moves on, not at each arrow key.
+  // "Not sure" as the first choice is announced too.
+  await group("What do you need help with?").getByLabel("Something else, or not sure").check();
+  await page.locator("#f-title").focus();
+  out.firstNotSureStatus = await page.locator("#type-status").textContent();
+
+  // The type is announced once the requester moves on: not at each arrow key, and not
+  // when a click on an answer's label blurs the chosen radio before the type changes.
+  await page.evaluate(() => {
+    window.typeStatusChanges = 0;
+    new MutationObserver(() => { window.typeStatusChanges++; }).observe(document.getElementById("type-status"), { childList: true, characterData: true, subtree: true });
+  });
   await group("What do you need help with?").getByLabel("Data processing agreement (DPA)").check();
-  out.statusWhileOnType = await page.locator("#status").textContent();
+  await page.locator("#f-type label", { hasText: "Checking a new supplier" }).click();
+  await page.locator("#f-type label", { hasText: "Data processing agreement (DPA)" }).click();
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowUp");
+  out.typeStatusChangesOnType = await page.evaluate(() => window.typeStatusChanges);
   out.dpaShown = await page.locator("#type-2").isVisible();
   await group("Value of the contract or claim").getByLabel("Under EUR 50,000").check();
-  out.typeAnnounced = await page.locator("#status").textContent();
+  out.typeAnnounced = await page.locator("#type-status").textContent();
+  out.statusAfterAnnouncement = await page.locator("#status").textContent();
   out.optionalAfterDpa = await page.locator("#f-counterparty-optional").isVisible();
   await group("Does it involve personal data?").getByLabel("Yes").check();
   out.countriesBefore = await page.locator("#q2-transfer_countries-field").isVisible();
@@ -106,8 +123,9 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   // A question hidden since the check is no longer asked for.
   await group(/outside the EEA/).getByLabel("No").check();
   out.errorsAfterHiding = await summary();
-  out.countriesErrorHidden = await page.locator("#q2-transfer_countries-error").isHidden();
   await group(/outside the EEA/).getByLabel("Yes").check();
+  // Shown again, the question no longer carries the dropped error.
+  out.countriesShownAgain = await page.evaluate(() => [document.getElementById("q2-transfer_countries-error").hidden, document.getElementById("q2-transfer_countries-field").className]);
 
   // Another type hides this one's questions and their errors.
   await group("What do you need help with?").getByLabel("Checking a new supplier").check();
@@ -117,6 +135,8 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
     vendor: await page.locator("#type-1").isVisible(),
     optional: await page.locator("#f-counterparty-optional").isVisible(),
     errors: await summary(),
+    invalid: await attr("#f-counterparty", "aria-invalid"),
+    title: await page.title(),
   };
   await group("What do you need help with?").getByLabel("Data processing agreement (DPA)").check();
 
@@ -128,6 +148,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.getByLabel(/^Which sub-processors\?/).fill("Example Mail Inc.");
   await page.getByRole("button", { name: "Check your answers" }).click();
   out.summaryHidden = await page.locator("#error-summary").isHidden();
+  out.marksAtReview = await page.evaluate(() => document.querySelectorAll(".field-error:not([hidden]), .has-error").length);
   out.titleAfterFix = await page.title();
   out.reviewFocused = await focused();
   out.statusAtReview = await page.locator("#status").textContent();
@@ -182,10 +203,27 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.longName = (await save()).name;
   out.overflowAt320 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
 
-  // Choosing "not sure" says there is nothing more to answer.
+  // Choosing "not sure" drops errors that were only the type's.
+  await page.getByLabel("What is the data used for?").fill("");
+  await page.getByRole("button", { name: "Check your answers" }).click();
+  out.typeOnlyErrors = await summary();
   await group("What do you need help with?").getByLabel("Something else, or not sure").check();
+  out.afterNotSure = { hidden: await page.locator("#error-summary").isHidden(), title: await page.title() };
+
+  // Announcing the type when focus moves to Check does not move Check from under the
+  // pointer, so one click at the end of the page still checks the answers.
+  await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+  const box = await page.getByRole("button", { name: "Check your answers" }).boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.mouse.up();
+  out.reviewAfterOneClick = await page.locator("#review").isVisible();
+  out.notSureStatus = await page.locator("#type-status").textContent();
+
+  // One question is "appears", not "appear".
+  await group("What do you need help with?").getByLabel("Brands, patents or software rights").check();
   await page.getByLabel("What do you need from legal?").focus();
-  out.notSureStatus = await page.locator("#status").textContent();
+  out.oneQuestionStatus = await page.locator("#type-status").textContent();
 
   out.requests = requests;
   out.errors = errors;
@@ -295,6 +333,7 @@ class IntakePageBrowserTests(unittest.TestCase):
             ("f-title-hint", None, "field"),
         )
         self.assertTrue(self.out["summaryHidden"])
+        self.assertEqual(self.out["marksAtReview"], 0)
         self.assertEqual(self.out["titleAfterFix"], "Prepare a legal request")
 
     def test_errors_for_hidden_questions_are_dropped(self) -> None:
@@ -307,19 +346,31 @@ class IntakePageBrowserTests(unittest.TestCase):
                 "Choose whether sub-processors will be involved",
             ],
         )
-        self.assertTrue(self.out["countriesErrorHidden"])
+        self.assertEqual(self.out["countriesShownAgain"], [True, "field"])
+        # The new type does not require the other party, so its error goes too.
         self.assertEqual(
             self.out["afterSwitch"],
-            {"dpa": False, "vendor": True, "optional": True, "errors": ["Enter the other party"]},
+            {"dpa": False, "vendor": True, "optional": True, "errors": [], "invalid": None, "title": "Prepare a legal request"},
         )
+        self.assertEqual(self.out["typeOnlyErrors"], ["Enter what the data is used for"])
+        self.assertEqual(self.out["afterNotSure"], {"hidden": True, "title": "Prepare a legal request"})
 
     def test_type_questions_appear_in_place(self) -> None:
         self.assertEqual((self.out["optionalMarks"], self.out["optionalAtStart"]), (1, True))
-        self.assertEqual(self.out["statusWhileOnType"], "")
+        self.assertEqual(self.out["typeStatusUnchosen"], "")
+        self.assertEqual(self.out["firstNotSureStatus"], "No further questions for this answer.")
+        self.assertEqual(self.out["typeStatusChangesOnType"], 0)
         self.assertEqual(
             self.out["typeAnnounced"],
             "3 more questions for Data processing agreement (DPA) appear after the questions about the request.",
         )
+        # The visible status is left for the page's own messages.
+        self.assertEqual(self.out["statusAfterAnnouncement"], "")
+        self.assertEqual(
+            self.out["oneQuestionStatus"],
+            "1 more question for Brands, patents or software rights appears after the questions about the request.",
+        )
+        self.assertTrue(self.out["reviewAfterOneClick"])
         self.assertTrue(self.out["dpaShown"])
         self.assertFalse(self.out["optionalAfterDpa"])
         self.assertEqual((self.out["countriesBefore"], self.out["countriesAfter"]), (False, True))

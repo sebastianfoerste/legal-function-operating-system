@@ -223,6 +223,11 @@ def _intake_page(args: argparse.Namespace) -> int:
             print(f"error: {exc.source}: {problem}", file=sys.stderr)
         print("The intake questions cannot be used. Nothing was written.", file=sys.stderr)
         raise _Failure(2) from None
+    except PolicyError as exc:
+        for problem in exc.problems:
+            print(f"error: {exc.source}: {problem}", file=sys.stderr)
+        print("The policy cannot be used for the intake page. Nothing was written.", file=sys.stderr)
+        raise _Failure(2) from None
     for note in form["notes"]:
         print(f"note: {note}", file=sys.stderr)
     if args.out:
