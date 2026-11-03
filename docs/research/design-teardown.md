@@ -80,7 +80,7 @@ Sources: <https://help.lawvu.com/en/articles/6824391-conditional-intake-forms>,
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adopt | Forward-only conditions, if branching is added | Specced as F9 |
+  | Adopt | Forward-only conditions, if branching is added | Built as F9: `show_if` in `src/legal_function_os/data/intake_questions.json`, checked by `intake_page.py` |
   | Adapt | A requester list of own matters with plain stages | `src/pilot/requester_status.py`, built |
   | Reject | An MCP write surface | Rule 4 |
 
@@ -226,7 +226,7 @@ a verdict, and the file the verdict would change.
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
 | Opening a scenario created a matter at once; a missing fact surfaced only as a refusal after submit | Observed | `baseline/room-requester-1280.png` | Adapt, built: the intake form with five required facts and an error summary, in `src/pilot/review_room.py` (after: `after/room-intake-form-1280.png`) |
-| Core request schema requires only `id` and `title`, with no branching | Observed (`contracts/legal-request.v1.schema.json`) | — | Adapt, specced (F9): a per-`type` question file and a static intake page that emits JSON for download only |
+| Core request schema requires only `id` and `title`, with no branching | Observed (`contracts/legal-request.v1.schema.json`) | — | Adapt, built (F9): per-type questions in `src/legal_function_os/data/intake_questions.json` and a static intake page, `src/legal_function_os/intake_page.py`, that saves JSON for download only |
 
 ### Triage
 

@@ -10,3 +10,4 @@ Rejected. A Proposed record names a choice the maintainer still has to make.
 | [0003](0003-intake-facts-and-requester-status.md) | Required facts and requester status are derived views, not new state | Accepted |
 | [0004](0004-docx-tracked-changes-engine.md) | Python-Redlines for Word tracked changes | Proposed |
 | [0005](0005-presence-in-memory.md) | Presence is held in memory only and is never an audit event | Accepted |
+| [0006](0006-intake-question-files.md) | Intake questions live in one file per policy, keyed by request type | Accepted |

@@ -21,7 +21,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       - run: make install
-      - run: make test
+      - name: Test (the intake page script runs in Node, which ubuntu-latest ships)
+        env:
+          REQUIRE_JS_TESTS: "1"
+        run: make test
       - name: Regenerate committed artifacts
         run: make demo
       - name: Reject generated-artifact drift
@@ -102,3 +105,8 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
           REQUIRE_BROWSER_TESTS: "1"
         run: make -C supervised-agent check PYTHON=python PYTEST_ARGS=-rA
+      - name: Intake page browser test (browser required)
+        env:
+          NODE_PATH: ${{ runner.temp }}/pw/node_modules
+          REQUIRE_BROWSER_TESTS: "1"
+        run: PYTHONPATH=src python -m unittest tests.test_intake_page_browser -v

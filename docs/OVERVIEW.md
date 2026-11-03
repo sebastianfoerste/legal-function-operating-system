@@ -86,6 +86,9 @@ By [@sebastianfoerste](https://github.com/sebastianfoerste):
    risk. It does not distinguish destinations covered by an adequacy decision
    (Art. 45 GDPR) from those that need Art. 46 safeguards; that distinction is left
    to the reviewer.
+9. The intake page saves a request file on the requester's device; nothing is sent,
+   so legal receives it only when the requester passes it on. Every file has the id
+   `REQ-DRAFT` until legal numbers it.
 
 Controls (synthetic inputs only, no external communication, no self-approval) are listed in [MODULES.md](MODULES.md#controls).
 
@@ -101,4 +104,4 @@ structured, testable, and reviewable.
 - [Competitive research, October 2026](research/2026-10-competitive-landscape.md) and the [adaptation plan](research/adaptation-plan.md)
 - [Reviewer script](RAAS_REVIEWER_SCRIPT.md) · [Collaboration programme](COLLABORATION_PROGRAMME.md) · [Consolidation](CONSOLIDATION.md)
 - [Supervised agent](../supervised-agent/) and its [pilot case study](../supervised-agent/docs/pilot/CASE_STUDY.md); shared contract: [`contracts/legal-workflow-controls.v1.schema.json`](../contracts/legal-workflow-controls.v1.schema.json)
-- [Board pack](../examples/board-pack.md) · [Outcome control tower](../examples/legal-outcome-control-tower.md) · [Capacity simulation](../examples/legal-capacity-simulation.md) · [Approval matrix](../examples/approval-matrix.md) · [Architecture](architecture.svg)
+- [Board pack](../examples/board-pack.md) · [Outcome control tower](../examples/legal-outcome-control-tower.md) · [Capacity simulation](../examples/legal-capacity-simulation.md) · [Approval matrix](../examples/approval-matrix.md) · [Intake page](../examples/intake-page.html) · [Architecture](architecture.svg)

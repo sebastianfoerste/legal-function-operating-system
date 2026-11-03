@@ -28,6 +28,7 @@ BLOB = f"{REPO}/blob/main"
 HOSTED = (
     (ROOT / "examples" / "legal-outcome-control-tower.html", "legal-outcome-control-tower.html"),
     (ROOT / "examples" / "approval-matrix.html", "approval-matrix.html"),
+    (ROOT / "examples" / "intake-page.html", "intake-page.html"),
     (ROOT / "examples" / "raas-deal-room.html", "raas-deal-room.html"),
     (ROOT / "examples" / "raas-deal-desk.svg", "raas-deal-desk.svg"),
     (ROOT / "docs" / "architecture.svg", "architecture.svg"),
@@ -55,6 +56,13 @@ CARDS = (
         "approval-matrix.html",
         "Who must sign off for each value band and risk level, read from the rules and the "
         "default policy, with each sample request placed in its cell.",
+        "Hosted",
+    ),
+    (
+        "Request intake page",
+        "intake-page.html",
+        "Prepare a synthetic legal request in the browser and save it as a request file. "
+        "Nothing is sent and nothing is decided; legal reviews the file.",
         "Hosted",
     ),
     (

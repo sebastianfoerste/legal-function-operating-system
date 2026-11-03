@@ -25,7 +25,9 @@ is a complete example.
 ```
 
 Every input is checked before any decision is made. Use `--input -` to read the
-array from standard input. A request log kept in a spreadsheet works too: save it
+array from standard input. A requester can also prepare one request in a browser with
+the intake page (`legal-function-os intake-page`, [Your own intake questions](CUSTOMIZE.md#your-own-intake-questions)):
+it saves a file in this format with the id `REQ-DRAFT`, which legal renumbers. A request log kept in a spreadsheet works too: save it
 as CSV ([Spreadsheets (CSV)](#spreadsheets-csv)).
 
 ## Fields

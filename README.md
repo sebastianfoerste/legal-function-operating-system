@@ -58,7 +58,7 @@ The full gate, `make check`, also runs the supervised agent and needs pinned too
 
 ## Links
 
-- [Artifacts in a browser](https://sebastianfoerste.github.io/legal-function-operating-system/): deal room, outcome control tower, approval matrix, decision cockpit
+- [Artifacts in a browser](https://sebastianfoerste.github.io/legal-function-operating-system/): deal room, outcome control tower, approval matrix, intake page, decision cockpit
 - [Case study](CASE_STUDY.md) · [Industrial RaaS case study](RAAS_CASE_STUDY.md)
 - [Overview](docs/OVERVIEW.md): what is inside, DPA clause review, known limitations · [Modules](docs/MODULES.md) · [CLI reference](docs/CLI.md)
 - [Verification manifest](docs/verification-manifest.json) · [Contributing](CONTRIBUTING.md)
