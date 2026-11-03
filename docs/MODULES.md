@@ -217,7 +217,8 @@ src/legal_function_os/
   raas_sources.py          dated primary-source registry
   raas_renderers.py        Markdown, HTML, SVG, and JSON outputs
   raas_cli.py              artifact generation and blocker gate
-  bundled.py               locates the synthetic data shipped in the wheel
+  bundled.py               locates the synthetic data shipped in the wheel; words a
+                           file that is not UTF-8
   data/                    synthetic data, packaged so the demo runs uninstalled
     sample_requests.json   synthetic general legal requests
     service_events.json    versioned synthetic request lifecycle

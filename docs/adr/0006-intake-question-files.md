@@ -2,6 +2,9 @@
 
 - Status: Accepted
 - Date: 2026-11-02
+- Defaults confirmed by the owner on 2026-11-03: the page is hosted on Pages; the three
+  decision flags keep the "Not sure? Choose Yes and say why" hint; every file is
+  `REQ-DRAFT`; no `x_intake` provenance key (see Decision and Alternatives rejected).
 - Answers the "ADR needed" item for F9 in `docs/research/adaptation-plan.md`: the format
   and location of per-type question files, and how they relate to `request_schema()`.
 
