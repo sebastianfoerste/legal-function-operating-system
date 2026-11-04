@@ -857,6 +857,8 @@ def render_intake_markdown(form: dict[str, Any]) -> str:
                 line += f" Choices: {_option_list(question)}."
             if "show_if" in question:
                 line += " " + _condition_words(form_type, form["fields"], question["show_if"])
+            if question["hint"]:
+                line += f" Hint: {_md_line(question['hint'])}"
             lines.append(line)
     if form["notes"]:
         lines += ["", "## Notes", ""]

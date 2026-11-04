@@ -1330,7 +1330,8 @@ class PageTests(unittest.TestCase):
         )
         self.assertIn(
             '3. **Which countries outside the EEA?** (`transfer_countries`, text), required. Shown when '
-            '"Will any data be sent to or accessed from outside the EEA?" is Yes.',
+            '"Does it involve any data sent to or accessed from outside the EEA?" is Yes. '
+            "Hint: If you do not know, write not sure.\n",
             sheet,
         )
         self.assertIn(
