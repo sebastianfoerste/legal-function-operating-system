@@ -37,7 +37,7 @@
       "error": "Choose whether it involves personal data"
     },
     "non_eea_transfer": {
-      "label": "Will any data be sent to or accessed from outside the EEA?",
+      "label": "Does it involve any data sent to or accessed from outside the EEA?",
       "hint": "The EEA is the EU plus Iceland, Liechtenstein and Norway; a supplier or server elsewhere counts. Not sure? Choose Yes and say why in “What do you need from legal?”.",
       "error": "Choose whether any data is sent to or accessed from outside the EEA"
     },
@@ -69,7 +69,7 @@
     },
     "deadline": {
       "label": "Date you need an answer by",
-      "hint": "For example 2026-12-01.",
+      "hint": "Year, month and day, for example 2026-12-01.",
       "error": "Enter the date you need an answer by"
     }
   },
@@ -79,9 +79,9 @@
       "also_required": ["counterparty"],
       "questions": [
         {"key": "annual_contract_value_eur", "label": "Annual contract value in EUR", "kind": "text", "hint": "A number, for example 42000.", "error": "Enter the annual contract value in EUR"},
-        {"key": "signature_target_date", "label": "Target signature date", "kind": "text", "hint": "For example 2026-12-15.", "error": "Enter the target signature date"},
-        {"key": "requested_deviations", "label": "Changes the customer asked for", "kind": "textarea", "hint": "Write none if there are none.", "error": "Enter the changes the customer asked for, or write none"},
-        {"key": "business_owner", "label": "Business owner on your side", "kind": "text", "error": "Enter the business owner on your side"},
+        {"key": "signature_target_date", "label": "Target signature date", "kind": "text", "hint": "Year, month and day, for example 2026-12-15.", "error": "Enter the target signature date"},
+        {"key": "requested_deviations", "label": "Changes the customer asked for", "kind": "textarea", "hint": "The changes the other party asked for, whether they are the customer or the supplier. Write none if there are none.", "error": "Enter the changes the other party asked for, or write none"},
+        {"key": "business_owner", "label": "Business owner on your side", "kind": "text", "hint": "The person in your company who is responsible for this contract.", "error": "Enter the business owner on your side"},
         {"key": "liability_cap_discussed", "label": "What cap on liability has been discussed, if any?", "kind": "textarea", "required": false, "show_if": {"field": "uncapped_liability", "in": [true]}}
       ]
     },
@@ -89,8 +89,8 @@
       "label": "Checking a new supplier",
       "questions": [
         {"key": "vendor_service", "label": "What will the supplier provide?", "kind": "text", "error": "Enter what the supplier will provide"},
-        {"key": "data_categories", "label": "What personal data will the supplier handle?", "kind": "textarea", "error": "Enter what personal data the supplier will handle", "show_if": {"field": "personal_data", "in": [true]}},
-        {"key": "security_review_done", "label": "Has IT security reviewed the supplier?", "kind": "yes_no", "error": "Choose whether IT security has reviewed the supplier"},
+        {"key": "data_categories", "label": "What personal data will the supplier handle?", "kind": "textarea", "hint": "If you do not know, write not sure.", "error": "Enter what personal data the supplier will handle, or write not sure", "show_if": {"field": "personal_data", "in": [true]}},
+        {"key": "security_review_done", "label": "Has IT security reviewed the supplier?", "kind": "yes_no", "hint": "Not sure? Choose No and say why in “What do you need from legal?”.", "error": "Choose whether IT security has reviewed the supplier"},
         {"key": "security_review_reference", "label": "Reference of the security review", "kind": "text", "required": false, "show_if": {"field": "security_review_done", "in": [true]}}
       ]
     },
@@ -100,8 +100,8 @@
       "questions": [
         {"key": "processing_role", "label": "Who decides how the data is used?", "kind": "choice", "options": ["We decide (we are the controller)", "The other party decides (we are the processor)", "Not sure"], "error": "Choose who decides how the data is used"},
         {"key": "processing_purpose", "label": "What is the data used for?", "kind": "textarea", "error": "Enter what the data is used for"},
-        {"key": "transfer_countries", "label": "Which countries outside the EEA?", "kind": "text", "error": "Enter the countries outside the EEA", "show_if": {"field": "non_eea_transfer", "in": [true]}},
-        {"key": "sub_processors", "label": "Will sub-processors be involved?", "kind": "yes_no", "error": "Choose whether sub-processors will be involved"},
+        {"key": "transfer_countries", "label": "Which countries outside the EEA?", "kind": "text", "hint": "If you do not know, write not sure.", "error": "Enter the countries outside the EEA, or write not sure", "show_if": {"field": "non_eea_transfer", "in": [true]}},
+        {"key": "sub_processors", "label": "Will sub-processors be involved?", "kind": "yes_no", "hint": "Not sure? Choose Yes and say why in “What do you need from legal?”.", "error": "Choose whether sub-processors will be involved"},
         {"key": "sub_processor_list", "label": "Which sub-processors?", "kind": "textarea", "required": false, "show_if": {"field": "sub_processors", "in": [true]}}
       ]
     },
@@ -109,8 +109,8 @@
       "label": "A question about personal data",
       "questions": [
         {"key": "data_subjects", "label": "Whose personal data is it about?", "kind": "text", "hint": "For example customers, employees or job applicants.", "error": "Enter whose personal data it is about"},
-        {"key": "request_from_individual", "label": "Has a person asked about their own data?", "kind": "yes_no", "error": "Choose whether a person has asked about their own data"},
-        {"key": "request_received_on", "label": "When did their request arrive?", "kind": "text", "hint": "For example 2026-11-02.", "error": "Enter when their request arrived", "show_if": {"field": "request_from_individual", "in": [true]}}
+        {"key": "request_from_individual", "label": "Has a person asked about their own data?", "kind": "yes_no", "hint": "For example they asked what data you hold about them, for a copy, to correct or delete it, or to stop using it. Not sure? Choose Yes and say why in “What do you need from legal?”.", "error": "Choose whether a person has asked about their own data"},
+        {"key": "request_received_on", "label": "When did their request arrive?", "kind": "text", "hint": "The date it first reached anyone in our company, even if that was before it reached you. Year, month and day, for example 2026-11-02.", "error": "Enter when their request arrived", "show_if": {"field": "request_from_individual", "in": [true]}}
       ]
     },
     "ai_governance": {
@@ -118,8 +118,8 @@
       "questions": [
         {"key": "ai_system", "label": "Which AI system or tool?", "kind": "text", "error": "Enter the AI system or tool"},
         {"key": "ai_use", "label": "What will it be used for?", "kind": "textarea", "error": "Enter what it will be used for"},
-        {"key": "ai_affects_people", "label": "Will its output affect decisions about people?", "kind": "yes_no", "hint": "For example hiring, credit or access to a service.", "error": "Choose whether its output will affect decisions about people"},
-        {"key": "ai_human_check", "label": "Does a person check each output before it is used?", "kind": "yes_no", "error": "Choose whether a person checks each output before it is used", "show_if": {"field": "ai_affects_people", "in": [true]}}
+        {"key": "ai_affects_people", "label": "Will its output affect decisions about people?", "kind": "yes_no", "hint": "For example hiring, credit or access to a service. Not sure? Choose Yes and say why in “What do you need from legal?”.", "error": "Choose whether its output will affect decisions about people"},
+        {"key": "ai_human_check", "label": "Does a person check each output before it is used?", "kind": "yes_no", "hint": "Not sure, or only some outputs are checked? Choose No and say why in “What do you need from legal?”.", "error": "Choose whether a person checks each output before it is used", "show_if": {"field": "ai_affects_people", "in": [true]}}
       ]
     },
     "corporate": {
@@ -142,15 +142,15 @@
       "label": "Hiring, contracts or leaving",
       "questions": [
         {"key": "employment_topic", "label": "What is it about?", "kind": "choice", "options": ["Hiring or an offer letter", "A change to someone's contract", "Leaving or dismissal", "Something else"], "error": "Choose what it is about"},
-        {"key": "work_country", "label": "Country where the person works", "kind": "text", "error": "Enter the country where the person works"},
-        {"key": "works_council", "label": "Is there a works council or union at that site?", "kind": "yes_no", "error": "Choose whether there is a works council or union at that site"}
+        {"key": "work_country", "label": "Country where the person works or will work", "kind": "text", "error": "Enter the country where the person works or will work"},
+        {"key": "works_council", "label": "Is there a works council or union where the person works or will work?", "kind": "yes_no", "hint": "Not sure? Choose Yes and say why in “What do you need from legal?”.", "error": "Choose whether there is a works council or union where the person works or will work"}
       ]
     },
     "dispute": {
       "label": "A dispute or claim",
       "questions": [
-        {"key": "dispute_stage", "label": "Where does it stand?", "kind": "choice", "options": ["A disagreement, nothing formal yet", "A formal letter or claim has arrived", "Court or arbitration proceedings have started"], "error": "Choose where it stands"},
-        {"key": "reply_due", "label": "When is a reply due?", "kind": "text", "hint": "For example 2026-11-20.", "error": "Enter when a reply is due", "show_if": {"field": "dispute_stage", "in": ["A formal letter or claim has arrived", "Court or arbitration proceedings have started"]}},
+        {"key": "dispute_stage", "label": "Where does it stand?", "kind": "choice", "options": ["A disagreement, nothing formal yet", "A formal letter or claim has arrived", "Court or arbitration proceedings have started"], "hint": "If our side sent the letter or started the proceedings, choose the stage it has reached. Not sure? Choose the more formal stage. Either way, say so in “What do you need from legal?”.", "error": "Choose where it stands"},
+        {"key": "reply_due", "label": "When is a reply due?", "kind": "text", "hint": "Year, month and day, for example 2026-11-20. If no date is given, write not stated and say when the letter or claim arrived in “What do you need from legal?”.", "error": "Enter when a reply is due, or write not stated", "show_if": {"field": "dispute_stage", "in": ["A formal letter or claim has arrived", "Court or arbitration proceedings have started"]}},
         {"key": "other_side_has_lawyer", "label": "Does the other side have a lawyer?", "kind": "yes_no", "error": "Choose whether the other side has a lawyer"}
       ]
     },
@@ -158,7 +158,7 @@
       "label": "Brands, patents or software rights",
       "questions": [
         {"key": "ip_kind", "label": "What is it about?", "kind": "choice", "options": ["A brand or trademark", "A patent or invention", "Software or copyright", "Something else"], "error": "Choose what it is about"},
-        {"key": "open_source", "label": "Does it involve open-source software?", "kind": "yes_no", "error": "Choose whether it involves open-source software", "show_if": {"field": "ip_kind", "in": ["Software or copyright"]}},
+        {"key": "open_source", "label": "Does it involve open-source software?", "kind": "yes_no", "hint": "Not sure? Choose Yes and say why in “What do you need from legal?”.", "error": "Choose whether it involves open-source software", "show_if": {"field": "ip_kind", "in": ["Software or copyright"]}},
         {"key": "open_source_licences", "label": "Which open-source licences?", "kind": "text", "required": false, "show_if": {"field": "open_source", "in": [true]}}
       ]
     }

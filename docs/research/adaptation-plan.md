@@ -624,3 +624,24 @@ playbook position next to each change, and the evidence next to each resolution.
 12. **German coverage.** Only one purely German search ran. A follow-up run should add
     German queries (for example "Legal Request Management Rechtsabteilung", "Vertragsprüfung
     Playbook", "Mandatsannahme Software Unternehmensjurist") once vendor sites are reachable.
+13. **Intake page defaults** (F9). **Decided on 2026-11-03** (ADR 0006): the page is hosted
+    on Pages with its made-up-details notice; the three decision flags keep the "Not sure?
+    Choose Yes and say why" hint; every file is `REQ-DRAFT` and legal renumbers; no
+    `x_intake` key.
+    - The bundled wording was reviewed on 2026-11-04 for accuracy and requester safety. Unsure
+      paths and clearer dates were added; nothing that rests on law was changed, because
+      EUR-Lex could not be reached from the session. Open for a lawyer:
+      - how `processing_role` puts controller and processor ("who decides how the data is
+        used");
+      - whether the personal-data hint should name indirect identifiers, such as customer or
+        user IDs and IP addresses;
+      - whether the transfer hint should say that viewing data from outside the EEA counts;
+      - a plain-language definition of sub-processor.
+    - Open for the owner, as policy questions:
+      - whether `uncapped_liability` also covers a draft with no cap, or with claims carved out
+        of a cap;
+      - whether a value band means yearly or whole-term value, and which band exactly
+        EUR 250,000 falls in: the labels overlap there, and the policy's reasons disagree
+        ("between EUR 250k and EUR 1m" against "Dispute above €250k");
+      - whether the pilot's pinned label "Changes the customer asked for" should say "the other
+        party", as the bundled hint now does.

@@ -236,6 +236,16 @@ class PolicyChecks(unittest.TestCase):
                 load_policy(str(broken))
             with self.assertRaisesRegex(PolicyError, "cannot read the file"):
                 load_policy(str(Path(tmp) / "missing.json"))
+            # A file saved in another encoding is reported, not a traceback.
+            latin = Path(tmp) / "latin.json"
+            latin.write_bytes('{"name": "Richtlinie f\u00fcr Vertr\u00e4ge"}'.encode("latin-1"))
+            with self.assertRaises(PolicyError) as caught:
+                load_policy(str(latin))
+            message = "cannot read the file: it is not UTF-8 text (byte 0xfc at position 22); save it as UTF-8"
+            self.assertEqual(caught.exception.problems, [message])
+            code, _, err = run_cli(["validate", "--policy", str(latin)])
+            self.assertEqual(code, 2)
+            self.assertIn(f"error: {latin}: {message}\n", err)
 
 
 class CliPolicyFlag(unittest.TestCase):

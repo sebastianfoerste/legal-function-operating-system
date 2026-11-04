@@ -376,7 +376,7 @@ class IntakePageBrowserTests(unittest.TestCase):
                 "Enter the other party",
                 "Choose who decides how the data is used",
                 "Enter what the data is used for",
-                "Enter the countries outside the EEA",
+                "Enter the countries outside the EEA, or write not sure",
                 "Choose whether sub-processors will be involved",
             ],
         )
