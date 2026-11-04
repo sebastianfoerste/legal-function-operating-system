@@ -692,6 +692,11 @@ def _legacy_main(argv: list[str]) -> int:
             dpa_documents = _load_dpa_documents(args.dpa_input)
         if args.approvals and args.shared_space_output:
             approvals = _read_json(args.approvals, "approvals")
+            # An empty entry means no approval; anything else must be an approval object.
+            if not isinstance(approvals, dict) or any(v and not isinstance(v, dict) for v in approvals.values()):
+                raise _error(
+                    f"approvals {args.approvals}: expected an object that maps a request id to an approval object"
+                )
     except _Failure as failure:
         return failure.status
 

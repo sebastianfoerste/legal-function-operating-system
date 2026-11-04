@@ -351,7 +351,7 @@ def _condition(
         earlier = [q for q in questions[:index] if isinstance(q, dict) and q.get("key") == name]
         if name in fields or any(q.get("kind") in ("text", "textarea") for q in earlier):
             check.problem(place, f'"{name}" is free text and cannot control a question; use yes_no or choice')
-        elif earlier:
+        elif earlier and not QUESTION_KEY.match(name):
             # An earlier question whose own key is wrong: that problem is reported there.
             pass
         elif later and later[0] > index:

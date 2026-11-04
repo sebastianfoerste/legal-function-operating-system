@@ -78,8 +78,11 @@ def load_requests(path: str | None) -> RequestInput:
         source = bundled_path("sample_requests.json")
         return RequestInput(_parse_json(source.read_text(encoding="utf-8"), str(source)), str(source))
     if path == "-":
+        # The bytes, decoded here: the locale decides how sys.stdin decodes, and under a C
+        # or UTF-8-mode locale it turns bytes that are not UTF-8 into surrogates silently.
+        stream = getattr(sys.stdin, "buffer", None)
         try:
-            text = sys.stdin.read()
+            text = sys.stdin.read() if stream is None else stream.read().decode("utf-8-sig")
         except UnicodeDecodeError as exc:
             raise InputError(f"cannot read standard input: {not_utf8(exc)}") from None
         return RequestInput(_parse_json(text, "standard input"), "standard input")

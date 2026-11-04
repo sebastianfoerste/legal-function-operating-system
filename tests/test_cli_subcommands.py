@@ -345,9 +345,15 @@ class LegacyFlags(unittest.TestCase):
             out_dir, space = Path(tmp) / "out", Path(tmp) / "shared-space.json"
             broken = Path(tmp) / "approvals.json"
             broken.write_text("{", encoding="utf-8")
+            listed, shaped = Path(tmp) / "listed.json", Path(tmp) / "shaped.json"
+            listed.write_text('[{"request_id": "REQ-1001"}]', encoding="utf-8")
+            shaped.write_text('{"REQ-1001": "yes"}', encoding="utf-8")
+            shape = "expected an object that maps a request id to an approval object"
             for path, message in (
                 (Path(tmp) / "missing.json", "cannot read approvals"),
                 (broken, f"approvals {broken} is not valid JSON"),
+                (listed, f"approvals {listed}: {shape}"),
+                (shaped, f"approvals {shaped}: {shape}"),
             ):
                 code, _, stderr = run_cli(
                     ["--quiet", "--out", str(out_dir), "--shared-space-output", str(space), "--approvals", str(path)]
@@ -355,6 +361,16 @@ class LegacyFlags(unittest.TestCase):
                 self.assertEqual(code, 2, path)
                 self.assertIn(message, stderr)
                 self.assertFalse(out_dir.exists() or space.exists())
+            # An empty entry still means no approval.
+            approvals = Path(tmp) / "approvals-ok.json"
+            approvals.write_text(
+                json.dumps({"REQ-1001": {"approved_by": "Legal Ops", "note": "Checked against the policy today."}, "REQ-1002": None, "REQ-1003": ""}),
+                encoding="utf-8",
+            )
+            code, _, stderr = run_cli(["--quiet", "--shared-space-output", str(space), "--approvals", str(approvals)])
+            self.assertEqual(code, 0, stderr)
+            entries = {e["request_id"]: e["shared"] for e in json.loads(space.read_text(encoding="utf-8"))["entries"]}
+            self.assertEqual((entries["REQ-1001"], entries["REQ-1002"], entries["REQ-1003"]), (True, False, False))
 
     def test_dpa_input_error_points_at_the_subcommand(self):
         code, _, stderr = run_cli(["--quiet", "--dpa-input", str(DATA / "dpa_documents.json")])

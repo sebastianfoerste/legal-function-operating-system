@@ -475,7 +475,15 @@ class QuestionFileTests(unittest.TestCase):
                 f'{where}[3].key: "urgency" is a request field; choose another key',
             ),
             # The controller's own problem is reported once, not again at what depends on it.
+            "a one-line text question": (
+                lambda qs: qs[3].update(show_if={"field": "transfer_countries", "in": ["x"]}),
+                f'{where}[3].show_if.field: "transfer_countries" is free text and cannot control a question; use yes_no or choice',
+            ),
             # Its own key is the problem, reported there; it is not "free text".
+            "a choice controller whose own key is wrong": (
+                lambda qs: qs[0].update(key="Processing_Role") or qs[1].update(show_if={"field": "Processing_Role", "in": ["Not sure"]}),
+                f"{where}[0].key: expected lower-case letters, digits and _, starting with a letter, up to 40 characters",
+            ),
             "a controller whose own key is wrong": (
                 lambda qs: qs[3].update(key="Sub_Processors") or qs[4].update(show_if={"field": "Sub_Processors", "in": [True]}),
                 f"{where}[3].key: expected lower-case letters, digits and _, starting with a letter, up to 40 characters",
