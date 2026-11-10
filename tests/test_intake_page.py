@@ -632,6 +632,14 @@ class QuestionFileTests(unittest.TestCase):
             "a label that is only a byte order mark": ({"label": "\ufeff"}, (), [f"{where}.label: expected non-empty text, got text"]),
             "an option with spaces": ({"options": ["A", " B"]}, (), [f"{where}.options[1]: has spaces at the start or end"]),
             "an option twice": ({"options": ["A", "A"]}, (), [f"{where}.options[1]: 'A' is listed twice"]),
+            "two options that read the same": (
+                {"options": ["We decide", "We  decide"]}, (),
+                [f"{where}.options[1]: 'We  decide' reads the same as 'We decide' on the page; give each answer its own wording"],
+            ),
+            "an option with an invisible character": (
+                {"options": ["We decide", "We\u200b decide"]}, (),
+                [f"{where}.options[1]: 'We\\u200b decide' reads the same as 'We decide' on the page; give each answer its own wording"],
+            ),
             "an option ending in U+FEFF": ({"options": ["A", "B\ufeff"]}, (), [f"{where}.options[1]: has spaces at the start or end"]),
             "an option with a link": (
                 {"options": ["A", "See https://example.org"]}, (),
@@ -741,6 +749,10 @@ class QuestionFileTests(unittest.TestCase):
             ),
             "two bands whose labels differ only in spaces": (
                 lambda f: f["value_band"]["options"].update({"250k-1m": "Over\u00a0 EUR 1 million "}),
+                ["fields.value_band: 'Over EUR 1 million' labels both '250k-1m' and '>1m'; give each answer its own label"],
+            ),
+            "two bands whose labels differ only in invisible characters": (
+                lambda f: f["value_band"]["options"].update({"250k-1m": "Over EUR\ufeff 1\u200b million"}),
                 ["fields.value_band: 'Over EUR 1 million' labels both '250k-1m' and '>1m'; give each answer its own label"],
             ),
             "a label for a band the policy does not have": (lambda f: f["value_band"]["options"].update(huge=None), []),

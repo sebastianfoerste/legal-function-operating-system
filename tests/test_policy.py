@@ -246,6 +246,11 @@ class PolicyChecks(unittest.TestCase):
             code, _, err = run_cli(["validate", "--policy", str(latin)])
             self.assertEqual(code, 2)
             self.assertIn(f"error: {latin}: {message}\n", err)
+            # The position counts from the file's first byte, a byte order mark included.
+            latin.write_bytes(b"\xef\xbb\xbf" + latin.read_bytes())
+            with self.assertRaises(PolicyError) as caught:
+                load_policy(str(latin))
+            self.assertIn("(byte 0xfc at position 25)", caught.exception.problems[0])
 
 
 class CliPolicyFlag(unittest.TestCase):
@@ -377,6 +382,28 @@ class InitInterview(unittest.TestCase):
             self.assertEqual(code, 0)
             committed = json.loads((EXAMPLES / "board-pack.json").read_text(encoding="utf-8"))
             self.assertEqual(json.loads(stdout), committed)
+
+    def test_answers_that_are_not_utf8_stop_before_anything_is_written(self):
+        answers = "Richtlinie f\u00fcr Vertr\u00e4ge\n".encode("latin-1") + b"\n" * 12
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "policy.json"
+            # Strict decoding, and a C or UTF-8-mode locale that turns bad bytes into surrogates.
+            for errors in ("strict", "surrogateescape"):
+                stdin = io.TextIOWrapper(io.BytesIO(answers), encoding="utf-8", errors=errors)
+                out, err = io.StringIO(), io.StringIO()
+                with mock.patch("sys.stdin", stdin), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+                    code = cli_main(["init", "--out", str(target)])
+                self.assertEqual(code, 2, errors)
+                self.assertIn("the answers on standard input are not UTF-8 text; save them as UTF-8. Nothing was written.", err.getvalue())
+                self.assertFalse(target.exists(), errors)
+
+    def test_a_policy_that_cannot_be_written_leaves_no_file(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "policy.json"
+            with mock.patch("legal_function_os.cli.render_policy_json", return_value='{"name": "x\udcfc"}\n'):
+                with self.assertRaises(UnicodeEncodeError):
+                    run_cli(["init", "--out", str(target), "--defaults"])
+            self.assertFalse(target.exists())
 
     def test_cli_stops_when_the_answers_run_out(self):
         with tempfile.TemporaryDirectory() as tmp:
