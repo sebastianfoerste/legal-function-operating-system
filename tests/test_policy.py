@@ -352,7 +352,21 @@ class InitInterview(unittest.TestCase):
         self.assertNotIn("ip", policy.routing)
         self.assertEqual(policy.unknown_type_queue, "Front door")
         self.assertEqual(policy.sla["P1_blocker"].response_hours, 2)
-        self.assertEqual(policy.high_risk_from.text, "Value in band >2m or above.")
+        # The sentences a decision gives follow the new bands, and a claim is a value too.
+        self.assertEqual(
+            (
+                policy.high_risk_from.text,
+                policy.medium_risk_from.text,
+                policy.dispute_high_risk_from.text,
+                policy.board_awareness_from.text,
+            ),
+            (
+                "Value in band >2m or above.",
+                "Value in band 500k-2m or above.",
+                "Dispute in value band 500k-2m or above.",
+                "Value in band >2m or above: add to board awareness list.",
+            ),
+        )
         self.assertTrue(any("Choose one of: none, <100k" in line for line in said))
         self.assertTrue(any("cannot start below the one before it" in line for line in said))
         self.assertTrue(any("An answer is required." in line for line in said))
