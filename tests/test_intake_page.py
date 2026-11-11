@@ -505,7 +505,7 @@ class QuestionFileTests(unittest.TestCase):
                 f"{where}[0].options: expected a list of 2 to 20 answers, got a list",
             ),
             "a controller with an option that is not text": (
-                lambda qs: qs[0]["options"].__setitem__(2, {"label": "Not sure"})
+                lambda qs: qs[0].update(options=["A", "B", {"label": "Not sure"}])
                 or qs[1].update(show_if={"field": "processing_role", "in": ["Not sure"]}),
                 f"{where}[0].options[2]: expected non-empty text, got an object",
             ),
@@ -523,7 +523,7 @@ class QuestionFileTests(unittest.TestCase):
             ),
             # A padded answer has one reading, so naming it is not a second problem.
             "a controller with a padded option": (
-                lambda qs: qs[0]["options"].__setitem__(2, " Not sure")
+                lambda qs: qs[0].update(options=["A", "B", " Not sure"])
                 or qs[1].update(show_if={"field": "processing_role", "in": ["Not sure"]}),
                 f"{where}[0].options[2]: has spaces at the start or end",
             ),
@@ -1348,8 +1348,9 @@ class PageTests(unittest.TestCase):
             "1. **Who decides what the data is used for?** (`processing_role`, choice), required. Choices: "
             "We decide (we are the controller); The other party decides (we are the processor); "
             "We decide together (we are joint controllers); Not sure. Hint: This is not about whose software "
-            "or systems handle it. If the other party will also use the data for its own purposes, for example "
-            "to improve its products, or you are not sure, say so in “What do you need from legal?”.\n",
+            "or systems handle it. If either side, we or the other party, will also use the data for its own "
+            "purposes, for example to improve its products, or you are not sure, say so in “What do you need "
+            "from legal?”.\n",
             sheet,
         )
         self.assertIn(

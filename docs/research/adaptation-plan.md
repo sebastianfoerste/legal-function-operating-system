@@ -629,8 +629,8 @@ playbook position next to each change, and the evidence next to each resolution.
     Choose Yes and say why" hint; every file is `REQ-DRAFT` and legal renumbers; no
     `x_intake` key.
     - The bundled wording was reviewed on 2026-11-04 for accuracy and requester safety.
-    - **The open legal and policy questions were settled on 2026-11-10**, at the owner's
-      request, after research against EUR-Lex primary sources:
+    - **The open legal and policy questions were settled on 2026-11-11**, at the owner's
+      request of 2026-11-10, after research against EUR-Lex primary sources:
       [Intake wording: legal and policy review](2026-11-intake-legal-review.md). In short:
       - "who decides what the data is used for", with a joint-controller answer;
       - personal data includes data that can be linked to a person, such as IDs, IP
@@ -640,7 +640,8 @@ playbook position next to each change, and the evidence next to each resolution.
       - `uncapped_liability` means our side's liability is or would be uncapped (no cap in
         the draft, or claims with no cap), not the usual exceptions;
       - a value band is the yearly value for anything longer than a year, the total
-        otherwise and the amount claimed for a claim; every band starts at its lower figure,
-        so EUR 250,000 is `250k-1m`;
+        otherwise, the amount claimed for a claim and the amount lent or invested for a
+        loan or an investment; a figure on a boundary goes in the band that starts there,
+        so EUR 250,000 is `250k-1m` (`>1m` means over EUR 1 million);
       - the pilot's label reads "Changes the other party asked for".
     - What remains a lawyer's call in a given case is listed at the end of that memo.

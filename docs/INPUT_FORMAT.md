@@ -62,8 +62,9 @@ it. See [Make the rules your own](CUSTOMIZE.md).
 
 A band is the value without VAT. For anything that runs longer than a year or has no
 end date, use the highest yearly value; otherwise use the total; for a claim, use the
-amount claimed. Every band starts at its lower figure: exactly EUR 50,000 is
-`50k-250k`, and exactly EUR 250,000 and exactly EUR 1 million are `250k-1m`. The
+amount claimed; for a loan or an investment, use the amount lent or invested. A figure on a boundary goes in the band that starts there: exactly
+EUR 50,000 is `50k-250k` and exactly EUR 250,000 is `250k-1m`. `>1m` means over
+EUR 1 million, so exactly EUR 1 million is `250k-1m`. The
 yearly basis matches the pilot's `annual_contract_value_eur` fact; give the total and
 the term in the description, where legal can raise the band.
 

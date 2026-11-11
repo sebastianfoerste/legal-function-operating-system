@@ -352,7 +352,7 @@ class InitInterview(unittest.TestCase):
         self.assertNotIn("ip", policy.routing)
         self.assertEqual(policy.unknown_type_queue, "Front door")
         self.assertEqual(policy.sla["P1_blocker"].response_hours, 2)
-        self.assertEqual(policy.high_risk_from.text, "Contract value in band >2m or above.")
+        self.assertEqual(policy.high_risk_from.text, "Value in band >2m or above.")
         self.assertTrue(any("Choose one of: none, <100k" in line for line in said))
         self.assertTrue(any("cannot start below the one before it" in line for line in said))
         self.assertTrue(any("An answer is required." in line for line in said))

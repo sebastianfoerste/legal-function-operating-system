@@ -6,7 +6,8 @@
   decision flags keep the "Not sure? Choose Yes and say why" hint; every file is
   `REQ-DRAFT`; no `x_intake` provenance key (the hint and `REQ-DRAFT` under Decision,
   `x_intake` under Alternatives rejected; `scripts/build_site.py` lists the page).
-- The bundled wording was settled against EUR-Lex primary sources on 2026-11-10:
+- The bundled wording was settled against EUR-Lex primary sources on 2026-11-11, at the
+  owner's request of 2026-11-10:
   [Intake wording: legal and policy review](../research/2026-11-intake-legal-review.md).
 - Answers the "ADR needed" item for F9 in `docs/research/adaptation-plan.md`: the format
   and location of per-type question files, and how they relate to `request_schema()`.

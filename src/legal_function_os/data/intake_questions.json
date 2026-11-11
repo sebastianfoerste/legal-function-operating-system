@@ -21,7 +21,7 @@
     },
     "value_band": {
       "label": "Value of the contract or claim",
-      "hint": "In euros, without VAT. If it runs for more than a year or has no end date, use the highest yearly value and give the total and how long it runs in “What do you need from legal?”. For a claim, use the amount claimed. Not sure? Choose the higher band it could be in and say why in “What do you need from legal?”.",
+      "hint": "In euros, without VAT. If it runs for more than a year or has no end date, use the highest yearly value and give the total and how long it runs in “What do you need from legal?”. For a claim, use the amount claimed, and for a loan or an investment, the amount lent or invested. Not sure? Choose the higher band it could be in and say why in “What do you need from legal?”.",
       "error": "Choose the value of the contract or claim",
       "options": {
         "none": "No money involved",
@@ -80,7 +80,7 @@
       "questions": [
         {"key": "annual_contract_value_eur", "label": "Annual contract value in EUR", "kind": "text", "hint": "A number, for example 42000.", "error": "Enter the annual contract value in EUR"},
         {"key": "signature_target_date", "label": "Target signature date", "kind": "text", "hint": "Year, month and day, for example 2026-12-15.", "error": "Enter the target signature date"},
-        {"key": "requested_deviations", "label": "Changes the other party asked for", "kind": "textarea", "hint": "For example longer payment terms or a higher limit on liability. Write none if there are none. If you do not know, write not sure.", "error": "Enter the changes the other party asked for, or write none or not sure"},
+        {"key": "requested_deviations", "label": "Changes the other party asked for", "kind": "textarea", "hint": "The other party may be the customer or the supplier. For example different payment terms or a different limit on liability. Write none if there are none. If you do not know, write not sure.", "error": "Enter the changes the other party asked for, or write none or not sure"},
         {"key": "business_owner", "label": "Business owner on your side", "kind": "text", "hint": "The person in your company who is responsible for this contract.", "error": "Enter the business owner on your side"},
         {"key": "liability_cap_discussed", "label": "What limit on liability has been discussed, and which claims are outside it?", "kind": "textarea", "required": false, "show_if": {"field": "uncapped_liability", "in": [true]}}
       ]
@@ -98,7 +98,7 @@
       "label": "Data processing agreement (DPA)",
       "also_required": ["counterparty"],
       "questions": [
-        {"key": "processing_role", "label": "Who decides what the data is used for?", "kind": "choice", "hint": "This is not about whose software or systems handle it. If the other party will also use the data for its own purposes, for example to improve its products, or you are not sure, say so in “What do you need from legal?”.", "options": ["We decide (we are the controller)", "The other party decides (we are the processor)", "We decide together (we are joint controllers)", "Not sure"], "error": "Choose who decides what the data is used for"},
+        {"key": "processing_role", "label": "Who decides what the data is used for?", "kind": "choice", "hint": "This is not about whose software or systems handle it. If either side, we or the other party, will also use the data for its own purposes, for example to improve its products, or you are not sure, say so in “What do you need from legal?”.", "options": ["We decide (we are the controller)", "The other party decides (we are the processor)", "We decide together (we are joint controllers)", "Not sure"], "error": "Choose who decides what the data is used for"},
         {"key": "processing_purpose", "label": "What is the data used for?", "kind": "textarea", "error": "Enter what the data is used for"},
         {"key": "transfer_countries", "label": "Which countries outside the EEA?", "kind": "text", "hint": "Include the countries where the data is or will be held and where anyone who gets or sees it is based. If you do not know, write not sure.", "error": "Enter the countries outside the EEA, or write not sure", "show_if": {"field": "non_eea_transfer", "in": [true]}},
         {"key": "sub_processors", "label": "Will sub-processors be involved?", "kind": "yes_no", "hint": "A sub-processor is another company or contractor that the processor uses to handle some of the data, such as a hosting or support provider, or a company in the processor's own group. Not sure? Choose Yes and say why in “What do you need from legal?”.", "error": "Choose whether sub-processors will be involved"},

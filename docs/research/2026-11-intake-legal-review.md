@@ -34,9 +34,9 @@ report, never what the law says about their case.
 **Decided.** `types.dpa.questions[0]` (`processing_role`):
 
 - Label: "Who decides what the data is used for?" (was "Who decides how the data is used?").
-- Hint (new): "This is not about whose software or systems handle it. If the other party
-  will also use the data for its own purposes, for example to improve its products, or
-  you are not sure, say so in “What do you need from legal?”."
+- Hint (new): "This is not about whose software or systems handle it. If either side, we
+  or the other party, will also use the data for its own purposes, for example to improve
+  its products, or you are not sure, say so in “What do you need from legal?”."
 - A fourth answer, "We decide together (we are joint controllers)", before "Not sure".
   The three existing answers are unchanged, so files saved before stay valid.
 
@@ -70,13 +70,14 @@ know when the requester thinks it applies.
   ([62016CJ0210](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:62016CJ0210)):
   "The fact that an administrator of a fan page uses the platform provided by Facebook in
   order to benefit from the associated services cannot exempt it from compliance with its
-  obligations concerning the protection of personal data."
+  obligations concerning the protection of personal data." (Directive 95/46.)
 - CJEU C-683/21 *Nacionalinis visuomenės sveikatos centras*, operative part, point 4
   ([62021CJ0683](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:62021CJ0683)):
   a fine may be imposed on a controller for a processor's operations "unless, in the
   context of those operations, that processor has carried out processing for its own
-  purposes". This is why the hint asks whether the other party will use the data for its
-  own purposes.
+  purposes". The same holds whichever side is the processor, so the hint asks whether
+  either side will use the data for its own purposes: the other party when we decide, and
+  our own company when we act for the other party.
 
 ## 2. What counts as personal data (decision flag)
 
@@ -113,7 +114,8 @@ holds the means to re-identify, which is legal's call.
   accesses a website that the provider makes accessible to the public constitutes
   personal data within the meaning of that provision, in relation to that provider, where
   the latter has the legal means which enable it to identify the data subject with
-  additional data which the internet service provider has about that person."
+  additional data which the internet service provider has about that person." ("That
+  provision" is Art. 2(a) of Directive 95/46, the GDPR's predecessor.)
 - CJEU C-413/23 P *EDPS v SRB*, para 86
   ([62023CJ0413](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:62023CJ0413)):
   "pseudonymised data must not be regarded as constituting, in all cases and for every
@@ -329,19 +331,30 @@ let the parties cap liability towards the injured person:
   ([32024L2853](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32024L2853)):
   "Member States shall ensure that the liability of an economic operator pursuant to this
   Directive is not, in relation to the injured person, limited or excluded by a
-  contractual provision or by national law."
-- Transfer SCCs, Decision (EU) 2021/914, Annex, Clause 12(a) (Modules Two and Three)
+  contractual provision or by national law." It applies to products "placed on the market
+  or put into service after 9 December 2026" (Art. 2(1)). For products placed on the
+  market before then, Directive 85/374/EEC, Art. 12
+  ([31985L0374](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:31985L0374)),
+  has the same rule: "The liability of the producer arising from this Directive may not,
+  in relation to the injured person, be limited or excluded by a provision limiting his
+  liability or exempting him from liability."
+- Transfer SCCs, Decision (EU) 2021/914, Annex, Clause 12(b) (Modules Two and Three)
   ([32021D0914](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:32021D0914)):
-  "Each Party shall be liable to the other Party/ies for any damages it causes the other
-  Party/ies by any breach of these Clauses."
+  "The data importer shall be liable to the data subject, and the data subject shall be
+  entitled to receive compensation, for any material or non-material damages the data
+  importer or its sub-processor causes the data subject by breaching the third-party
+  beneficiary rights under these Clauses." Clause 2(a) lets the parties add other clauses
+  only "provided that they do not contradict, directly or indirectly, these Clauses or
+  prejudice the fundamental rights or freedoms of data subjects."
 
 ## 8. Value bands: basis and boundaries
 
 **Decided: yearly basis.** `fields.value_band.hint`: "In euros, without VAT. If it runs for
 more than a year or has no end date, use the highest yearly value and give the total and
-how long it runs in “What do you need from legal?”. For a claim, use the amount claimed.
-Not sure? Choose the higher band it could be in and say why in “What do you need from
-legal?”." The request contract and `docs/INPUT_FORMAT.md` define the band the same way.
+how long it runs in “What do you need from legal?”. For a claim, use the amount claimed,
+and for a loan or an investment, the amount lent or invested. Not sure? Choose the higher
+band it could be in and say why in “What do you need from legal?”." The request contract
+and `docs/INPUT_FORMAT.md` define the band the same way.
 
 **Why (Repository).** The pilot's required fact is `annual_contract_value_eur`, and the
 core contract question asks for the "Annual contract value in EUR", so a yearly band can
@@ -352,7 +365,9 @@ contradicting that scenario. The pilot's standard liability cap is measured in t
 the preceding twelve months. A yearly figure also exists for contracts with no end date,
 such as employment. The cost: a multi-year deal can stay below the board band while its
 total is above it. The hint therefore asks for the total and the term, and legal can raise
-the band. "Not sure? Choose the higher band" applies the owner's safe-direction rule.
+the band. A loan or an investment is valued at its amount: its yearly repayments or
+interest would be a much lower figure, and the fundraising type offers both. "Not sure?
+Choose the higher band" applies the owner's safe-direction rule.
 
 EU law shows why "value" has to be defined (an analogy only: it does not govern a
 company's own approvals). Directive 2014/24/EU, Art. 5(1)
@@ -361,8 +376,9 @@ values a public contract on "the total amount payable, net of VAT", including op
 renewals. That rule serves public procurement; this repository's thresholds are about
 review effort, and its data are yearly.
 
-**Decided: every band starts at its lower figure.** Exactly EUR 50,000 is `50k-250k`;
-exactly EUR 250,000 and exactly EUR 1 million are `250k-1m`.
+**Decided: a figure on a boundary goes in the band that starts there.** Exactly EUR 50,000
+is `50k-250k` and exactly EUR 250,000 is `250k-1m`. `>1m` means over EUR 1 million, so
+exactly EUR 1 million is `250k-1m`.
 
 - The `50k-250k` label now reads "EUR 50,000 or more but under EUR 250,000" (it overlapped
   "EUR 250,000 to EUR 1 million" at EUR 250,000).
@@ -376,15 +392,19 @@ rule set "from `250k-1m`" starts wherever that band starts; putting the boundary
 higher band adds review, the safe direction. EU thresholds are likewise reached at the
 figure itself: Directive 2014/24/EU, Art. 4 applies to procurements "estimated to be equal
 to or greater than the following thresholds". (Two gap-free readings of the keys exist;
-the choice between them rests on these reasons, not on the keys alone.)
+the choice between them rests on these reasons, not on the keys alone.) At EUR 1 million
+the safe direction gives way to the key itself: `>1m` and its label "Over EUR 1 million"
+say "over", the pilot puts `>1m` outside its scope, and the band keys are the request
+contract's values, so exactly EUR 1 million stays in `250k-1m`. A policy that
+wants the board band to start at EUR 1 million can name its own bands.
 
 ## 9. The pilot's contract-changes label
 
 **Decided.** The pilot's label for `requested_deviations`
 (`supervised-agent/src/pilot/models.py`) and the core question both read "Changes the
-other party asked for" (was "Changes the customer asked for"). Hint: "For example longer
-payment terms or a higher limit on liability. Write none if there are none. If you do not
-know, write not sure."
+other party asked for" (was "Changes the customer asked for"). Hint: "The other party may
+be the customer or the supplier. For example different payment terms or a different limit
+on liability. Write none if there are none. If you do not know, write not sure."
 
 **Why (Repository).** The core type is "Customer or supplier contract", so "the customer"
 was our own side whenever we buy. "The other party" stays true in the pilot, where the
@@ -404,7 +424,8 @@ to legal.
   C-413/23 P depends on who holds the means to re-identify.
 - **Transfers.** Whether remote access or a travelling employee's access is a transfer;
   the EDPB's transfer guidelines (05/2021) were not read, and the *Bindl* test is under
-  appeal (C-206/25 P, C-211/25 P).
+  appeal (the Commission's appeal, C-206/25 P; Mr Bindl's own appeal, C-211/25 P, is on
+  admissibility, his request for information and damages).
 - **Request receipt.** Whether receipt by a processor, a call centre or another group
   company starts the one-month period (EDPB 01/2022 not read). The page asks for the
   earliest date either way.
