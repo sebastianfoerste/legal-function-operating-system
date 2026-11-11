@@ -426,7 +426,8 @@ class QuestionFileTests(unittest.TestCase):
             "a choice that is not offered": (
                 lambda qs: qs[1].update(show_if={"field": "processing_role", "in": ["Maybe"]}),
                 f"{where}[1].show_if.in[0]: \"Maybe\" is not an answer to 'processing_role'; use one of "
-                '"We decide (we are the controller)", "The other party decides (we are the processor)", "Not sure"',
+                '"We decide (we are the controller)", "The other party decides (we are the processor)", '
+                '"We decide together (we are joint controllers)", "Not sure"',
             ),
             "a band the policy lacks": (
                 lambda qs: qs[0].update(show_if={"field": "value_band", "in": [">1M"]}),
@@ -680,7 +681,7 @@ class QuestionFileTests(unittest.TestCase):
         self.assertEqual(
             [q["error"] for q in form_for(questions)["types"][2]["questions"][:4]],
             [
-                "Choose an answer to: Who decides how the data is used?",
+                "Choose an answer to: Who decides what the data is used for?",
                 "Enter an answer to: What is the data used for?",
                 "Enter an answer to: Which countries outside the EEA?",
                 "Choose an answer to: Will sub-processors be involved?",
@@ -837,7 +838,7 @@ class QuestionFileTests(unittest.TestCase):
             [
                 "Enter an answer to: Short title",
                 "Choose an answer to: How soon do you need an answer?",
-                "Choose an answer to: Who decides how the data is used?",
+                "Choose an answer to: Who decides what the data is used for?",
             ],
         )
 
@@ -1337,21 +1338,25 @@ class PageTests(unittest.TestCase):
         self.assertIn("- **Short title** (`title`), required.", sheet)
         self.assertIn(
             "- **Value of the contract or claim** (`value_band`), required. Choices: No money involved; "
-            "Under EUR 50,000; EUR 50,000 to EUR 250,000; EUR 250,000 to EUR 1 million; Over EUR 1 million.",
+            "Under EUR 50,000; EUR 50,000 or more but under EUR 250,000; EUR 250,000 to EUR 1 million; Over EUR 1 million.",
             sheet,
         )
         self.assertIn("- **Other party** (`counterparty`), optional. Hint: The company or person on the other side, if there is one.\n", sheet)
         self.assertIn("## Data processing agreement (DPA) (`dpa`)", sheet)
         self.assertIn("Also required for this type: Other party.", sheet)
         self.assertIn(
-            "1. **Who decides how the data is used?** (`processing_role`, choice), required. Choices: "
-            "We decide (we are the controller); The other party decides (we are the processor); Not sure.\n",
+            "1. **Who decides what the data is used for?** (`processing_role`, choice), required. Choices: "
+            "We decide (we are the controller); The other party decides (we are the processor); "
+            "We decide together (we are joint controllers); Not sure. Hint: This is not about whose software "
+            "or systems handle it. If the other party will also use the data for its own purposes, for example "
+            "to improve its products, or you are not sure, say so in “What do you need from legal?”.\n",
             sheet,
         )
         self.assertIn(
             '3. **Which countries outside the EEA?** (`transfer_countries`, text), required. Shown when '
             '"Does it involve any data sent to or accessed from outside the EEA?" is Yes. '
-            "Hint: If you do not know, write not sure.\n",
+            "Hint: Include the countries where the data is or will be held and where anyone who gets or sees it "
+            "is based. If you do not know, write not sure.\n",
             sheet,
         )
         self.assertIn(

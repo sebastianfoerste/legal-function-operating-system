@@ -628,20 +628,19 @@ playbook position next to each change, and the evidence next to each resolution.
     on Pages with its made-up-details notice; the three decision flags keep the "Not sure?
     Choose Yes and say why" hint; every file is `REQ-DRAFT` and legal renumbers; no
     `x_intake` key.
-    - The bundled wording was reviewed on 2026-11-04 for accuracy and requester safety. Unsure
-      paths and clearer dates were added; nothing that rests on law was changed, because
-      EUR-Lex could not be reached from the session. Open for a lawyer:
-      - how `processing_role` puts controller and processor ("who decides how the data is
-        used");
-      - whether the personal-data hint should name indirect identifiers, such as customer or
-        user IDs and IP addresses;
-      - whether the transfer hint should say that viewing data from outside the EEA counts;
-      - a plain-language definition of sub-processor.
-    - Open for the owner, as policy questions:
-      - whether `uncapped_liability` also covers a draft with no cap, or with claims carved out
-        of a cap;
-      - whether a value band means yearly or whole-term value, and which band exactly
-        EUR 250,000 falls in: the labels overlap there, and the policy's reasons disagree
-        ("between EUR 250k and EUR 1m" against "Dispute above €250k");
-      - whether the pilot's pinned label "Changes the customer asked for" should say "the other
-        party", as the bundled hint now does.
+    - The bundled wording was reviewed on 2026-11-04 for accuracy and requester safety.
+    - **The open legal and policy questions were settled on 2026-11-10**, at the owner's
+      request, after research against EUR-Lex primary sources:
+      [Intake wording: legal and policy review](2026-11-intake-legal-review.md). In short:
+      - "who decides what the data is used for", with a joint-controller answer;
+      - personal data includes data that can be linked to a person, such as IDs, IP
+        addresses or coded data;
+      - access from outside the EEA is reported, the UK and Switzerland are named as outside;
+      - a plain definition of sub-processor;
+      - `uncapped_liability` means our side's liability is or would be uncapped (no cap in
+        the draft, or claims with no cap), not the usual exceptions;
+      - a value band is the yearly value for anything longer than a year, the total
+        otherwise and the amount claimed for a claim; every band starts at its lower figure,
+        so EUR 250,000 is `250k-1m`;
+      - the pilot's label reads "Changes the other party asked for".
+    - What remains a lawyer's call in a given case is listed at the end of that memo.

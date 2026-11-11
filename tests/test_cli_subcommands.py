@@ -90,7 +90,7 @@ class Triage(unittest.TestCase):
         self.assertIn(
             "**Approval chain** Reviewer → Legal Ops Lead → General Counsel → Board note", stdout
         )
-        self.assertLess(stdout.index("**Risk** HIGH"), stdout.index("- Contract value above €1m."))
+        self.assertLess(stdout.index("**Risk** HIGH"), stdout.index("- Value over EUR 1 million."))
         self.assertIn("not legal advice", stdout)
         self.assertNotIn("REQ-1002", stdout)
 

@@ -31,9 +31,9 @@
     "board_note_from": ">1m"
   },
   "risk": {
-    "high_from": {"value_band": ">1m", "reason": "Contract value above €1m."},
-    "medium_from": {"value_band": "250k-1m", "reason": "Contract value between EUR 250k and EUR 1m."},
-    "dispute_high_from": {"value_band": "250k-1m", "reason": "Dispute above €250k."},
+    "high_from": {"value_band": ">1m", "reason": "Value over EUR 1 million."},
+    "medium_from": {"value_band": "250k-1m", "reason": "Value from EUR 250,000 to EUR 1 million."},
+    "dispute_high_from": {"value_band": "250k-1m", "reason": "Dispute value of EUR 250,000 or more."},
     "elevated_types": ["corporate", "fundraising", "ai_governance"]
   },
   "external_counsel": {
@@ -42,7 +42,7 @@
   "escalation": {
     "board_awareness_from": {
       "value_band": ">1m",
-      "message": "Value above EUR 1m: add to board awareness list."
+      "message": "Value over EUR 1 million: add to board awareness list."
     },
     "dispute_board_attention_from": "250k-1m"
   }

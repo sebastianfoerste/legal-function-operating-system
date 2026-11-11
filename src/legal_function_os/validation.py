@@ -372,8 +372,11 @@ def request_schema() -> dict[str, Any]:
             "value_band": {
                 "enum": [*VALUE_BANDS, None],
                 "description": (
-                    "Contract or claim value band, lowest first. Matched exactly, so "
-                    "'>1m' is valid and '>1M' is rejected. Omitted means 'none'."
+                    "Contract or claim value band, without VAT, lowest first. For anything "
+                    "that runs longer than a year or has no end date, the highest yearly value; "
+                    "otherwise the total; for a claim, the amount claimed. Exactly EUR 50,000 is "
+                    "'50k-250k'; exactly EUR 250,000 and exactly EUR 1 million are '250k-1m'. "
+                    "Matched exactly, so '>1m' is valid and '>1M' is rejected. Omitted means 'none'."
                 ),
             },
             "personal_data": {
@@ -386,7 +389,12 @@ def request_schema() -> dict[str, Any]:
             },
             "uncapped_liability": {
                 **nullable_flag,
-                "description": "The counterparty asks for uncapped liability. Default false.",
+                "description": (
+                    "Our side's liability is or would be uncapped: the counterparty asks for it, "
+                    "the draft sets no cap, or some claims have no cap (a separate higher cap is "
+                    "not uncapped). Claims for fraud, wilful misconduct, death or personal injury, "
+                    "or payment of the agreed price do not count. Default false."
+                ),
             },
             "urgency": {
                 "enum": [*URGENCIES, None],

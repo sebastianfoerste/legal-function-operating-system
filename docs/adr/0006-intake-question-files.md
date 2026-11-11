@@ -6,6 +6,8 @@
   decision flags keep the "Not sure? Choose Yes and say why" hint; every file is
   `REQ-DRAFT`; no `x_intake` provenance key (the hint and `REQ-DRAFT` under Decision,
   `x_intake` under Alternatives rejected; `scripts/build_site.py` lists the page).
+- The bundled wording was settled against EUR-Lex primary sources on 2026-11-10:
+  [Intake wording: legal and policy review](../research/2026-11-intake-legal-review.md).
 - Answers the "ADR needed" item for F9 in `docs/research/adaptation-plan.md`: the format
   and location of per-type question files, and how they relate to `request_schema()`.
 
@@ -66,7 +68,8 @@ Three constraints shape it here:
   writes them (`parent_bridge.parent_request`). A type question can never write a
   top-level field. The labels of the value bands, urgencies and request types do decide
   what a requester's choice saves, so a change to them needs the same review as a policy
-  change; two answers with one label, or labels that differ only in spaces, are refused.
+  change; two answers with one label, or labels that differ only in spaces or invisible
+  characters, are refused, and so are two choice answers that read the same.
 - **Conditions are data, forward-only.** `"show_if": {"field": NAME, "in": [VALUES]}`
   names an answer given above the question: the value band, one of the three yes/no
   flags, the urgency, or an earlier yes/no or choice question of the same type. `type` is not a condition (put the question

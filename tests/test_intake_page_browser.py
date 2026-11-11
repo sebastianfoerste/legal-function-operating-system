@@ -145,7 +145,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await group("What do you need help with?").getByLabel("Data processing agreement (DPA)").check();
 
   await page.getByLabel(/^Other party/).fill("Example Hosting GmbH");
-  await group("Who decides how the data is used?").getByLabel("Not sure").check();
+  await group("Who decides what the data is used for?").getByLabel("Not sure").check();
   await page.getByLabel("What is the data used for?").fill("Support tickets.");
   await page.getByLabel("Which countries outside the EEA?").fill("United States");
   await group("Will sub-processors be involved?").getByLabel("Yes").check();
@@ -167,7 +167,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   await page.locator("#review-list .review-row").nth(1).getByRole("link").click();
   out.focusAfterChange = await focused();
   // The chosen answer is reached when it is the last one too.
-  await page.locator("#review-list .review-row", { hasText: "Who decides how the data is used?" }).getByRole("link").click();
+  await page.locator("#review-list .review-row", { hasText: "Who decides what the data is used for?" }).getByRole("link").click();
   out.focusAfterLastChange = await focused();
   // The link's own handler moves focus; following the #fragment would also focus it.
   out.urlAfterChange = page.url();
@@ -334,7 +334,7 @@ class IntakePageBrowserTests(unittest.TestCase):
             "description": "Please review the DPA.\nIt covers support tickets.",
         }
         questions = {
-            "processing_role": "2",
+            "processing_role": "3",
             "processing_purpose": "Support tickets.",
             "transfer_countries": "United States",
             "sub_processors": sub_processors,
@@ -374,7 +374,7 @@ class IntakePageBrowserTests(unittest.TestCase):
             self.out["secondErrors"],
             [
                 "Enter the other party",
-                "Choose who decides how the data is used",
+                "Choose who decides what the data is used for",
                 "Enter what the data is used for",
                 "Enter the countries outside the EEA, or write not sure",
                 "Choose whether sub-processors will be involved",
@@ -397,7 +397,7 @@ class IntakePageBrowserTests(unittest.TestCase):
             self.out["errorsAfterHiding"],
             [
                 "Enter the other party",
-                "Choose who decides how the data is used",
+                "Choose who decides what the data is used for",
                 "Enter what the data is used for",
                 "Choose whether sub-processors will be involved",
             ],
@@ -454,7 +454,7 @@ class IntakePageBrowserTests(unittest.TestCase):
         self.assertEqual(self.out["file"], render_download(request))
         self.assertEqual(self.out["saved"], render_download(request))
         self.assertEqual(self.out["focusAfterChange"], "f-type-2")
-        self.assertEqual(self.out["focusAfterLastChange"], "q2-processing_role-2")
+        self.assertEqual(self.out["focusAfterLastChange"], "q2-processing_role-3")
         self.assertEqual(self.out["urlAfterChange"], self.path.as_uri())
         self.assertEqual(self.out["savedName"], download_name(request))
         self.assertEqual(self.out["savedName"], "legal-request-dpa-with-example-hosting-gmbh-synthetic.json")
