@@ -367,6 +367,15 @@ class RaaSDealDeskTests(unittest.TestCase):
                     raas_cli_main(["--input", str(bad_input), "--quiet"]),
                     2,
                 )
+            latin = Path(tmp_dir) / "latin.json"
+            latin.write_bytes('{"deal": "Pr\u00fcfung"}'.encode("latin-1"))
+            err = io.StringIO()
+            with redirect_stderr(err):
+                self.assertEqual(raas_cli_main(["--input", str(latin), "--quiet"]), 2)
+            self.assertEqual(
+                err.getvalue(),
+                f"cannot read {latin}: it is not UTF-8 text (byte 0xfc at position 12); save it as UTF-8\n",
+            )
 
 
 if __name__ == "__main__":

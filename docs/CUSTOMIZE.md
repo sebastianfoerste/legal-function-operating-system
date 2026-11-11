@@ -73,7 +73,7 @@ The file format is published as
 
 The three `risk` thresholds and `escalation.board_awareness_from` also carry the
 sentence a decision gives when they apply (`reason` or `message`), for example
-`"Contract value above €1m."`. These sentences appear in the rationale and the
+`"Value over EUR 1 million."`. These sentences appear in the rationale and the
 escalations, so change them together with the band. `init` writes them for you.
 
 A policy changes numbers and names, not the shape of the rules. The following stay

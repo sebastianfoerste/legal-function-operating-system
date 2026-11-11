@@ -90,7 +90,7 @@ class Triage(unittest.TestCase):
         self.assertIn(
             "**Approval chain** Reviewer → Legal Ops Lead → General Counsel → Board note", stdout
         )
-        self.assertLess(stdout.index("**Risk** HIGH"), stdout.index("- Contract value above €1m."))
+        self.assertLess(stdout.index("**Risk** HIGH"), stdout.index("- Value over EUR 1 million."))
         self.assertIn("not legal advice", stdout)
         self.assertNotIn("REQ-1002", stdout)
 
@@ -371,6 +371,33 @@ class LegacyFlags(unittest.TestCase):
             self.assertEqual(code, 0, stderr)
             entries = {e["request_id"]: e["shared"] for e in json.loads(space.read_text(encoding="utf-8"))["entries"]}
             self.assertEqual((entries["REQ-1001"], entries["REQ-1002"], entries["REQ-1003"]), (True, False, False))
+
+    def test_legacy_side_files_that_are_not_utf8_are_named(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            latin = Path(tmp) / "latin.json"
+            latin.write_bytes('{"name": "Pr\u00fcfung"}'.encode("latin-1"))
+            not_utf8 = "it is not UTF-8 text (byte 0xfc at position 12); save it as UTF-8"
+            code, _, stderr = run_cli(["--quiet", "--capacity-scenarios", str(latin), "--capacity-output", tmp])
+            self.assertEqual(code, 2)
+            self.assertIn(f"Invalid capacity simulation input: {latin}: {not_utf8}", stderr)
+            events = str(DATA / "service_events.json")
+            code, _, stderr = run_cli(
+                ["--quiet", "--events-input", events, "--outcome-config", str(latin), "--outcome-output", tmp]
+            )
+            self.assertEqual(code, 2)
+            self.assertIn(f"Invalid outcome control tower input: {latin}: {not_utf8}", stderr)
+            # A byte order mark is accepted here too, as in every other JSON input.
+            marked = Path(tmp) / "scenarios.json"
+            marked.write_bytes(b"\xef\xbb\xbf" + (DATA / "capacity_scenarios.json").read_bytes())
+            code, _, stderr = run_cli(["--quiet", "--capacity-scenarios", str(marked), "--capacity-output", tmp])
+            self.assertEqual(code, 0, stderr)
+
+    def test_approvals_are_read_only_for_the_shared_space(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            broken = Path(tmp) / "approvals.json"
+            broken.write_text("{", encoding="utf-8")
+            code, _, stderr = run_cli(["--quiet", "--approvals", str(broken)])
+            self.assertEqual(code, 0, stderr)
 
     def test_dpa_input_error_points_at_the_subcommand(self):
         code, _, stderr = run_cli(["--quiet", "--dpa-input", str(DATA / "dpa_documents.json")])

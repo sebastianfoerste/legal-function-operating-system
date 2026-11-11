@@ -10,7 +10,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from legal_function_os.bundled import bundled_path, not_utf8
+from legal_function_os.bundled import bundled_path, decode_utf8, not_utf8, read_utf8
 from legal_function_os.intake_csv import CsvFormatError, parse_csv
 
 
@@ -82,7 +82,7 @@ def load_requests(path: str | None) -> RequestInput:
         # or UTF-8-mode locale it turns bytes that are not UTF-8 into surrogates silently.
         stream = getattr(sys.stdin, "buffer", None)
         try:
-            text = sys.stdin.read() if stream is None else stream.read().decode("utf-8-sig")
+            text = sys.stdin.read() if stream is None else decode_utf8(stream.read())
         except UnicodeDecodeError as exc:
             raise InputError(f"cannot read standard input: {not_utf8(exc)}") from None
         return RequestInput(_parse_json(text, "standard input"), "standard input")
@@ -94,7 +94,7 @@ def load_requests(path: str | None) -> RequestInput:
             "and pass the .csv file"
         )
     try:
-        text = Path(path).read_text(encoding="utf-8-sig")
+        text = read_utf8(path)
     except OSError as exc:
         raise InputError(f"cannot read {path}: {exc.strerror or exc}") from None
     except UnicodeDecodeError as exc:

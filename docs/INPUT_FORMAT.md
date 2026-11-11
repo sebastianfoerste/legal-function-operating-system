@@ -44,7 +44,7 @@ default.
 | `value_band` | one of `none`, `<50k`, `50k-250k`, `250k-1m`, `>1m` | `none` | Risk, approval chain, litigation referral, board attention |
 | `personal_data` | `true` / `false` | `false` | MEDIUM risk; HIGH risk together with `non_eea_transfer` |
 | `non_eea_transfer` | `true` / `false` | `false` | Routes to Privacy whatever the type; HIGH risk with `personal_data` |
-| `uncapped_liability` | `true` / `false` | `false` | HIGH risk |
+| `uncapped_liability` | `true` / `false` | `false` | HIGH risk. True when our side's liability is or would be uncapped: the other party asks for it, the draft sets no cap, or some claims have no cap. A separate higher cap is not uncapped, and the usual exceptions (fraud, wilful misconduct, death or personal injury, payment of the agreed price) do not count |
 | `urgency` | one of `blocker`, `high`, `standard`, `low` | `standard` | Priority and therefore the SLA |
 | `requested_by` | string | none | Register only |
 | `sla_breached` | `true` / `false` | `false` | SLA escalation; `--fail-on-breach` exits 1 |
@@ -59,6 +59,14 @@ default policy. A policy file can set your own; requests are then checked agains
 it. See [Make the rules your own](CUSTOMIZE.md).
 
 ### Value bands
+
+A band is the value without VAT. For anything that runs longer than a year or has no
+end date, use the highest yearly value; otherwise use the total; for a claim, use the
+amount claimed; for a loan or an investment, use the amount lent or invested. A figure on a boundary goes in the band that starts there: exactly
+EUR 50,000 is `50k-250k` and exactly EUR 250,000 is `250k-1m`. `>1m` means over
+EUR 1 million, so exactly EUR 1 million is `250k-1m`. The
+yearly basis matches the pilot's `annual_contract_value_eur` fact; give the total and
+the term in the description, where legal can raise the band.
 
 With the shipped thresholds (illustrative, not a recommendation):
 

@@ -28,10 +28,11 @@ import hashlib
 import html
 import json
 import re
+import unicodedata
 from pathlib import Path
 from typing import Any
 
-from legal_function_os.bundled import bundled_path, not_utf8
+from legal_function_os.bundled import bundled_path, not_utf8, read_utf8
 from legal_function_os.design_tokens import TOKENS_CSS
 from legal_function_os.policy import Policy, PolicyError, default_policy
 from legal_function_os.rules import URGENCIES
@@ -77,6 +78,7 @@ WHITESPACE = (
     "\u2006\u2007\u2008\u2009\u200a\u2028\u2029\u202f\u205f\u3000\ufeff"
 )
 _SURROGATE = re.compile("[\ud800-\udfff]")
+_SPACES = re.compile("[" + re.escape(WHITESPACE) + "]+")
 _SLUG = re.compile("[^A-Za-z0-9]+")
 
 _TOP_KEYS = ("schema", "name", "description", "fields", "types")
@@ -97,6 +99,14 @@ class IntakeQuestionsError(ValueError):
         self.problems = problems
 
 
+def _looks(text: str) -> str:
+    """Text as it reads on the page: runs of whitespace are one space, and invisible
+    format characters (a zero-width space, a byte order mark) are gone."""
+
+    visible = "".join(c for c in text if unicodedata.category(c) != "Cf")
+    return _SPACES.sub(" ", visible).strip(" ")
+
+
 def clean_text(value: Any) -> str:
     """An answer as the page saves it: an unpaired surrogate becomes U+FFFD and the
     WHITESPACE set is trimmed from both ends."""
@@ -111,7 +121,7 @@ def load_intake_questions(path: str | None = None) -> tuple[Any, str]:
     source = BUNDLED_SOURCE if path is None else path
     try:
         file = bundled_path(QUESTIONS_FILE) if path is None else Path(path)
-        text = file.read_text(encoding="utf-8-sig")
+        text = read_utf8(file)
     except OSError as exc:
         raise IntakeQuestionsError(source, [f"cannot read the file: {exc.strerror or exc}"]) from None
     except UnicodeDecodeError as exc:
@@ -439,6 +449,10 @@ def _question(
                 elif any(o["value"] == text for o in options):
                     check.problem(place, f"{text!r} is listed twice")
                     ok = False
+                elif any(_looks(o["value"]) == _looks(text) for o in options):
+                    twin = next(o["value"] for o in options if _looks(o["value"]) == _looks(text))
+                    check.problem(place, f"{text!r} reads the same as {twin!r} on the page; give each answer its own wording")
+                    ok = False
                 else:
                     options.append({"label": text, "value": text})
     elif "options" in entry and kind in KINDS:
@@ -605,11 +619,12 @@ def build_intake_form(
             item["options"] = [{"label": t["label"], "value": t["key"]} for t in types]
             item["options"].append({"label": item.pop("not_sure"), "value": None})
     # Two answers with one label would look alike on the page and in the review. HTML
-    # collapses runs of spaces, so labels that differ only there look alike too.
+    # collapses runs of spaces and shows no invisible characters, so labels that differ
+    # only there look alike too.
     for item in fields:
         seen: dict[str, str] = {}
         for option in item.get("options", []):
-            label = " ".join(option["label"].split())
+            label = _looks(option["label"])
             # The not-sure answer, always last, is the only one saved as null.
             value = "not_sure" if option["value"] is None else repr(option["value"])
             if label and label in seen:

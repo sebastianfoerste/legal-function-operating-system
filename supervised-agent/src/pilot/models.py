@@ -39,7 +39,7 @@ REQUIRED_FACT_LABELS = {
     "counterparty": "Counterparty (the customer's legal name)",
     "annual_contract_value_eur": "Annual contract value in EUR",
     "signature_target_date": "Target signature date",
-    "requested_deviations": "Changes the customer asked for",
+    "requested_deviations": "Changes the other party asked for",
     "business_owner": "Business owner on your side",
 }
 DELIVERABLE_SECTIONS = (

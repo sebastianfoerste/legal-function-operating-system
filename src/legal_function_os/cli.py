@@ -38,7 +38,7 @@ from legal_function_os.approval_matrix import (
     write_approval_matrix,
 )
 from legal_function_os.board_pack import build_board_pack, render_markdown, render_triage_markdown
-from legal_function_os.bundled import bundled_path, not_utf8
+from legal_function_os.bundled import bundled_path, not_utf8, read_utf8
 from legal_function_os.capacity_simulator import (
     build_capacity_simulation,
     render_capacity_markdown,
@@ -109,7 +109,7 @@ def _json(payload: Any) -> str:
 
 def _read_json(path: str, what: str) -> Any:
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+        return json.loads(read_utf8(path))
     except OSError as exc:
         raise _error(f"cannot read {what} {path}: {exc.strerror or exc}") from None
     except UnicodeDecodeError as exc:
@@ -342,6 +342,9 @@ def _control_tower(args: argparse.Namespace) -> int:
     return 0
 
 
+NOT_UTF8_ANSWERS = "the answers on standard input are not UTF-8 text; save them as UTF-8. Nothing was written."
+
+
 def _init(args: argparse.Namespace) -> int:
     target = Path(args.out)
     if target.exists() and not args.force:
@@ -352,19 +355,28 @@ def _init(args: argparse.Namespace) -> int:
 
         def ask(prompt: str) -> str:
             try:
-                return input(prompt)
+                answer = input(prompt)
             except EOFError:
                 raise _error(
                     f"the interview needs an answer on standard input; run '{PROG} init "
                     "--defaults' to write the bundled default values instead"
                 ) from None
+            except UnicodeDecodeError:
+                raise _error(NOT_UTF8_ANSWERS) from None
+            # Under a C or UTF-8-mode locale, bytes that are not UTF-8 arrive as surrogates.
+            if any("\ud800" <= c <= "\udfff" for c in answer):
+                raise _error(NOT_UTF8_ANSWERS)
+            return answer
 
         try:
             policy = run_interview(ask, print)
         except InterviewError as exc:
             raise _error(f"{exc}. Nothing was written.") from None
+    # Encoded before the file is opened, so a policy that cannot be written leaves no
+    # empty file behind (a second init would then refuse to overwrite it).
+    data = render_policy_json(policy).encode("utf-8")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render_policy_json(policy), encoding="utf-8")
+    target.write_bytes(data)
     print(f"wrote {target}", file=sys.stderr)
     print(
         f"Next: {PROG} validate --policy {target} --input requests.csv, then "
@@ -744,10 +756,11 @@ def _legacy_main(argv: list[str]) -> int:
             )
             return 2
         try:
-            scenario_payloads = json.loads(
-                Path(args.capacity_scenarios).read_text(encoding="utf-8")
-            )
+            scenario_payloads = json.loads(read_utf8(args.capacity_scenarios))
             simulation = build_capacity_simulation(requests, scenario_payloads, policy)
+        except UnicodeDecodeError as exc:
+            print(f"Invalid capacity simulation input: {args.capacity_scenarios}: {not_utf8(exc)}", file=sys.stderr)
+            return 2
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"Invalid capacity simulation input: {exc}", file=sys.stderr)
             return 2
@@ -771,10 +784,15 @@ def _legacy_main(argv: list[str]) -> int:
             )
             return 2
         try:
-            event_ledger = json.loads(Path(args.events_input).read_text(encoding="utf-8"))
-            outcome_config = json.loads(Path(args.outcome_config).read_text(encoding="utf-8"))
+            reading = args.events_input
+            event_ledger = json.loads(read_utf8(reading))
+            reading = args.outcome_config
+            outcome_config = json.loads(read_utf8(reading))
             tower = build_outcome_control_tower(requests, event_ledger, outcome_config, policy)
             write_outcome_artifacts(tower, Path(args.outcome_output))
+        except UnicodeDecodeError as exc:
+            print(f"Invalid outcome control tower input: {reading}: {not_utf8(exc)}", file=sys.stderr)
+            return 2
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"Invalid outcome control tower input: {exc}", file=sys.stderr)
             return 2

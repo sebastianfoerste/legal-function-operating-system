@@ -104,11 +104,11 @@
       ],
       "external_counsel": "in-house",
       "escalations": [
-        "Value above EUR 1m: add to board awareness list."
+        "Value over EUR 1 million: add to board awareness list."
       ],
       "board_attention": true,
       "rationale": [
-        "Contract value above €1m.",
+        "Value over EUR 1 million.",
         "Uncapped liability exposure.",
         "Priority P2_high from urgency 'high' and risk HIGH.",
         "Routed to Commercial; approval chain: Reviewer -> Legal Ops Lead -> General Counsel -> Board note."
@@ -198,11 +198,11 @@
       ],
       "external_counsel": "External: corporate counsel",
       "escalations": [
-        "Value above EUR 1m: add to board awareness list."
+        "Value over EUR 1 million: add to board awareness list."
       ],
       "board_attention": true,
       "rationale": [
-        "Contract value above €1m.",
+        "Value over EUR 1 million.",
         "Priority P2_high from urgency 'standard' and risk HIGH.",
         "Routed to Corporate / GC; approval chain: Reviewer -> Legal Ops Lead -> General Counsel -> Board note.",
         "External: corporate counsel indicated."
@@ -253,7 +253,7 @@
       ],
       "board_attention": true,
       "rationale": [
-        "Dispute above €250k.",
+        "Dispute value of EUR 250,000 or more.",
         "Priority P1_blocker from urgency 'blocker' and risk HIGH.",
         "Routed to Litigation; approval chain: Reviewer -> Legal Ops Lead -> General Counsel.",
         "External: litigation counsel indicated."
