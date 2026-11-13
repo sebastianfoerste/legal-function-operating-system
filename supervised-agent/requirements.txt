@@ -5,12 +5,9 @@ annotated-types==0.7.0
 anyio==4.15.1
     # via
     #   google-genai
-    #   httpx
+    #   httpx2
 certifi==2026.10.23
-    # via
-    #   httpcore
-    #   httpx
-    #   requests
+    # via requests
 cffi==2.0.0
     # via cryptography
 charset-normalizer==3.4.4
@@ -19,20 +16,20 @@ cryptography==50.0.2
     # via google-auth
 distro==1.9.0
     # via google-genai
-google-auth==2.53.0
+google-auth[requests]==2.62.2
     # via google-genai
-google-genai==2.7.0
+google-genai==3.0.0
     # via -r requirements.in
 h11==0.16.0
-    # via httpcore
-httpcore==1.0.9
-    # via httpx
-httpx==0.28.1
+    # via httpcore2
+httpcore2==2.16.0
+    # via httpx2
+httpx2==2.16.0
     # via google-genai
 idna==3.20
     # via
     #   anyio
-    #   httpx
+    #   httpx2
     #   requests
 pyasn1==0.6.5
     # via pyasn1-modules
@@ -56,6 +53,10 @@ sniffio==1.3.1
     # via google-genai
 tenacity==9.1.4
     # via google-genai
+truststore==0.10.5
+    # via
+    #   httpcore2
+    #   httpx2
 typing-extensions==4.16.0
     # via
     #   anyio
