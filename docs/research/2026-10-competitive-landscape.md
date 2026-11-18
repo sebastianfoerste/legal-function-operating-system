@@ -102,12 +102,12 @@ Repository discovery (Observed, 2026-10-20):
   through the REST search API. The research agent then listed them through the GitHub MCP
   search tool. That tool reached beyond this session's repository scope, which the session
   rules do not allow, and it is not one of the fallbacks the brief names. The access was
-  read-only. No matrix row comes from it; only the `legal-operations` count in the next
-  bullet relies on it. Whether to keep that count is an owner decision, and later runs use
-  only the named fallbacks.
-- `legal-operations` has 22 repositories, all small, which confirms the brief's
-  observation: there is little open-source competition for a deterministic legal front
-  door.
+  read-only. Nothing from that listing is used: the topic count it gave was removed on
+  2026-11-18 (owner decision 11), and no matrix row came from it. Later runs use only the
+  named fallbacks.
+- The open-source picture rests on the 17 repositories cloned for this research and the
+  curated lists below. They suggest little open-source competition for a deterministic
+  legal front door. Inferred, and weak evidence: it is not a count.
 - The repository owner's lists (`awesome-eu-fintech-regulation`, `awesome-legal-tech`,
   `awesome-in-house-legal`, `awesome-legal-nlp` on `master`, `Awesome-LegalAI-Resources`)
   were read via raw.githubusercontent.com. `awesome-in-house-legal` states that no

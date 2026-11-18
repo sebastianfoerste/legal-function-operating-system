@@ -675,10 +675,12 @@ playbook position next to each change, and the evidence next to each resolution.
    The last four steps are the owner's alone.
 10. **Visual migration of committed reviewer artifacts** (D4). It changes the look of
     published pages.
-11. **Candidates found outside the session's repository scope.** The GitHub topic
-    listings came from a search tool that reached beyond the attached repository (see the
-    landscape's Repository discovery). No matrix row depends on it; keep or drop the
-    `legal-operations` topic count that does.
+11. **Candidates found outside the session's repository scope.** **Decided on 2026-11-18:
+    dropped.** The `legal-operations` topic count came from a GitHub search that reached
+    beyond the session's repository scope, so the landscape no longer states it. Its
+    Repository discovery keeps the disclosure. The open-source picture rests on the 17
+    cloned repositories and the owner's curated lists, as weak evidence. No matrix row or
+    verdict changed.
 12. **German coverage.** Only one purely German search ran. A follow-up run should add
     German queries (for example "Legal Request Management Rechtsabteilung", "Vertragsprüfung
     Playbook", "Mandatsannahme Software Unternehmensjurist") once vendor sites are reachable.
