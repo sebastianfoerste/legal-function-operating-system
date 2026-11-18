@@ -4,7 +4,8 @@ Opens the published control tower and RaaS deal room, and a freshly rendered kno
 portal, from files at phone width in light and dark mode. Each page must fit the
 phone without sideways scroll, follow the colour scheme, load nothing from the
 network, let the keyboard reach every scrolling table, and print in the light palette
-even when the reader uses dark mode.
+even when the reader uses dark mode. Chromium makes a scroller with no focusable content
+focusable by itself, so the test also checks that the focus came from ``tabindex="0"``.
 
 Runs a short Node Playwright script. It is skipped when Node, its Playwright package
 or a Chromium build is not installed, so ``make test`` does not need a browser. With
@@ -55,9 +56,11 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
         result["bg-" + key] = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
         if (width === 390) {
           // Tab through the page and note which scrolling tables take focus, and how
-          // the focus ring looks on them.
+          // the focus ring looks on them. Chromium can focus a scroller by itself (and
+          // reports tabIndex -1 for it), so note which ones lack tabindex="0".
           const regions = await page.locator(".table-scroll").count();
           const reached = new Set();
+          const implicit = new Set();
           const rings = [];
           for (let i = 0; i < 80 && reached.size < regions; i += 1) {
             await page.keyboard.press("Tab");
@@ -66,12 +69,16 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
               const index = all.indexOf(document.activeElement);
               if (index < 0) return null;
               const style = getComputedStyle(document.activeElement);
-              return { index, ring: style.outlineStyle + " " + style.outlineWidth, scrolls: document.activeElement.scrollWidth > document.activeElement.clientWidth };
+              return { index, explicit: document.activeElement.getAttribute("tabindex") === "0", ring: style.outlineStyle + " " + style.outlineWidth, scrolls: document.activeElement.scrollWidth > document.activeElement.clientWidth };
             });
-            if (hit) { reached.add(hit.index); rings.push(hit.ring); result["scrolls-" + hit.index] = hit.scrolls; }
+            if (hit) {
+              reached.add(hit.index); rings.push(hit.ring); result["scrolls-" + hit.index] = hit.scrolls;
+              if (!hit.explicit) implicit.add(hit.index);
+            }
           }
           result["regions-" + scheme] = regions;
           result["reached-" + scheme] = reached.size;
+          result["implicit-" + scheme] = implicit.size;
           result["rings-" + scheme] = [...new Set(rings)];
         }
         if (scheme === "dark" && width === 390) {
@@ -167,6 +174,9 @@ class ReviewerPagesBrowserTests(unittest.TestCase):
                 for scheme in ("light", "dark"):
                     self.assertGreater(result["regions-" + scheme], 0)
                     self.assertEqual(result["reached-" + scheme], result["regions-" + scheme])
+                    # Reached through tabindex="0", not only because Chromium focuses a
+                    # scroller with nothing focusable inside by itself.
+                    self.assertEqual(result["implicit-" + scheme], 0, "focused without tabindex=0")
                     self.assertEqual(result["rings-" + scheme], ["solid 3px"])
                 # At 390px the wide tables do scroll, inside their focusable region.
                 self.assertTrue(result["scrolls-0"])

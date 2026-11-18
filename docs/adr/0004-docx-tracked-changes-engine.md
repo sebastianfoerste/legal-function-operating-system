@@ -107,8 +107,8 @@ Python-Redlines is not adopted.
   documents in Word) stays with a person who has Word.
 - Tests: `supervised-agent/tests/test_docx_redline.py` (per-change marks, unchanged
   single-mark output, `w:ins`/`w:del`/`w:delText` markup, checked and XML-safe marks),
-  `tests/test_pilot_workflow.py` (the deciding role and decision time in the delivery
-  package, the draft prefix, export-time independence) and
-  `tests/test_collaboration_workspace.py` (the stateless label).
+  `supervised-agent/tests/test_pilot_workflow.py` (the deciding role and decision time
+  in the delivery package, the draft prefix, export-time independence) and
+  `supervised-agent/tests/test_collaboration_workspace.py` (the stateless label).
 - Python-Redlines comes back only through a new ADR, if the owner accepts a bundled
   binary.

@@ -594,8 +594,10 @@ playbook position next to each change, and the evidence next to each resolution.
   committed examples, so each needs `make demo` and review.
   - **Built** (decision 10), one commit per renderer. Wording and layout stayed the
     same: at 1280px the control tower, portal and packages are as tall as before, and
-    the deal room is 5px taller. Each page gained dark mode, a focus ring, a phone
-    layout and `PRINT_CSS`, the shared print block, which prints the light palette.
+    the deal room is 5px taller. Each page gained dark mode, a phone layout and
+    `PRINT_CSS`, the shared print block, which prints the light palette. The control
+    tower, deal room and portal also gained a focus ring; the snapshot and package
+    have nothing to focus.
   - Only `examples/legal-outcome-control-tower.html` and `examples/raas-deal-room.html`
     changed among the committed examples. The deal room's EUR-Lex links are unchanged.
   - `tests/test_reviewer_pages_browser.py` checks the two published pages and the
@@ -655,13 +657,13 @@ playbook position next to each change, and the evidence next to each resolution.
    use. What is built is local hardening of the pilot server. It is not authentication. The
    server refuses to start on an address that is not loopback. It answers only its own
    `Host` names, as before. It refuses a request whose `Origin` is not its own. No page on
-   another origin may frame it. Its request log leaves out presence check-ins. Tests now
-   prove that a final approval is refused when the approver holds too low a tier, is also
-   the requester or matter owner, or decided a change; no command can make the matter
-   owner the approver, so that test writes the assignment directly into the store. These
-   rules compare actor IDs, not people. A per-start secret was considered and not built:
-   anyone at the machine could still read it, and it would look like a sign-in. Selecting
-   a role is still not authentication.
+   another origin may frame it. Its request log leaves out presence check-ins that reach
+   the review-room API. Tests now prove that a final approval is refused when the
+   approver holds too low a tier, is also the requester or matter owner, or decided a
+   change; no command can make the matter owner the approver, so that test writes the
+   assignment directly into the store. These rules compare actor IDs, not people. A
+   per-start secret was considered and not built: anyone at the machine could still read
+   it, and it would look like a sign-in. Selecting a role is still not authentication.
 2. **`supervised-agent/.github/workflows/`** (`ci.yml`, `pre-commit.yml`,
    `release-gates.yml`). **Decided on 2026-11-18: deleted.** GitHub runs workflows only
    from the root `.github/workflows`, so these never ran here. The root CI's `agent` job
@@ -751,8 +753,9 @@ playbook position next to each change, and the evidence next to each resolution.
     - All five renderers moved to the shared tokens, one renderer per commit: the control
       tower, the RaaS deal room, the knowledge portal, the agent snapshot and the
       customer package.
-    - Layout and wording stay the same. Colours, fonts, dark mode, focus rings and the
-      phone layout change.
+    - Layout and wording stay the same. Colours, fonts, dark mode and the phone layout
+      change. The control tower, deal room and portal gain a focus ring; the snapshot
+      and customer package have nothing to focus.
     - Each commit has before and after captures, kept locally, and its message records
       the axe and sideways-scroll numbers. axe finds no violation at 320, 390 and 1280px
       in light or dark mode.

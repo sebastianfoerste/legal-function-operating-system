@@ -9,8 +9,9 @@
 
 Seven HTML renderers each carried their own inline colours: the Pages index (oxblood,
 the only dark mode), the outcome control tower (teal), the RaaS deal room (teal and
-red), the knowledge portal, the agent snapshot and the review room (blue). Nothing
-shared them. The review room is also bound by rules the others are not:
+red), the knowledge portal, the agent snapshot, the customer package and the review
+room (blue). Nothing shared them. The review room is also bound by rules the others
+are not:
 
 - it must stay self-contained, with no external script, style or font;
 - the agent is exported on its own with `make agent-export`, so non-pilot agent code
@@ -32,8 +33,10 @@ shared them. The review room is also bound by rules the others are not:
   deal room, knowledge portal, agent snapshot and customer package followed on
   2026-11-18, one renderer per commit, each with before and after captures kept
   locally. Their wording and layout stayed the same; their colours, fonts, dark mode,
-  focus rings, phone layout and print changed. The approval matrix and the intake page
-  were built on the tokens. Every generated HTML page now uses them.
+  phone layout and print changed. The control tower, deal room and portal gained a
+  focus ring; the snapshot and customer package have nothing to focus. The approval
+  matrix and the intake page were built on the tokens. Every generated HTML page now
+  uses them.
 - `PRINT_CSS`, next to `TOKENS_CSS` in both copies, restates the light tokens inside
   `@media print`, so a page viewed in dark mode still prints dark ink on a light page.
   It is derived from the light block of `TOKENS_CSS`, so the two cannot drift, and the
@@ -51,7 +54,9 @@ shared them. The review room is also bound by rules the others are not:
   root test makes forgetting the copy a CI failure.
 - The tokens are a string of CSS custom properties, so any renderer can inline them
   with no build step and no dependency.
-- All seven renderers share one palette, dark mode and focus ring. The published
+- All seven renderers share one palette and dark mode. The five with something to
+  focus (the Pages index, review room, control tower, deal room and portal) share one
+  focus ring; the snapshot and customer package have nothing focusable. The published
   control tower and deal room look different from before (oxblood and warm off-white
   instead of teal and cool grey); they change on the Pages site only when the owner
   merges and the Pages workflow publishes.

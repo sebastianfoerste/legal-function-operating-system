@@ -93,11 +93,10 @@ repository, so it cannot be built or tested here.
   is tested through such a direct write to the store.
 - The `approver_authorised` requirement text now names all three rules, as the check
   already enforced, in `state_machine.py` and `RUNBOOK.md`.
-- Tests: `supervised-agent/tests/test_runtime_agent.py` (listening address, `Origin`,
-  headers on every response, request log), `tests/test_review_room_browser.py` (the
+- Tests, all under `supervised-agent/tests/`: `test_runtime_agent.py` (listening address,
+  `Origin`, headers on every response, request log), `test_review_room_browser.py` (the
   package frame still renders; another page cannot frame the room),
-  `tests/test_pilot_workflow.py` and `tests/test_pilot_api.py` (approval refusals; no
-  actor route).
+  `test_pilot_workflow.py` and `test_pilot_api.py` (approval refusals; no actor route).
 
 ## Alternatives rejected
 
