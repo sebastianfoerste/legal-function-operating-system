@@ -21,6 +21,7 @@ Recorded on 6 October 2026 for the supervised agent after the pilot workflow was
 | Internal review export and approved delivery package | `src/pilot/deliverable.py` | `tests/test_pilot_workflow.py` |
 | Measurement over the event log, on two separate clocks | `src/pilot/metrics.py` | `tests/test_pilot_rehearsal.py` |
 | Review room API and page that save through the application layer | `src/pilot/api.py`, `src/pilot/review_room.py`, `runtime_agent/app.py` | `tests/test_pilot_api.py`, live inspection |
+| Local network hardening of the runtime (not authentication) | `runtime_agent/app.py` | `tests/test_runtime_agent.py`, `tests/test_review_room_browser.py` |
 | End-to-end rehearsal across process restarts | `src/pilot/cli.py` | `tests/test_pilot_rehearsal.py` |
 
 ## Static presentation

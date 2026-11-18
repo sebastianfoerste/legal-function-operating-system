@@ -594,8 +594,19 @@ playbook position next to each change, and the evidence next to each resolution.
 ## Needs owner decision
 
 1. **Authentication and the 11 controls in `supervised-agent/docs/pilot/IDENTITY_CONTROLS.md`.**
-   None is built. Selecting a role is still not authentication. Presence (F4) makes the
-   gap more visible.
+   **Decided on 2026-11-18** (ADR 0008): authentication is not built here. Sign-in through
+   OIDC or SAML needs the organisation's identity provider and network access, and this
+   repository uses neither. Controls 1 to 11 in
+   `supervised-agent/docs/pilot/IDENTITY_CONTROLS.md` stay preconditions for practitioner
+   use. What is built is local hardening of the pilot server. It is not authentication. The
+   server refuses to start on an address that is not loopback. It answers only its own
+   `Host` names, as before. It refuses a request whose `Origin` is not its own. No page on
+   another origin may frame it. Its request log leaves out presence check-ins. Tests now
+   prove that a final approval is refused when the approver holds too low a tier, is also
+   the requester or matter owner, or decided a change. These rules compare actor IDs, not
+   people. A per-start secret was considered and not built: anyone at the machine could
+   still read it, and it would look like a sign-in. Selecting a role is still not
+   authentication.
 2. **`supervised-agent/.github/workflows/`** (`ci.yml`, `pre-commit.yml`,
    `release-gates.yml`). **Decided on 2026-11-18: deleted.** GitHub runs workflows only
    from the root `.github/workflows`, so these never ran here. The root CI's `agent` job

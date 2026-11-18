@@ -36,6 +36,11 @@ Three of these tests compare the Northwind intakes and the session format with a
 python -m pytest -q tests/test_runtime_agent.py
 ```
 
+These cover the loopback-only listening address, the `Host` and `Origin` checks, the
+JSON-only, size-bounded POSTs, the no-framing headers on every response and the request
+log, which leaves out presence check-ins. They decide which requests the local server
+answers; they are not authentication.
+
 ## Pilot Workflow Checks
 
 ```bash

@@ -178,6 +178,63 @@ def test_readiness_needs_onboarded_reviewers_and_agreed_authority(tmp_path) -> N
         service.start_review(OWNER, matter_id, revision(service, matter_id))
 
 
+FINAL_APPROVAL = (
+    "All comments resolved and exceptions evidenced; approving version 3 of the reviewed draft."
+)
+
+
+@pytest.mark.parametrize(
+    ("approver", "promote", "refusal"),
+    [
+        (APPROVER_LEAD, False, "General Counsel required"),
+        (REQUESTER, True, "the approver is also requester or matter owner on this matter"),
+        (SPECIALIST, True, "the approver decided a change on this matter"),
+    ],
+    ids=["tier too low", "requester", "decided a change"],
+)
+def test_final_approval_refuses_tier_requester_owner_or_change_decider(
+    tmp_path, approver: str, promote: bool, refusal: str
+) -> None:
+    # The separation rules compare actor ids. Giving the requester or the specialist the
+    # approver role and the General Counsel tier (as the silent re-registration allows) does
+    # not let either approve; nor does the Legal Ops Lead, whose tier is too low.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B41")
+    if promote:
+        current = next(actor for actor in service.list_actors() if actor.actor_id == approver)
+        service.register_actor(
+            current.model_copy(
+                update={"role": "final_approver", "approval_tier": "General Counsel"}
+            )
+        )
+    service.assign(
+        OWNER,
+        matter_id,
+        revision(service, matter_id),
+        role="final_approver",
+        assignee_id=approver,
+    )
+    start = revision(service, matter_id)
+    refusals = event_types(service, matter_id).count("command_refused")
+
+    with pytest.raises(TransitionBlockedError) as blocked:
+        service.approve(approver, matter_id, start, note=FINAL_APPROVAL)
+    assert _failing(blocked.value) == {"approver_authorised"}
+    [item] = [entry for entry in blocked.value.evidence if entry["name"] == "approver_authorised"]
+    assert refusal in item["detail"]
+    assert item["requirement"].endswith("and decided none of the changes.")
+    assert revision(service, matter_id) == start and state(service, matter_id) == "review"
+    assert event_types(service, matter_id).count("command_refused") == refusals + 1
+    assert service.view_matter(OWNER, matter_id)["audit_chain"]["verified"]
+
+
+def test_the_assigned_general_counsel_approves_where_the_others_were_refused(tmp_path) -> None:
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B41")
+    service.approve(APPROVER_GC, matter_id, revision(service, matter_id), note=FINAL_APPROVAL)
+    assert state(service, matter_id) == "approved"
+
+
 # -- stale submissions and conflicting edits -----------------------------------------
 
 

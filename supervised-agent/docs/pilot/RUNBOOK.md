@@ -37,7 +37,7 @@ python -m src.pilot.cli seed --db .pilot/pilot.sqlite3
 python -m src.pilot.cli serve --db .pilot/pilot.sqlite3
 ```
 
-Open `http://127.0.0.1:18085/pilot`. The store and the export folder live under `.pilot/`, which is ignored by Git. Set `PILOT_EXPORT_ROOT` to write exports elsewhere. The server binds to `127.0.0.1` only; do not expose it.
+Open `http://127.0.0.1:18085/pilot`. The store and the export folder live under `.pilot/`, which is ignored by Git. Set `PILOT_EXPORT_ROOT` to write exports elsewhere. The server listens only on a loopback address and refuses to start on any other; this is not authentication (see [IDENTITY_CONTROLS.md](IDENTITY_CONTROLS.md)).
 
 Each participant selects their synthetic role, completes onboarding ([ONBOARDING.md](ONBOARDING.md)) and enters the minutes spent before each action, so that effort is recorded with the event. A requester opens a synthetic matter from one of the scenario fixtures. The facilitator scripts are in [scenarios/](scenarios/).
 
@@ -72,7 +72,7 @@ Two commands sit outside the table. `amend_matter` changes the document, a fact,
 | `changes_decided` | Every proposed change on the current version is accepted, rejected or amended. |
 | `no_open_blockers` | No critical comment, clarification request or coverage gap is open. |
 | `specialist_signoffs_current` | Every required specialist signed off on the current version. |
-| `approver_authorised` | The approver holds the required tier and is neither the requester nor the matter owner. |
+| `approver_authorised` | The approver holds the required tier, is neither the requester nor the matter owner, and decided none of the changes. |
 | `export_gate_passes` | The single export-eligibility check passes for a delivery package. |
 | `delivery_manifest_current` | A delivery manifest exists for the current version and reviewed state. |
 | `acceptance_recorded` | The requester recorded an acceptance note. |
