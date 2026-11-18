@@ -11,7 +11,7 @@ The shared JSON Schema normalizes four boundaries:
 3. Synthetic and approved-public source boundaries.
 4. Audit events and optional hash-chain integrity.
 
-The public `legal-ops-agent` repository is archived and points here. It remains readable as a dated snapshot and receives no fixes. `make agent-export` prepares a local path-export branch and does not push it.
+The public `legal-ops-agent` repository is archived and points here. It remains readable as a dated snapshot and receives no fixes. `make agent-export` prepares a local path-export branch and does not push it. The export carries no CI workflow: GitHub runs workflows only from a repository's root, this repository's `agent` CI job runs the agent's gate (`make -C supervised-agent check`), and a path export cannot pass its pilot tests without the parent package.
 
 ## Pilot workflow
 

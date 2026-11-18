@@ -66,6 +66,7 @@ All notable changes to this project are recorded here. The format follows
 
 - The weekly repository-traffic snapshot workflow added in 0.3.0.
 - Internal material from `supervised-agent/docs/`: agent plans and the development checklist `tasks.md`.
+- `supervised-agent/.github/` (the `ci`, `pre-commit` and `release-gates` workflows, `dependabot.yml` and `CODEOWNERS`) and `supervised-agent/.pre-commit-config.yaml`. GitHub runs workflows only from the repository root, so they never ran; the root CI `agent` job runs the agent's gate with pinned tools and browser tests. `tests/test_agent_gate.py` keeps them out (owner decision 2).
 
 ### Fixed
 

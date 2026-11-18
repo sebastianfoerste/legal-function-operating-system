@@ -596,8 +596,13 @@ playbook position next to each change, and the evidence next to each resolution.
    None is built. Selecting a role is still not authentication. Presence (F4) makes the
    gap more visible.
 2. **`supervised-agent/.github/workflows/`** (`ci.yml`, `pre-commit.yml`,
-   `release-gates.yml`). These never run from this repository. Delete them, or keep them
-   for the exported repository.
+   `release-gates.yml`). **Decided on 2026-11-18: deleted.** GitHub runs workflows only
+   from the root `.github/workflows`, so these never ran here. The root CI's `agent` job
+   already runs the agent's full gate (`make -C supervised-agent check`, with pinned tools
+   and browser tests). The export target, `legal-ops-agent`, is archived, and a path
+   export could not pass its own pilot tests without the parent package. The agent's
+   `dependabot.yml`, `CODEOWNERS` and `.pre-commit-config.yaml` were removed with them for
+   the same reason. `tests/test_agent_gate.py` keeps it that way.
 3. **`supervised-agent/src/gemini_client.py`.** It is used only by its own test. The
    decision path keeps `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` false.
 4. **Python-Redlines** (ADR 0004). A new dependency with a bundled native binary, or an
