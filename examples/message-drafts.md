@@ -140,6 +140,6 @@ Not given: `counterparty`, `requested_by`, `deadline`.
 
 ## Before triage
 
-1. Fill every blank from the message, or by asking its sender. Do not delete a blank field: a field left out takes its default (false or none), which can lower the risk.
+1. Fill every blank from the message, or by asking its sender. Do not delete a blank field: a field left out takes its default (false or none), which can lower the risk. `validate` only warns about a blank `type`, and `triage` then decides the draft without the type's own rules, which can lower the risk: fill `type` before triage.
 2. Give each draft a register number in place of its `REQ-DRAFT-` id.
 3. Run `legal-function-os validate` on the drafts file, then `triage`.

@@ -94,8 +94,8 @@ By [@sebastianfoerste](https://github.com/sebastianfoerste):
     no remote services ([ADR 0007](adr/0007-mcp-local-stdio-only.md)).
 11. `message-drafts` reads a synthetic message export saved as a file. It connects to no
     chat or mail service, captures nothing live and replies to no one, and its drafts
-    need legal to fill every blank before triage
-    ([ADR 0009](adr/0009-message-drafts.md)).
+    need legal to fill every blank before triage. `validate` refuses every blank but
+    `type`, which it only warns about ([ADR 0009](adr/0009-message-drafts.md)).
 
 Controls (synthetic inputs only, no external communication, no self-approval) are listed in [MODULES.md](MODULES.md#controls).
 

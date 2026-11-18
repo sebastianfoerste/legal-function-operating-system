@@ -560,8 +560,11 @@ playbook position next to each change, and the evidence next to each resolution.
     Prose, quoted replies and list items are not read. Labels for fields legal sets,
     misspelled labels and fields given two different ways are noted and not copied.
   - Every draft holds the seven fields the intake page always asks. One a message does not
-    state is `""` and named, so `validate` and `triage` refuse the draft until legal fills
-    it; left out, it would take its default and could lower the risk.
+    state is `""` and named. Every blank but `type` is an error, so `validate` and `triage`
+    refuse the draft until legal fills it; left out, the field would take its default and
+    could lower the risk. A blank `type` is only a warning: the draft validates, and
+    `triage` decides it, marked for manual triage, without the type's own rules, so legal
+    fills it before triage.
   - Drafts are `REQ-DRAFT-1` and so on in message order, with the message id in
     `x_message_id`; nothing goes into `facts`.
   - It is a CLI command, not an MCP tool, and it imports no network, mail or process
@@ -714,9 +717,12 @@ playbook position next to each change, and the evidence next to each resolution.
    such as `Value band: <50k`, with labels matched the way CSV headers are, and reads
    nothing from the rest of the text. The subject becomes the title, and the whole text
    the description. Every draft holds every field the intake page always asks. A field the
-   message does not state is left blank (`""`) and named, so `validate` and `triage`
-   refuse the draft until a person in legal fills it; left out, it would take its default
-   and could lower the risk. Drafts are numbered `REQ-DRAFT-1`, `REQ-DRAFT-2` and so on in
+   message does not state is left blank (`""`) and named. Every blank but `type` is an
+   error, so `validate` and `triage` refuse the draft until a person in legal fills it;
+   left out, the field would take its default and could lower the risk. A blank `type` is
+   only a warning: the draft validates, and `triage` decides it, marked for manual triage,
+   without the type's own rules, which can lower the risk, so legal fills it before
+   triage. Drafts are numbered `REQ-DRAFT-1`, `REQ-DRAFT-2` and so on in
    message order, each keeps its message id in `x_message_id`, and legal renumbers them.
    It is a CLI command, not an MCP tool, so no model feeds it messages or fills its
    blanks. `.eml` and mailbox files, real chat exports and replies stay out; each would

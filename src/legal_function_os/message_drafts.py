@@ -10,9 +10,12 @@ message-drafts``. Each message becomes one ``legal-request.v1`` draft:
   as written, so ``>1M`` stays ``>1M`` and validation names it. Nothing is read from the
   rest of the text: the subject becomes the title, and the whole text the description.
 - Every field the intake page always asks is in every draft. A field the message does
-  not state is left blank (``""``) and named, so ``validate`` and ``triage`` refuse the
-  draft until a person in legal fills it. Left out, it would take its default (false or
-  none), which can lower the risk.
+  not state is left blank (``""``) and named. Every blank but ``type`` is an error, so
+  ``validate`` and ``triage`` refuse the draft until a person in legal fills it; left
+  out, the field would take its default (false or none), which can lower the risk. A
+  blank ``type`` is only a warning: the draft validates, and ``triage`` decides it,
+  marked for manual triage, without the type's own rules, which can also lower the
+  risk. Legal fills it before triage.
 - Fields legal sets (the id, the service-level flag, ``facts`` and the rest) are never
   copied. Drafts are numbered ``REQ-DRAFT-1``, ``REQ-DRAFT-2`` and so on in message
   order, keep their message id in ``x_message_id``, and legal renumbers them.
@@ -66,7 +69,9 @@ LEGAL_SETS = ("id", *NOT_ASKED, "facts")
 FIELD_ORDER = (*REQUEST_FIELDS, *AUXILIARY_FIELDS)
 # A label starts the line: letters, then letters, spaces, dots, hyphens or underscores,
 # then a colon. A quoted reply ("> Value band: ...") or a list item is not a label.
-LABEL = re.compile(r"[ \t]*([A-Za-z][A-Za-z _.\-]{0,39}?)[ \t]*:[ \t]*(.*?)[ \t]*\Z")
+# The value is everything after the colon, trimmed by clean_text: a lazy value followed by
+# trailing blanks would backtrack quadratically on a long run of spaces.
+LABEL = re.compile(r"[ \t]*([A-Za-z][A-Za-z _.\-]{0,39}?)[ \t]*:(.*)\Z")
 
 
 class MessageExportError(ValueError):
@@ -174,6 +179,9 @@ def read_messages(text: str, source: str) -> list[Message]:
             item = json.loads(raw)
         except json.JSONDecodeError as exc:
             problems.append(f"line {number}: not valid JSON: {exc.msg} (column {exc.colno})")
+            continue
+        except RecursionError:
+            problems.append(f"line {number}: nested too deeply to read")
             continue
         if not isinstance(item, dict):
             problems.append(f"line {number}: expected a JSON object (one message per line), got {_kind(item)}")
@@ -405,7 +413,9 @@ def render_message_drafts_markdown(result: dict[str, Any]) -> str:
         "",
         "1. Fill every blank from the message, or by asking its sender. Do not delete a "
         "blank field: a field left out takes its default (false or none), which can lower "
-        "the risk.",
+        "the risk. `validate` only warns about a blank `type`, and `triage` then decides "
+        "the draft without the type's own rules, which can lower the risk: fill `type` "
+        "before triage.",
         "2. Give each draft a register number in place of its `REQ-DRAFT-` id.",
         "3. Run `legal-function-os validate` on the drafts file, then `triage`.",
     ]

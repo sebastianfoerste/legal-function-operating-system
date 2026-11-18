@@ -62,9 +62,13 @@ Three facts shape what can be built:
    line), and the whole text is the description.
 5. **Blanks are written, not left out.** Every draft holds every field the intake page
    always asks (`title`, `type`, `value_band`, the three flags, `urgency`). One the
-   message does not state is `""` and named, so `validate` and `triage` refuse the draft
-   until a person in legal fills it. Left out, it would take its default and could lower
-   the risk without a word.
+   message does not state is `""` and named. Every blank but `type` is an error, so
+   `validate` and `triage` refuse the draft until a person in legal fills it. Left out,
+   the field would take its default and could lower the risk without a word. A blank
+   `type` is only a warning, as a missing one is in v1: the draft validates, and
+   `triage` decides it, marked for manual triage, without the type's own rules, which
+   can lower the risk. Legal fills it before triage. Making a blank `type` an error
+   would change how `validate` treats a missing type in v1.
 6. **Numbering and provenance.** Drafts are `REQ-DRAFT-1`, `REQ-DRAFT-2` and so on in
    message order, and legal renumbers them. Each keeps its message id in `x_message_id`,
    which the contract passes through unchanged. Nothing goes into `facts`.
@@ -76,7 +80,9 @@ Three facts shape what can be built:
 
 - A team with requests in a channel can turn a saved export into drafts that show what
   was copied, what is blank and what was noted, with no model involved.
-- Drafts are invalid by design until filled. Someone who deletes a blank key instead of
+- Drafts with a blank other than `type` are invalid until filled. One whose only blank is
+  `type` validates and is triaged without the type's own rules, so the output and the
+  docs say to fill `type` before triage. Someone who deletes a blank key instead of
   filling it gets the default, as with any hand-written JSON. The output, the input format
   docs and this record say "fill, do not delete"; closing this fully would need a contract
   change, which v1 does not allow.

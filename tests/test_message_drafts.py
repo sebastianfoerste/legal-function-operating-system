@@ -1,8 +1,10 @@
 """Message drafts (F11): a synthetic message export becomes request drafts for legal.
 
 Values are copied only from labelled lines; every decision field the message does not
-state is left blank, so validate and triage refuse the draft until legal fills it. The
-command reads a file and sends nothing. It is a CLI command, never an MCP tool.
+state is left blank. Every blank but type is an error, so validate and triage refuse the
+draft until legal fills it; a blank type is only a warning, and triage decides the draft
+without the type's own rules, so legal fills it before triage. The command reads a file
+and sends nothing. It is a CLI command, never an MCP tool.
 """
 
 from __future__ import annotations
@@ -14,6 +16,7 @@ import io
 import json
 import os
 import tempfile
+import time
 import unittest
 from pathlib import Path
 from typing import Any
@@ -108,6 +111,20 @@ class ReadExport(unittest.TestCase):
             problems(line() + "\n{not json}"),
             ["line 2: not valid JSON: Expecting property name enclosed in double quotes (column 2)"],
         )
+
+    def test_a_line_nested_too_deeply_names_its_line(self) -> None:
+        # Deep enough to exhaust the JSON reader's recursion limit on every supported Python,
+        # although the x_ key holding it is otherwise ignored.
+        deep = "[" * 100_000 + "]" * 100_000
+        text = line() + "\n" + '{"message_id": "syn-msg-2", "sender": "syn-ana", "text": "hi", "x_thread": ' + deep + "}"
+        self.assertEqual(problems(text), ["line 2: nested too deeply to read"])
+        with tempfile.TemporaryDirectory() as tmp:
+            export = Path(tmp) / "deep.jsonl"
+            export.write_text(text, encoding="utf-8")
+            code, stdout, stderr = run_cli(["message-drafts", "--input", str(export), "--out", str(Path(tmp) / "out")])
+            self.assertFalse((Path(tmp) / "out").exists())
+        self.assertEqual((code, stdout), (2, ""))
+        self.assertIn(f"error: {export}: line 2: nested too deeply to read\n", stderr)
 
     def test_a_json_array_of_requests_is_pointed_at_validate(self) -> None:
         for text in ('[{"id": "REQ-1", "title": "T"}]', '  \n[\n  {"id": "REQ-1"}\n]\n'):
@@ -267,7 +284,7 @@ class Mapping(unittest.TestCase):
         self.assertEqual(report.issues, ())
         self.assertEqual(decide(draft).risk, "LOW")
 
-    def test_each_blank_is_an_error_validate_names(self) -> None:
+    def test_each_blank_but_type_is_an_error_validate_names(self) -> None:
         result = bundled()
         report = validate_requests(result["drafts"])
         for index, entry in enumerate(result["messages"]):
@@ -277,6 +294,20 @@ class Mapping(unittest.TestCase):
                 checked = {c["field"] for c in entry["check"]}
                 self.assertEqual(errors - checked, set(entry["blank"]) - {"type"})
                 self.assertEqual("type" in warnings, "type" in entry["blank"] or "type" in checked)
+
+    def test_a_blank_type_is_only_a_warning_and_triage_decides_without_it(self) -> None:
+        stated = "Value band: 250k-1m\nPersonal data: no\nNon-EEA transfer: no\nUncapped liability: no\nUrgency: standard"
+        draft, entry = one(stated, subject="Claim from a supplier (synthetic)")
+        self.assertEqual(entry["blank"], ["type"])
+        report = validate_requests([draft])
+        self.assertEqual([(i.severity, i.field) for i in report.issues], [("warning", "type")])
+        blank, typed = decide(draft), decide({**draft, "type": "dispute"})
+        self.assertIn("No request type given: needs manual triage.", blank.rationale)
+        self.assertEqual(blank.queue, default_policy().unknown_type_queue)
+        # Without its type's own rules the draft is decided lower: legal fills type first.
+        self.assertEqual((blank.risk, typed.risk), ("MEDIUM", "HIGH"))
+        before_triage = render_message_drafts_markdown(drafts_of(stated)).split("## Before triage")[1]
+        self.assertIn("`validate` only warns about a blank `type`", before_triage)
 
     def test_prose_is_never_read(self) -> None:
         result = bundled()
@@ -363,11 +394,22 @@ class Mapping(unittest.TestCase):
         self.assertNotIn("counterparty", draft)
         self.assertEqual(draft["value_band"], "")
         self.assertIn("urgency", entry["blank"])
+        # An empty value counts as not given: the field is blank, not copied as "".
+        self.assertIn("value_band", entry["blank"])
+        self.assertNotIn("value_band", entry["copied"])
+        self.assertEqual(labelled_values("Urgency:\nUrgency: high"), ({"urgency": "high"}, []))
         self.assertIn("counterparty", entry["not_given"])
         self.assertEqual(
             entry["notes"],
             ["urgency is given 2 different ways; not copied", "counterparty is given 2 different ways; not copied"],
         )
+
+    def test_a_long_run_of_spaces_in_a_labelled_line_is_read_in_linear_time(self) -> None:
+        text = "Note: a" + " " * 100_000 + "b"
+        start = time.perf_counter()
+        self.assertEqual(labelled_values(text), ({}, []))
+        self.assertLess(time.perf_counter() - start, 1.0)
+        self.assertEqual(labelled_values("Value band: \t<50k \t "), ({"value_band": "<50k"}, []))
 
     def test_quoted_reply_lines_are_not_copied(self) -> None:
         for text in ("> Value band: >1m", ">Value band: >1m", "- Value band: >1m", "1. Value band: >1m",

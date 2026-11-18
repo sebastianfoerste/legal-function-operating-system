@@ -142,7 +142,7 @@ bundled synthetic requests and gives the same board pack as the JSON set.
 | --- | --- |
 | Header row | Names the fields. Spelling is relaxed: `Value band`, `value-band` and `valueBand` all mean `value_band`, and `Request ID`, `Request type` and `Requester` mean `id`, `type` and `requested_by` |
 | Empty cell | The field was not given, so its default applies |
-| Yes/no columns | `personal_data`, `non_eea_transfer`, `uncapped_liability`, `sla_breached` and `awaiting_business_input` accept yes/no, true/false, ja/nein, wahr/falsch, 1/0 and x, in any case |
+| Yes/no columns | `personal_data`, `non_eea_transfer`, `uncapped_liability`, `sla_breached` and `awaiting_business_input` accept yes/no, y/n, true/false, ja/nein, wahr/falsch, 1/0 and x, in any case |
 | `facts`, `dependencies` | One item per line of the cell (Alt+Enter in Excel) |
 | Every other cell | Text, checked exactly as in JSON, so `>1M` is still rejected |
 | Delimiter | Comma, semicolon or tab, recognised from the header row. Excel in a German locale writes semicolons |
@@ -188,11 +188,12 @@ The export is JSON lines: one message object per line, UTF-8, blank lines allowe
 | `channel`, `sent_at` | no | Shown in the Markdown, not copied into the draft |
 
 Keys starting with `x_` or `_` are ignored. Any other key, a line that is not a JSON
-object, a missing or blank required key, a value that is not a string, a repeated
-`message_id` or a sender that is not a `syn-` handle stops the run with exit status 2,
-one line per problem naming the line, and nothing is written. A JSON array is refused:
-requests go to `validate` or `triage`, not here. The `syn-` check marks the export as
-synthetic data; it says nothing about who sent a message, and senders are not verified.
+object or is nested too deeply to read, a missing or blank required key, a value that
+is not a string, a repeated `message_id` or a sender that is not a `syn-` handle stops
+the run with exit status 2, one line per problem naming the line, and nothing is
+written. A JSON array is refused: requests go to `validate` or `triage`, not here. The
+`syn-` check marks the export as synthetic data; it says nothing about who sent a
+message, and senders are not verified.
 
 How each request field reaches a draft:
 
@@ -210,9 +211,9 @@ Labelled lines:
 - A label starts the line and ends at the first colon: `Value band: <50k`. It is matched
   like a CSV header, so `Value band`, `value-band` and `valueBand` mean `value_band`, and
   `Request type` and `Requester` mean `type` and `requested_by`.
-- Yes/no answers are read with the CSV words (yes/no, true/false, ja/nein, wahr/falsch,
-  1/0 and x). Any other value is copied as written, so `>1M` stays `>1M`, and the drafts'
-  check names it.
+- Yes/no answers are read with the CSV words (yes/no, y/n, true/false, ja/nein,
+  wahr/falsch, 1/0 and x). Any other value is copied as written, so `>1M` stays `>1M`,
+  and the drafts' check names it.
 - A quoted reply (`> Value band: >1m`), a list item and the rest of the text are not
   read. Nothing is inferred from prose: "they want uncapped liability" leaves
   `uncapped_liability` blank.
@@ -221,7 +222,10 @@ Labelled lines:
   different ways, such as `Urgency: high` and `Urgency: low`. An empty value counts as not
   given.
 
-A blank decision field is `""`, which `validate` and `triage` refuse, naming each field:
+A blank decision field is `""`. `validate` and `triage` refuse each blank but `type`,
+naming the field. A blank `type` is only a warning, as a missing one is: the draft
+validates, and `triage` decides it, marked for manual triage, without the type's own
+rules, which can lower the risk:
 
 ```text
 error: request 3 (REQ-DRAFT-3): title: missing; every request needs one
@@ -231,9 +235,9 @@ error: request 3 (REQ-DRAFT-3): urgency: '' is not an urgency; use one of blocke
 error: request 3 (REQ-DRAFT-3): personal_data: expected true or false, got ''
 ```
 
-Fill every blank from the message, or by asking its sender. **Do not delete a blank
-field**: a field left out takes its default (false or none), which can lower the risk.
-Then give each draft a register number and run `validate`, then `triage`.
+Fill every blank from the message, or by asking its sender, `type` included. **Do not
+delete a blank field**: a field left out takes its default (false or none), which can
+lower the risk. Then give each draft a register number and run `validate`, then `triage`.
 
 ## What happens on bad input
 
