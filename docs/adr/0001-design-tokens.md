@@ -55,8 +55,8 @@ are not:
 - The tokens are a string of CSS custom properties, so any renderer can inline them
   with no build step and no dependency.
 - All seven renderers share one palette and dark mode. The five with something to
-  focus (the Pages index, review room, control tower, deal room and portal) share one
-  focus ring; the snapshot and customer package have nothing focusable. The published
+  focus (the Pages index, review room, control tower, deal room and portal) draw the
+  same 3px `--focus` outline; the snapshot and customer package have nothing focusable. The published
   control tower and deal room look different from before (oxblood and warm off-white
   instead of teal and cool grey); they change on the Pages site only when the owner
   merges and the Pages workflow publishes.

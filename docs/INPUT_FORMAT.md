@@ -223,8 +223,8 @@ Labelled lines:
   given.
 
 A blank decision field is `""`. `validate` and `triage` refuse each blank but `type`,
-naming the field. A blank `type` is only a warning, as a missing one is: the draft
-validates, and `triage` decides it, marked for manual triage, without the type's own
+naming the field. A blank `type` is only a warning, as a missing one is: a draft whose
+only blank is `type` validates, and `triage` decides it, marked for manual triage, without the type's own
 rules, which can lower the risk:
 
 ```text

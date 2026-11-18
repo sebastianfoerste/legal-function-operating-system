@@ -255,8 +255,8 @@ Served by `runtime_agent/app.py` under `/pilot` on `127.0.0.1`. Every data route
 local role. It is not authentication; see `docs/pilot/IDENTITY_CONTROLS.md`. A request
 whose `Origin` header is not this server's own is refused: the header, when sent, must be
 `http://` with the host and port of the `Host` header. Browsers send it on every POST and
-every CORS-mode fetch, but not on a navigation or an image or script load, so such a GET
-from another origin is still answered. That origin can neither read nor embed the response
+every CORS-mode fetch, but not on a GET navigation or an image or script load, so such a
+GET from another origin is still answered. That origin can neither read nor embed the response
 (same-origin policy, `Cross-Origin-Resource-Policy`, no framing), and a data route also
 needs `X-Pilot-Actor`.
 
