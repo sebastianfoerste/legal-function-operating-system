@@ -101,7 +101,7 @@ Housekeeping, in separate commits:
 | Anti-pattern | Who does it | Evidence | Our rule |
 | --- | --- | --- | --- |
 | Autonomous, "invisible" completion of legal work | Flank | Claimed | Every consequential decision requires human review |
-| LLM routing, risk or priority calls | Checkbox (AI triage), Wordsmith (priority classification) | Claimed | No model in the decision path |
+| LLM routing, risk or priority calls | Checkbox (AI triage), Wordsmith (priority classification), BRYTER (AI legal front door triage) | Claimed | No model in the decision path |
 | Bots that post outward into Slack, Teams or email | Wordsmith, Flank | Claimed | No external delivery or outreach |
 | Role switching that reads as sign-in | Common in demos; not observed in a named product | Inferred | "Selecting an actor is not authentication" |
 | Black-box scores | No named product confirmed; vendor snippets show severities and scores without how they are derived. Lavern, by contrast, documents its grounding score as plain string matching (Observed) | Inferred | Every rule outcome carries its reason |
@@ -553,7 +553,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | Hypothesis | Verdict | Evidence |
 | --- | --- | --- |
 | H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file; deflection is specced as F9a | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
-| H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu (Claimed); Plane (Observed) |
+| H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu, Legisway (Claimed); Plane (Observed) |
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
@@ -681,9 +681,13 @@ playbook position next to each change, and the evidence next to each resolution.
     Repository discovery keeps the disclosure. The open-source picture rests on the 17
     cloned repositories and the owner's curated lists, as weak evidence. No matrix row or
     verdict changed.
-12. **German coverage.** Only one purely German search ran. A follow-up run should add
-    German queries (for example "Legal Request Management Rechtsabteilung", "Vertragsprüfung
-    Playbook", "Mandatsannahme Software Unternehmensjurist") once vendor sites are reachable.
+12. **German coverage.** **Decided on 2026-11-18: run now, at search level.** Twelve German
+    searches ran, including the three named here; see the landscape's
+    [German follow-up](2026-10-competitive-landscape.md#german-follow-up-2026-11-18).
+    The vendor pages tried were still not reachable, so every new fact is Claimed. The
+    matrix gained otris and DEPLAW, and the Wolters Kluwer, BRYTER and Onit rows were
+    updated. No hypothesis verdict changed. Reading the vendor pages waits until the owner
+    allows those hosts in the environment's network settings.
 13. **Intake page defaults** (F9). **Decided on 2026-11-03** (ADR 0006): the page is hosted
     on Pages with its made-up-details notice; the three decision flags keep the "Not sure?
     Choose Yes and say why" hint; every file is `REQ-DRAFT` and legal renumbers; no
