@@ -182,7 +182,7 @@ All Claimed.
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Specced as F11 |
+  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Built as F11: `message_drafts.py` and the `message-drafts` command ([ADR 0009](../adr/0009-message-drafts.md)) |
   | Reject | Posting back to the channel; invisible completion | Rule 4 and rule 1 |
 
 ## Design donors read in source (Observed)
@@ -267,7 +267,7 @@ a verdict, and the file the verdict would change.
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Board pack is Markdown and JSON only | Observed | — | Keep; a print stylesheet is specced as D3 |
+| Board pack is Markdown and JSON only | Observed | — | Keep. D3 was built for the customer package only: the board pack has no HTML page to print, and an HTML board pack would be a new candidate (decision 10) |
 | Portal abstains with "insufficient evidence" | Observed | `baseline/knowledge-portal-1280.png` | Keep |
 | Portal had no `lang` attribute (axe serious) | Observed | — | Fixed |
 
@@ -282,7 +282,7 @@ a verdict, and the file the verdict would change.
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Seven palettes; only the Pages index had dark mode; "Public Sans" named but never loaded | Observed | all baseline captures | Adopt, partly built: shared tokens in the index and the review room (ADR 0001) |
+| Seven palettes; only the Pages index had dark mode; "Public Sans" named but never loaded | Observed | all baseline captures | Adopt, built: shared tokens in the index and the review room (D2), then in the control tower, deal room, portal, snapshot and customer package, one renderer per commit (D4, ADR 0001 amended 2026-11-18) |
 | The "simulated roles" banner is present on every room view | Observed | — | Keep |
 
 ### MCP and CLI

@@ -313,6 +313,50 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
+FRAMING_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, matter, OWNER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+
+  // The room shows the approved package in its own sandboxed srcdoc frame.
+  const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto(base + "/pilot");
+  await page.waitForSelector("#actor option", { state: "attached" });
+  await page.selectOption("#actor", OWNER);
+  await page.waitForTimeout(300);
+  await page.locator("#list button", { hasText: matter }).first().click();
+  await page.waitForSelector("#matter h2.title");
+  await page.getByRole("link", { name: "Open the approved customer package" }).first().click();
+  const frame = page.frameLocator('iframe[title="Customer package"]');
+  await frame.locator("h1").waitFor();
+  out.packageHeading = await frame.locator("h1").innerText();
+  out.packageFrameSrc = await page.locator('iframe[title="Customer package"]').evaluate((f) => f.src);
+  out.errors = errors;
+
+  // A page on another origin tries to frame the room.
+  const context = await browser.newContext();
+  const requested = [];
+  context.on("request", (r) => requested.push(new URL(r.url()).pathname));
+  const foreign = await context.newPage();
+  await foreign.setContent('<iframe src="' + base + '/pilot" width="800" height="600"></iframe>');
+  await foreign.waitForTimeout(1500);
+  const child = foreign.frames().find((f) => f !== foreign.mainFrame());
+  out.framedTitle = child ? await child.title().catch(() => "") : "";
+  out.framedControls = child ? await child.locator("#actor").count().catch(() => 0) : 0;
+  out.requested = requested;
+
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
 def _node_env() -> dict[str, str] | None:
     node, npm = shutil.which("node"), shutil.which("npm")
     if not node or not npm:
@@ -539,3 +583,19 @@ def test_time_on_the_matter_never_stops_the_room(tmp_path, monkeypatch) -> None:
     recorded = out["PM-OP-1"]["timing"]
     assert "Target 16.0 h: ✗ past target, no response yet" in recorded
     assert "Time recorded by this server, up to when this page was loaded" in recorded
+
+
+def test_room_shows_its_package_but_cannot_be_framed_by_another_page(tmp_path, monkeypatch) -> None:
+    service = make_service(tmp_path)
+    matter = run_until(service, "routine", "A12")  # ready for delivery: the package exists
+    out = _run_node(tmp_path, monkeypatch, service, FRAMING_SCRIPT, matter, OWNER)
+
+    # The room's own package frame is a srcdoc document, which the no-framing headers allow.
+    assert out["errors"] == []
+    assert out["packageHeading"].startswith("Customer package")
+    assert out["packageFrameSrc"] == ""
+    # Another origin's frame asked for /pilot, and the browser refused to show it: the room
+    # never ran, so it never fetched its actors.
+    assert "/pilot" in out["requested"]
+    assert out["framedTitle"] != "Pilot review room" and out["framedControls"] == 0
+    assert "/pilot/api/actors" not in out["requested"]

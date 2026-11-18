@@ -37,7 +37,7 @@ python -m src.pilot.cli seed --db .pilot/pilot.sqlite3
 python -m src.pilot.cli serve --db .pilot/pilot.sqlite3
 ```
 
-Open `http://127.0.0.1:18085/pilot`. The store and the export folder live under `.pilot/`, which is ignored by Git. Set `PILOT_EXPORT_ROOT` to write exports elsewhere. The server binds to `127.0.0.1` only; do not expose it.
+Open `http://127.0.0.1:18085/pilot`. The store and the export folder live under `.pilot/`, which is ignored by Git. Set `PILOT_EXPORT_ROOT` to write exports elsewhere. The server listens only on a loopback address and refuses to start on any other; this is not authentication (see [IDENTITY_CONTROLS.md](IDENTITY_CONTROLS.md)).
 
 Each participant selects their synthetic role, completes onboarding ([ONBOARDING.md](ONBOARDING.md)) and enters the minutes spent before each action, so that effort is recorded with the event. A requester opens a synthetic matter from one of the scenario fixtures. The facilitator scripts are in [scenarios/](scenarios/).
 
@@ -72,7 +72,7 @@ Two commands sit outside the table. `amend_matter` changes the document, a fact,
 | `changes_decided` | Every proposed change on the current version is accepted, rejected or amended. |
 | `no_open_blockers` | No critical comment, clarification request or coverage gap is open. |
 | `specialist_signoffs_current` | Every required specialist signed off on the current version. |
-| `approver_authorised` | The approver holds the required tier and is neither the requester nor the matter owner. |
+| `approver_authorised` | The approver holds the required tier, is neither the requester nor the matter owner, and decided none of the changes. |
 | `export_gate_passes` | The single export-eligibility check passes for a delivery package. |
 | `delivery_manifest_current` | A delivery manifest exists for the current version and reviewed state. |
 | `acceptance_recorded` | The requester recorded an acceptance note. |
@@ -106,6 +106,8 @@ There is one eligibility check, `src/export_gate.py::evaluate_export_eligibility
 
 A delivery package contains `customer-package.md`, `customer-package.html`, `reviewed-document.docx`, `issue-list.json` and `manifest.json`. The manifest is also stored in the database. A folder without a matching stored manifest is not an approved package. Sending, filing and publication are not implemented.
 
+`customer-package.html` uses the shared colour tokens, with dark mode on screen and a stacked table layout on a phone. It always prints in the light palette: each numbered section starts a new page, table headers repeat, and the synthetic-data notice and the page number print at the foot of every page. The page footer was checked in Chromium only. The packages in the dated rehearsal of 2026-10-06 were written before this and keep the older look.
+
 ## 8. Supported DOCX subset
 
 The tracked-change engine reads and edits body-level paragraphs whose runs contain text, tabs, simple line breaks and page-break markers. It replaces a span, deletes a paragraph or inserts a paragraph after an anchor.
@@ -115,6 +117,17 @@ The tracked-change engine reads and edits body-level paragraphs whose runs conta
 - Tables, text boxes, headers, footers and footnotes are not read. Each unread body element becomes a coverage gap that blocks approval until a person records how it was reviewed.
 - Only the bytes of an edited paragraph change. Every other byte of the document and every other part of the package is copied unchanged, and the source file is never written to.
 - An inserted clause is not numbered.
+
+Each change is a Word tracked change (`w:ins` or `w:del`, deleted text as `w:delText`) with its own author and date:
+
+- In a delivery package the author is "Simulated local role: <display name> (<actor ID>)", the role that recorded the decision, and the date is when that decision was recorded, to the second (UTC). A decision carried forward to a new version keeps its role and time.
+- In an internal review draft every author starts "DRAFT, not approved.". A change nobody has decided yet, including one waiting for clarification, reads "Playbook proposal, no reviewer decision yet" and is dated when the matter version was recorded.
+- A change decided as "rejected" writes no tracked change. The customer's wording stays, and the reason is in the issue list and section 4 of the package.
+- The dates are recorded times, not the export time, so exporting the same version again gives the same document.
+- The stateless `render_annotated_docx` has no recorded reviewer. It labels every change "Legal reviewer (not authenticated)", dated from `SOURCE_DATE_EPOCH`.
+- In Word, "Accept all" gives the reviewed wording and "Reject all" gives the customer draft. Accepting a tracked change in Word is a different step from "accepted" in the pilot, which means the reviewer took the playbook proposal.
+- The names are simulated local roles, not authenticated identities. Selecting an actor is not authentication.
+- Tables, Word comments and `w:trackRevisions` are not written. The rehearsal of 2026-10-06 in `examples/pilot/rehearsal-2026-10-06/` predates these labels: each of its documents carries one label and the export time on every change.
 
 ## 9. Recovery and troubleshooting
 
@@ -138,4 +151,4 @@ make -C .. check
 python -m src.pilot.cli rehearse --db /tmp/pilot-rehearsal/pilot.sqlite3 --out /tmp/pilot-rehearsal/out
 ```
 
-Then open one `reviewed-document.docx` in Microsoft Word with tracked changes shown, and one `customer-package.html` in a browser.
+Then open one `reviewed-document.docx` in Microsoft Word with tracked changes shown, check that each change names its simulated local role and decision time, and open one `customer-package.html` in a browser and in its print preview.

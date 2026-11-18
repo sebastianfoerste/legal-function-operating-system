@@ -1,9 +1,11 @@
 """MCP server (stdio) exposing the tested rules to LLM agents.
 
 The tool functions below are plain Python and need nothing beyond the standard
-library. Only ``build_server``/``main`` import the optional ``mcp`` package:
+library. Only ``build_server``/``main`` import the optional ``mcp`` package. The
+package is not on PyPI, so install the extra from a clone or run it from git:
 
-    pip install "legal-function-os[mcp]"
+    pip install -e ".[mcp]"    # in a clone
+    uvx --from "legal-function-os[mcp] @ git+https://github.com/sebastianfoerste/legal-function-operating-system" legal-function-os-mcp
     legal-function-os-mcp [--policy PATH]
 
 An agent can then call the approval matrix instead of interpreting a prose one.
@@ -114,7 +116,11 @@ def build_server() -> Any:
         from mcp.server.fastmcp import FastMCP
         from mcp.types import ToolAnnotations
     except ImportError as exc:  # pragma: no cover - exercised without the extra
-        raise SystemExit('The MCP server needs the extra: pip install "legal-function-os[mcp]"') from exc
+        raise SystemExit(
+            "The MCP server needs the mcp extra. The package is not on PyPI. "
+            'In a clone, run: pip install -e ".[mcp]". Without one, run: '
+            'uvx --from "legal-function-os[mcp] @ git+https://github.com/sebastianfoerste/legal-function-operating-system" legal-function-os-mcp'
+        ) from exc
 
     server = FastMCP("legal-function-os")
     read_only = ToolAnnotations(readOnlyHint=True, destructiveHint=False, idempotentHint=True, openWorldHint=False)

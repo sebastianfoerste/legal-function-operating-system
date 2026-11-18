@@ -7,8 +7,8 @@ Request logs usually live in a spreadsheet. Save it as CSV and pass the file to
   "value-band" and "valueBand" all mean ``value_band``. "Request ID", "Request
   type" and "Requester" are accepted for ``id``, ``type`` and ``requested_by``.
 - An empty cell means the field was not given, so its default applies.
-- In the yes/no columns, yes/no, true/false, ja/nein, wahr/falsch, 1/0 and x are
-  read as booleans. Any other answer is passed on and rejected by validation.
+- In the yes/no columns, yes/no, y/n, true/false, ja/nein, wahr/falsch, 1/0 and x
+  are read as booleans. Any other answer is passed on and rejected by validation.
 - In ``facts`` and ``dependencies`` each line of a cell is one item.
 - Every other value is passed on unchanged, so the same checks apply as for JSON:
   ``>1M`` is still rejected with a suggestion.

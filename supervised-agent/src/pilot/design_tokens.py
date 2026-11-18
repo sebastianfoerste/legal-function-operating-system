@@ -1,7 +1,8 @@
 """Copy of the parent's design tokens for the review room.
 
-Byte-identical to ``TOKENS_CSS`` in ``src/legal_function_os/design_tokens.py`` at the
-repository root; the root test ``tests/test_design_tokens.py`` fails when they drift.
+``TOKENS_CSS`` and ``PRINT_CSS`` are byte-identical to those in
+``src/legal_function_os/design_tokens.py`` at the repository root; the root test
+``tests/test_design_tokens.py`` fails when they drift. The module imports nothing.
 A copy, not an import, so the agent stays exportable on its own
 (docs/adr/0001-design-tokens.md at the repository root).
 """
@@ -19,3 +20,16 @@ TOKENS_CSS = """:root{color-scheme:light dark;
 --ok:#7ccf8e;--ok-bg:#1d2a20;--warn:#e8b06a;--warn-bg:#2e2416;--bad:#f08a84;--bad-bg:#33201f;
 --focus:#e8a09a}}
 """
+
+# The print block: the light tokens again, inside @media print, so a page viewed in
+# dark mode still prints dark ink on a light page. Derived from TOKENS_CSS so the two
+# cannot drift. Pages append it after their own rules; it also repeats table headers on
+# each printed page and keeps rows, list items and cards whole.
+_LIGHT = TOKENS_CSS.split("@media", 1)[0]
+_LIGHT = _LIGHT.replace("color-scheme:light dark;", "color-scheme:light;", 1)
+PRINT_CSS = (
+    "@media print{"
+    + _LIGHT.strip()
+    + "\n*{box-shadow:none!important}thead{display:table-header-group}"
+    "tr,li,article,.metric,.issue{break-inside:avoid}h1,h2,h3{break-after:avoid}}\n"
+)

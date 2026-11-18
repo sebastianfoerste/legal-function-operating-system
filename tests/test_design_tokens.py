@@ -3,7 +3,7 @@ import re
 import unittest
 from pathlib import Path
 
-from legal_function_os.design_tokens import TOKENS_CSS
+from legal_function_os.design_tokens import PRINT_CSS, TOKENS_CSS
 
 ROOT = Path(__file__).resolve().parents[1]
 TOKEN = re.compile(r"(--[a-z-]+):(#[0-9a-f]{6})")
@@ -31,10 +31,21 @@ class DesignTokenTests(unittest.TestCase):
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         self.assertEqual(module.TOKENS_CSS, TOKENS_CSS)
+        self.assertEqual(module.PRINT_CSS, PRINT_CSS)
 
     def test_tokens_load_no_font_or_remote_resource(self) -> None:
-        for forbidden in ("http", "url(", "@import", "@font-face"):
-            self.assertNotIn(forbidden, TOKENS_CSS)
+        for css in (TOKENS_CSS, PRINT_CSS):
+            for forbidden in ("http", "url(", "@import", "@font-face"):
+                self.assertNotIn(forbidden, css)
+
+    def test_print_block_is_the_light_theme(self) -> None:
+        # A page in dark mode still prints dark ink on a light page: the print block
+        # restates the light tokens, so it is checked against the same light values.
+        self.assertTrue(PRINT_CSS.startswith("@media print{:root{color-scheme:light;"))
+        self.assertNotIn("light dark", PRINT_CSS)
+        self.assertEqual(dict(TOKEN.findall(PRINT_CSS)), _themes()[0])
+        self.assertIn("thead{display:table-header-group}", PRINT_CSS)
+        self.assertTrue(PRINT_CSS.endswith("}\n"))
 
     def test_both_themes_meet_wcag_aa_contrast(self) -> None:
         backgrounds = ("--bg", "--surface", "--panel", "--ok-bg", "--warn-bg", "--bad-bg")

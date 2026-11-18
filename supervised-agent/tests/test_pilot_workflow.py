@@ -1,13 +1,16 @@
 import hashlib
 import json
+import re
 import threading
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 
-from src.docx_redline import index_docx, read_paragraph_texts
+from src.docx_redline import index_docx, list_tracked_changes, read_paragraph_texts
 from src.export_gate import ExportBlockedError
 from src.pilot import deliverable
+from src.pilot.design_tokens import PRINT_CSS, TOKENS_CSS
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.models import Actor
 from src.pilot.service import (
@@ -37,6 +40,33 @@ from tests.pilot_support import (
 )
 
 APPROVAL = "All deviations decided and evidenced; approving the reviewed draft."
+OWNER_LABEL = (
+    "Simulated local role: Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+)
+SPECIALIST_LABEL = (
+    "Simulated local role: Synthetic Specialist C (Privacy Counsel) (syn-specialist-privacy)"
+)
+PROPOSAL_LABEL = "Playbook proposal, no reviewer decision yet"
+DRAFT_PREFIX = "DRAFT, not approved. "
+
+
+class FixedClock:
+    def __init__(self, now: str) -> None:
+        self.value = now
+
+    def now(self) -> str:
+        return self.value
+
+
+class TickingClock:
+    """Moves on a minute at every reading, so no two recorded times share a second."""
+
+    def __init__(self) -> None:
+        self.value = datetime(2026, 9, 7, 8, 0, tzinfo=UTC)
+
+    def now(self) -> str:
+        self.value += timedelta(minutes=1)
+        return self.value.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def _failing(error: TransitionBlockedError) -> set[str]:
@@ -178,6 +208,89 @@ def test_readiness_needs_onboarded_reviewers_and_agreed_authority(tmp_path) -> N
         service.start_review(OWNER, matter_id, revision(service, matter_id))
 
 
+FINAL_APPROVAL = (
+    "All comments resolved and exceptions evidenced; approving version 3 of the reviewed draft."
+)
+
+
+@pytest.mark.parametrize(
+    ("approver", "promote", "refusal"),
+    [
+        (APPROVER_LEAD, False, "General Counsel required"),
+        (REQUESTER, True, "the approver is also requester or matter owner on this matter"),
+        (SPECIALIST, True, "the approver decided a change on this matter"),
+    ],
+    ids=["tier too low", "requester", "decided a change"],
+)
+def test_final_approval_refuses_tier_requester_or_change_decider(
+    tmp_path, approver: str, promote: bool, refusal: str
+) -> None:
+    # The separation rules compare actor ids. Giving the requester or the specialist the
+    # approver role and the General Counsel tier (as the silent re-registration allows) does
+    # not let either approve; nor does the Legal Ops Lead, whose tier is too low.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B41")
+    if promote:
+        current = next(actor for actor in service.list_actors() if actor.actor_id == approver)
+        service.register_actor(
+            current.model_copy(
+                update={"role": "final_approver", "approval_tier": "General Counsel"}
+            )
+        )
+    service.assign(
+        OWNER,
+        matter_id,
+        revision(service, matter_id),
+        role="final_approver",
+        assignee_id=approver,
+    )
+    start = revision(service, matter_id)
+    refusals = event_types(service, matter_id).count("command_refused")
+
+    with pytest.raises(TransitionBlockedError) as blocked:
+        service.approve(approver, matter_id, start, note=FINAL_APPROVAL)
+    assert _failing(blocked.value) == {"approver_authorised"}
+    [item] = [entry for entry in blocked.value.evidence if entry["name"] == "approver_authorised"]
+    assert refusal in item["detail"]
+    assert item["requirement"].endswith("and decided none of the changes.")
+    assert revision(service, matter_id) == start and state(service, matter_id) == "review"
+    assert event_types(service, matter_id).count("command_refused") == refusals + 1
+    assert service.view_matter(OWNER, matter_id)["audit_chain"]["verified"]
+
+
+def test_final_approval_refuses_an_approver_who_is_also_matter_owner(tmp_path) -> None:
+    # No command can produce this state: only the matter owner assigns the final approver,
+    # one actor ID holds one role, and a matter has one owner, who claimed it at triage. The
+    # owner half of the check is defence in depth, so this test reaches it by writing the
+    # assignment row straight into the store (the direct database access of control 10).
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B41")
+    with service.store.transaction() as connection:
+        connection.execute(
+            "INSERT INTO assignments (matter_id, role, actor_id, assigned_by, assigned_at) "
+            "VALUES (?, 'matter_owner', ?, ?, ?)",
+            (matter_id, APPROVER_GC, OWNER, "2026-01-01T00:00:00Z"),
+        )
+    start = revision(service, matter_id)
+    refusals = event_types(service, matter_id).count("command_refused")
+
+    with pytest.raises(TransitionBlockedError) as blocked:
+        service.approve(APPROVER_GC, matter_id, start, note=FINAL_APPROVAL)
+    assert _failing(blocked.value) == {"approver_authorised"}
+    [item] = [entry for entry in blocked.value.evidence if entry["name"] == "approver_authorised"]
+    assert item["detail"] == "the approver is also requester or matter owner on this matter"
+    assert revision(service, matter_id) == start and state(service, matter_id) == "review"
+    assert event_types(service, matter_id).count("command_refused") == refusals + 1
+    assert service.view_matter(OWNER, matter_id)["audit_chain"]["verified"]
+
+
+def test_the_assigned_general_counsel_approves_where_the_others_were_refused(tmp_path) -> None:
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B41")
+    service.approve(APPROVER_GC, matter_id, revision(service, matter_id), note=FINAL_APPROVAL)
+    assert state(service, matter_id) == "approved"
+
+
 # -- stale submissions and conflicting edits -----------------------------------------
 
 
@@ -203,6 +316,26 @@ def test_stale_submission_is_refused_and_overwrites_nothing(tmp_path) -> None:
     assert stale.value.current_revision == loaded + 1
     change = next(c for c in service.view_matter(OWNER, matter_id)["changes"] if c["id"] == target)
     assert change["decision"] == "accepted"
+
+
+def test_amended_wording_a_word_document_cannot_hold_is_refused(tmp_path) -> None:
+    # JSON can carry "\u0001"; written into the redline it would make the document malformed,
+    # and the delivery package would fail only after the final approval was recorded.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "routine", "A07")
+    target = change_id(service, matter_id, "payment-terms")
+    start, events = revision(service, matter_id), event_types(service, matter_id)
+    for wording in ("forty-five (45) days\x01", "forty-five (45) days\ufffe", "\ud800 days"):
+        with pytest.raises(InvalidCommandError, match="a Word document cannot hold"):
+            service.decide_change(
+                OWNER, matter_id, start, change_id=target, outcome="amended",
+                reason="Finance agreed forty-five days for this account.",
+                amended_text=wording, source_support_confirmed=True,
+            )  # fmt: skip
+    # Refused as an invalid command, like other invalid wording: nothing is recorded.
+    assert revision(service, matter_id) == start and event_types(service, matter_id) == events
+    change = next(c for c in service.view_matter(OWNER, matter_id)["changes"] if c["id"] == target)
+    assert change["decision"] == "pending" and change["amended_text"] is None
 
 
 def test_concurrent_writers_only_one_wins(tmp_path) -> None:
@@ -671,6 +804,13 @@ def test_internal_review_export_is_a_separate_marked_draft(tmp_path) -> None:
     text = (folder / "internal-review.md").read_text()
     assert text.splitlines()[2].startswith("> INTERNAL REVIEW DRAFT. Not approved.")
     assert "Not yet decided" in text
+    assert "a change not yet decided is marked as a playbook proposal" in text
+    with service.store.reading() as connection:
+        proposed_at = service._version(connection, matter_id, 2)[1]["created_at"]
+    tracked = list_tracked_changes((folder / "draft-redline.docx").read_bytes())
+    assert tracked and {(c.author, c.date) for c in tracked} == {
+        (DRAFT_PREFIX + PROPOSAL_LABEL, proposed_at[:19] + "Z")
+    }
     assert view["matter"]["state"] == "review" and not view["eligibility"]["eligible"]
     assert not (tmp_path / "exports" / matter_id / "v2" / "delivery").exists()
     with pytest.raises(PermissionDeniedError):
@@ -712,6 +852,121 @@ def test_delivery_package_contents_and_document_integrity(tmp_path) -> None:
     issues = json.loads((folder / "issue-list.json").read_text())
     assert len(issues["issues"]) == 7 and len(issues["obligations"]) == 4
     assert all(o["owner"] != "unassigned" and o["due"] != "not set" for o in issues["obligations"])
+
+
+def test_package_page_uses_shared_tokens_and_prints_the_notice_on_every_page(
+    tmp_path, monkeypatch
+) -> None:
+    seen: list[deliverable.PackageData] = []
+    render = deliverable.render_html
+
+    def spy(data: deliverable.PackageData, *, draft: bool) -> str:
+        seen.append(data)
+        return render(data, draft=draft)
+
+    monkeypatch.setattr(deliverable, "render_html", spy)
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B44")
+    folder = tmp_path / "exports" / matter_id / "v3" / "delivery"
+    page = (folder / "customer-package.html").read_text()
+    style = page.split("<style>", 1)[1].split("</style>", 1)[0]
+    assert style.startswith(TOKENS_CSS) and PRINT_CSS in style
+    own, page_rules = style[len(TOKENS_CSS) :].split(PRINT_CSS, 1)
+    assert not re.search(r"#[0-9a-fA-F]{3,6}\b", own)
+    # D3: the notice and page number at the foot of every printed page, each numbered
+    # section on a new page, in the light palette (the margin box cannot read tokens).
+    assert page_rules.startswith("@page{")
+    foot = (
+        '@bottom-center{content:"'
+        + deliverable.SYNTHETIC_NOTICE
+        + ' Page " counter(page) " of " counter(pages);'
+    )
+    assert foot in page_rules
+    colour = re.search(r"color:(#[0-9a-f]{6})\}", page_rules)
+    assert colour and f"--muted:{colour.group(1)};" in TOKENS_CSS.split("@media", 1)[0]
+    assert "section+section{break-before:page}" in page_rules
+    assert "<meta name='viewport' content='width=device-width, initial-scale=1'>" in page
+    body = page.split("<body>", 1)[1]
+    assert body.startswith("<main>") and body.rstrip().endswith("</main></body></html>")
+    # Every cell is labelled with its column header, for the stacked phone layout.
+    tables = re.findall(r"<table>.*?</table>", page)
+    assert tables
+    for table in tables:
+        headers = re.findall(r"<th>(.*?)</th>", table)
+        for row in re.findall(r"<tbody>.*?</tbody>", table)[0].split("<tr>")[1:]:
+            assert re.findall(r"<td data-label='(.*?)'>", row) == headers[: row.count("<td")]
+            assert row.count("<td") == row.count("<td data-label=") == len(headers)
+    assert "<script" not in page and "http://" not in page and "https://" not in page
+
+    draft = render(seen[-1], draft=True)
+    assert '@bottom-center{content:"' + deliverable.DRAFT_NOTICE + ' Page "' in draft
+    assert deliverable.SYNTHETIC_NOTICE not in draft.split("</style>", 1)[0]
+
+
+def test_css_string_escapes_quotes_and_refuses_line_breaks() -> None:
+    assert deliverable._css_string('Say "no" \\ </style>') == 'Say \\"no\\" \\\\ \\3c /style>'
+    with pytest.raises(ValueError):
+        deliverable._css_string("two\nlines")
+    with pytest.raises(ValueError):  # CSS treats a form feed as a line break too
+        deliverable._css_string("form\ffeed")
+
+
+def test_reviewed_document_names_the_deciding_role_and_decision_time(tmp_path) -> None:
+    service = make_service(tmp_path, clock=TickingClock())
+    matter_id = run_until(service, "specialist-revision", "B44")
+    with service.store.reading() as connection:
+        changes = service._changes(connection, matter_id, 3)
+    decided = [c for c in changes if c.decision in {"accepted", "amended"}]
+    labels = {OWNER: OWNER_LABEL, SPECIALIST: SPECIALIST_LABEL}
+    expected = {c.id: (labels[str(c.decided_by)], str(c.decided_at)[:19] + "Z") for c in decided}
+    assert len({date for _, date in expected.values()}) == len(decided) == 6
+    folder = tmp_path / "exports" / matter_id / "v3" / "delivery"
+    manifest = json.loads((folder / "manifest.json").read_text())
+    reviewed = (folder / "reviewed-document.docx").read_bytes()
+    tracked = list_tracked_changes(reviewed)
+    assert {(c.author, c.date) for c in tracked} == set(expected.values())
+    assert manifest["generated_at_utc"][:19] + "Z" not in {c.date for c in tracked}
+    for change in decided:  # each inserted wording carries its own decision's mark
+        if change.operation != "delete_paragraph":
+            insertion = next(
+                t for t in tracked if t.kind == "insertion" and t.text == change.final_text
+            )
+            assert (insertion.author, insertion.date) == expected[change.id]
+    subprocessors = next(c for c in tracked if "Supplier may engage the subprocessors" in c.text)
+    assert subprocessors.author == SPECIALIST_LABEL
+    assert all(c.author.startswith("Simulated local role: ") for c in tracked)
+    assert not any("Approved" in c.author or "DRAFT" in c.author for c in tracked)
+    # Payment terms were rejected: the customer's wording stays and nothing is tracked there.
+    assert not any(c.text == "thirty (30) days" or "ninety (90) days" in c.text for c in tracked)
+    source = build_synthetic_msa("specialist")
+    assert read_paragraph_texts(reviewed, "rejected") == read_paragraph_texts(source, "accepted")
+    assert "two hundred percent (200%)" in "\n".join(read_paragraph_texts(reviewed, "accepted"))
+    package = (folder / "customer-package.md").read_text()
+    assert "Each tracked change names the simulated local role that decided it" in package
+    assert "These names are not authenticated identities." in package
+
+
+def test_draft_redline_names_deciders_and_does_not_depend_on_export_time(tmp_path) -> None:
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B19")
+    folder = tmp_path / "exports" / matter_id / "v2" / "internal-review"
+    service.export_internal_review(OWNER, matter_id, revision(service, matter_id))
+    draft = (folder / "draft-redline.docx").read_bytes()
+    summary = (folder / "internal-review.md").read_bytes()
+    assert {c.author for c in list_tracked_changes(draft)} == {
+        DRAFT_PREFIX + OWNER_LABEL,
+        DRAFT_PREFIX + SPECIALIST_LABEL,
+        DRAFT_PREFIX + PROPOSAL_LABEL,  # the liability cap waits for clarification
+    }
+
+    later = PilotService(
+        service.store,
+        clock=FixedClock("2030-01-01T00:00:00.000000Z"),
+        export_root=tmp_path / "exports",
+    )
+    later.export_internal_review(OWNER, matter_id, revision(later, matter_id))
+    assert (folder / "draft-redline.docx").read_bytes() == draft
+    assert (folder / "internal-review.md").read_bytes() != summary
 
 
 def test_package_writer_refuses_data_that_did_not_pass_the_delivery_gate(tmp_path) -> None:

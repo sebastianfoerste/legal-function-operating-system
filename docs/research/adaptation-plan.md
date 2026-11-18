@@ -34,6 +34,15 @@ violations on the baseline captures:
 | Review room as matter owner (closed matter and triage matter), specialist, approver | `select-name` (critical) on 2–3 selects | 0 |
 | New intake form | — | 0 |
 | Review room and Pages index in dark mode | not scanned | 0 |
+| Control tower and RaaS deal room at 320 and 390px (D4 scan, 2026-11-18) | `scrollable-region-focusable` (serious) on the wide tables | 0 (D4) |
+
+The 1280px scan missed that serious finding: the wide tables scroll only at phone
+width, inside a section the keyboard could not reach. The D4 scan of 2026-11-18 ran
+axe-core 4.14 at 320, 390 and 1280px in light and dark mode, with the best-practice
+rules as well. It also found `region` and `landmark-one-main` (moderate) on the portal,
+the snapshot and the customer package, and sideways scroll on the snapshot and the
+package at phone width. After D4 none of the five pages has a violation or sideways
+scroll (decision 10). Captures stay local.
 
 Artifact sizes at baseline:
 
@@ -79,7 +88,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | **Built** |
 | F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | **Built** |
 | F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | Specced |
-| F11 | Local inbound message adapter, from a synthetic export to `legal-request.v1` drafts | 3 | Claimed: Wordsmith, Checkbox | M | pass (inbound only) | 3 | table stakes | Specced |
+| F11 | Local inbound message adapter, from a synthetic export to `legal-request.v1` drafts | 3 | Claimed: Wordsmith, Checkbox | M | pass (inbound only) | 3 | table stakes | **Built** |
 
 ### Design upgrades
 
@@ -87,8 +96,8 @@ The build cap is three features and two design upgrades, in rank order.
 | --- | --- | --- | --- | --- | --- | --- |
 | D1 | Inline forms, error summary and ARIA in the review room (H4) | 5 | Observed: GOV.UK Frontend; RETROSPECTIVE | M | 7.5 | **Built** |
 | D2 | Shared tokens, dark mode and narrow layout for the review room and Pages index (H5, phase 1) | 3 | Observed: GOV.UK, Evidence; own captures | M | 4.5 | **Built** |
-| D3 | Print stylesheet for the customer package and board pack | 2 | Inferred | S | 2 | Specced |
-| D4 | Migrate control tower, deal room, portal, snapshot and package to the tokens (H5, phase 2) | 2 | Observed: own captures | L | 1.5 | Specced |
+| D3 | Print stylesheet for the customer package and board pack | 2 | Inferred | S | 2 | **Built** (customer package); board pack withdrawn |
+| D4 | Migrate control tower, deal room, portal, snapshot and package to the tokens (H5, phase 2) | 2 | Observed: own captures | L | 1.5 | **Built** |
 
 Housekeeping, in separate commits:
 
@@ -101,7 +110,7 @@ Housekeeping, in separate commits:
 | Anti-pattern | Who does it | Evidence | Our rule |
 | --- | --- | --- | --- |
 | Autonomous, "invisible" completion of legal work | Flank | Claimed | Every consequential decision requires human review |
-| LLM routing, risk or priority calls | Checkbox (AI triage), Wordsmith (priority classification) | Claimed | No model in the decision path |
+| LLM routing, risk or priority calls | Checkbox (AI triage), Wordsmith (priority classification), BRYTER (AI legal front door triage) | Claimed | No model in the decision path |
 | Bots that post outward into Slack, Teams or email | Wordsmith, Flank | Claimed | No external delivery or outreach |
 | Role switching that reads as sign-in | Common in demos; not observed in a named product | Inferred | "Selecting an actor is not authentication" |
 | Black-box scores | No named product confirmed; vendor snippets show severities and scores without how they are derived. Lavern, by contrast, documents its grounding score as plain string matching (Observed) | Inferred | Every rule outcome carries its reason |
@@ -263,8 +272,8 @@ playbook position next to each change, and the evidence next to each resolution.
   - One `TOKENS_CSS` string, kept in the core with a copy in the agent (ADR 0001).
   - Contrast is tested in both themes.
   - Under 600px the changes table stacks per change, with labelled cells.
-- **Done differently.** The other five renderers keep their colours until they are
-  migrated (D4).
+- **Done differently.** The other five renderers kept their colours until D4 migrated
+  them (decision 10).
 - **Files.**
   - `src/legal_function_os/design_tokens.py`
   - `supervised-agent/src/pilot/design_tokens.py`
@@ -527,10 +536,11 @@ playbook position next to each change, and the evidence next to each resolution.
   - Needs new states. Update `parent_bridge.CONTRACT_REVIEW_STATE` and
     `scripts/check_shared_contracts.py`.
 
-### F11. Local inbound adapter (specced; the Slack, Teams and email decision)
+### F11. Local inbound adapter (built; the Slack, Teams and email decision)
 
 - **Decision.** Channel intake that reads or writes a live service is rejected, because
-  it breaks rule 4 and the no-network core.
+  it breaks the rule "Do not add external delivery, publication, filing or outreach
+  actions" and the no-network core.
 - **What is allowed instead.**
   - A local, inbound-only adapter that parses a synthetic message export (JSON lines with
     `syn-` senders and fictional organisations) into `legal-request.v1` drafts.
@@ -538,26 +548,73 @@ playbook position next to each change, and the evidence next to each resolution.
   - Nothing is sent back.
 - **What it loses compared with Wordsmith or Flank.** Real-time capture and replying in
   the same channel (Inferred).
+- **Built.**
+  - `src/legal_function_os/message_drafts.py` and the `message-drafts` command read a
+    JSON-lines export (`message_id`, `sender`, `text`; optional `channel`, `sent_at`,
+    `subject`) and write `message-drafts.json` and `message-drafts.md`. `make demo` writes
+    them from the bundled export, `src/legal_function_os/data/sample_messages.jsonl`, to
+    `examples/`. The format and its rules are [ADR 0009](../adr/0009-message-drafts.md).
+  - Every sender must be a `syn-` handle, the pilot's pattern. That marks the data as
+    synthetic and says nothing about who sent a message; senders are not verified.
+  - Values are copied only from labelled lines, matched like CSV headers, and as written.
+    Prose, quoted replies and list items are not read. Labels for fields legal sets,
+    misspelled labels and fields given two different ways are noted and not copied.
+  - Every draft holds the seven fields the intake page always asks. One a message does not
+    state is `""` and named. Every blank but `type` is an error, so `validate` and `triage`
+    refuse the draft until legal fills it; left out, the field would take its default and
+    could lower the risk. A blank `type` is only a warning: the draft validates, and
+    `triage` decides it, marked for manual triage, without the type's own rules, so legal
+    fills it before triage.
+  - Drafts are `REQ-DRAFT-1` and so on in message order, with the message id in
+    `x_message_id`; nothing goes into `facts`.
+  - It is a CLI command, not an MCP tool, and it imports no network, mail or process
+    module.
+  - Tests: `tests/test_message_drafts.py` (the export checks, the mapping, the committed
+    examples, the MCP and import boundaries), `tests/test_bundled_data.py` and
+    `tests/test_cli_subcommands.py` (every command is in `docs/CLI.md`).
+- **Done differently.**
+  - `.eml` and mailbox files, real chat exports and replies stay out; each needs a new
+    owner decision.
+  - A label that misspells a request field is noted the way a CSV header is, so `Urgent`
+    is not taken for `urgency`; the field stays blank and named.
 
-### D3, D4
+### D3, D4 (built)
 
 - **D3.** `@media print` rules for the customer package and board pack: one page per
   section, no navigation, and the disclaimer on every page.
+  - **Built for the customer package** (decision 10). Each numbered section starts a
+    new page and table headers repeat. An `@page` footer prints the synthetic-data
+    notice (the internal-review notice for a draft) and "Page N of M" on every page.
+    The package has no navigation to hide. The footer was checked in Chromium only.
+  - **Withdrawn for the board pack.** It has no HTML page, only Markdown and JSON, so a
+    print stylesheet would mean a new artifact. An HTML board pack would be a new
+    candidate.
 - **D4.** Move the control tower, deal room, portal, snapshot and customer package onto
   `TOKENS_CSS`, one renderer per commit, with before and after captures. These change
   committed examples, so each needs `make demo` and review.
+  - **Built** (decision 10), one commit per renderer. Wording and layout stayed the
+    same: at 1280px the control tower, portal and packages are as tall as before, and
+    the deal room is 5px taller. Each page gained dark mode, a phone layout and
+    `PRINT_CSS`, the shared print block, which prints the light palette. The control
+    tower, deal room and portal also gained a focus ring; the snapshot and package
+    have nothing to focus.
+  - Only `examples/legal-outcome-control-tower.html` and `examples/raas-deal-room.html`
+    changed among the committed examples. The deal room's EUR-Lex links are unchanged.
+  - `tests/test_reviewer_pages_browser.py` checks the two published pages and the
+    portal in a browser: no sideways scroll at 320 and 390px, dark mode, keyboard reach
+    of every scrolling table, and light print in dark mode.
 
 ## Hypothesis verdicts
 
 | Hypothesis | Verdict | Evidence |
 | --- | --- | --- |
 | H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file; deflection is specced as F9a | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
-| H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu (Claimed); Plane (Observed) |
+| H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu, Legisway (Claimed); Plane (Observed) |
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
-| H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
+| H5. One shared design system | **Modified.** One token set, applied to two surfaces first (D2) and to the other five in D4, built | GOV.UK, Evidence (Observed) |
 | H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; built as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
-| H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **parked**: it bundles a 44 MB .NET binary (ADR 0004, Proposed) | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
+| H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **not adopted**: it bundles a 44 MB .NET binary (ADR 0004, Accepted); tracked changes are attributed per change in the stdlib writer | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
 | H8. Visual governance views | **Confirmed.** F6 and F8 are built | Temporal UI (Observed); SpotDraft (Claimed) |
 
 ## Design direction
@@ -593,37 +650,143 @@ playbook position next to each change, and the evidence next to each resolution.
 ## Needs owner decision
 
 1. **Authentication and the 11 controls in `supervised-agent/docs/pilot/IDENTITY_CONTROLS.md`.**
-   None is built. Selecting a role is still not authentication. Presence (F4) makes the
-   gap more visible.
+   **Decided on 2026-11-18** (ADR 0008): authentication is not built here. Sign-in through
+   OIDC or SAML needs the organisation's identity provider and network access, and this
+   repository uses neither. Controls 1 to 11 in
+   `supervised-agent/docs/pilot/IDENTITY_CONTROLS.md` stay preconditions for practitioner
+   use. What is built is local hardening of the pilot server. It is not authentication. The
+   server refuses to start on an address that is not loopback. It answers only its own
+   `Host` names, as before. It refuses a request whose `Origin` is not its own. No page on
+   another origin may frame it. Its request log leaves out presence check-ins that reach
+   the review-room API. Tests now prove that a final approval is refused when the
+   approver holds too low a tier, is also the requester or matter owner, or decided a
+   change; no command can make the matter owner the approver, so that test writes the
+   assignment directly into the store. These rules compare actor IDs, not people. A
+   per-start secret was considered and not built: anyone at the machine could still read
+   it, and it would look like a sign-in. Selecting a role is still not authentication.
 2. **`supervised-agent/.github/workflows/`** (`ci.yml`, `pre-commit.yml`,
-   `release-gates.yml`). These never run from this repository. Delete them, or keep them
-   for the exported repository.
-3. **`supervised-agent/src/gemini_client.py`.** It is used only by its own test. The
-   decision path keeps `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` false.
-4. **Python-Redlines** (ADR 0004). A new dependency with a bundled native binary, or an
-   extension of the stdlib DOCX writer.
+   `release-gates.yml`). **Decided on 2026-11-18: deleted.** GitHub runs workflows only
+   from the root `.github/workflows`, so these never ran here. The root CI's `agent` job
+   already runs the agent's full gate (`make -C supervised-agent check`, with pinned tools
+   and browser tests). The export target, `legal-ops-agent`, is archived, and a path
+   export could not pass its own pilot tests without the parent package. The agent's
+   `dependabot.yml` and `CODEOWNERS` were removed with them for the same reason, and its
+   `.pre-commit-config.yaml` because the only thing set up to run it was that `pre-commit`
+   workflow. `tests/test_agent_gate.py` keeps it that way.
+3. **`supervised-agent/src/gemini_client.py`.** **Decided on 2026-11-18: removed.** The
+   agent has no external model client. The client, its test, the unused Gemini model list
+   `src/config.py`, `.env.example` and the `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` switch are
+   gone. `google-genai` and the unused `python-dotenv` left the runtime lockfile, which now
+   pins pydantic and its four dependencies. A model call would be a new, reviewed change
+   with its own controls, not a setting. `supervised-agent/tests/test_no_external_model.py`
+   checks the lockfile, the imports and `mcp.json`.
+4. **Python-Redlines** (ADR 0004). **Decided on 2026-11-18:** not adopted. It would add a
+   dependency and a 44 MB bundled .NET binary that runs as a subprocess. Word tracked
+   changes stay in the stdlib writer, `supervised-agent/src/docx_redline.py`. That writer
+   already wrote `w:ins` and `w:del` with an author and a date, but with one label and the
+   export time for the whole file. Now each tracked change names the simulated local role
+   that decided it and the time that decision was recorded. In an internal draft every
+   label starts "DRAFT, not approved", and an undecided change is marked as a playbook
+   proposal. A change decided as "rejected" writes no tracked change. The names are
+   simulated local roles, not authenticated identities. Tables, Word comments and
+   `w:trackRevisions` stay out of scope. Python-Redlines comes back only through a new
+   ADR, if the owner accepts a bundled binary.
 5. **AI Act timing after the Digital Omnibus.** **Settled on 2026-10-29 by PR #15.**
    - `src/legal_function_os/raas_sources.py` now follows the amending regulation and
      records when each source was re-checked against the EUR-Lex consolidated texts. That
      file is the record; this plan restates no date or citation.
    - The research for this plan saw only search snippets (Claimed) and could not reach
      EUR-Lex, so it changed nothing.
-6. **Remote MCP and HTTP transport.** claude-for-legal wires remote connectors. This
-   repository stays local over stdio (rule 4, ADR 0002).
+6. **Remote MCP and HTTP transport.** **Decided on 2026-11-18** (ADR 0007): the MCP
+   server stays a local process. The MCP client starts it and talks to it over stdio. It
+   offers no HTTP or SSE transport and no transport, host or port option. It does not
+   authenticate callers, because nothing reaches it over a network. The plugin's
+   `.mcp.json` starts only this local server and connects no remote services, unlike
+   claude-for-legal, which wires remote connectors. A remote server would need real
+   authentication (decision 1) and would send request data over a network. Remote
+   connectors would add signing, posting and filing, against the rule "Do not add
+   external delivery, publication, filing or outreach actions". Tests in
+   `tests/test_mcp_server.py` keep it this way. Reopening this needs a new ADR that
+   settles authentication first.
 7. **Presence records** (F4). **Decided on 2026-10-28:** in memory only, never stored or
    logged, never shown to or recorded for requesters (ADR 0005).
-8. **Channel intake** (F11). Confirm that a local inbound adapter is wanted, or that
-   channel intake stays out.
-9. **PyPI publication.** Still not published. Not touched here.
-10. **Visual migration of committed reviewer artifacts** (D4). It changes the look of
-    published pages.
-11. **Candidates found outside the session's repository scope.** The GitHub topic
-    listings came from a search tool that reached beyond the attached repository (see the
-    landscape's Repository discovery). No matrix row depends on it; keep or drop the
-    `legal-operations` topic count that does.
-12. **German coverage.** Only one purely German search ran. A follow-up run should add
-    German queries (for example "Legal Request Management Rechtsabteilung", "Vertragsprüfung
-    Playbook", "Mandatsannahme Software Unternehmensjurist") once vendor sites are reachable.
+8. **Channel intake** (F11). **Decided on 2026-11-18** (ADR 0009): a local inbound
+   adapter is built; live channel intake stays out. `legal-function-os message-drafts`
+   reads a message export saved as JSON lines, one message per line, and every sender must
+   be a synthetic `syn-` handle. That check marks the data as synthetic; it is not an
+   identity, and senders are not verified. The command connects to no Slack, Teams or mail
+   service, captures nothing live and sends nothing back. It copies only labelled lines
+   such as `Value band: <50k`, with labels matched the way CSV headers are, and reads
+   nothing from the rest of the text. The subject becomes the title, and the whole text
+   the description. Every draft holds every field the intake page always asks. A field the
+   message does not state is left blank (`""`) and named. Every blank but `type` is an
+   error, so `validate` and `triage` refuse the draft until a person in legal fills it;
+   left out, the field would take its default and could lower the risk. A blank `type` is
+   only a warning: the draft validates, and `triage` decides it, marked for manual triage,
+   without the type's own rules, which can lower the risk, so legal fills it before
+   triage. Drafts are numbered `REQ-DRAFT-1`, `REQ-DRAFT-2` and so on in
+   message order, each keeps its message id in `x_message_id`, and legal renumbers them.
+   It is a CLI command, not an MCP tool, so no model feeds it messages or fills its
+   blanks. `.eml` and mailbox files, real chat exports and replies stay out; each would
+   need a new owner decision.
+9. **PyPI publication.** **Decided on 2026-11-18: publish later, and only the owner
+   publishes.** The package is not on PyPI, and PyPI had no project named
+   `legal-function-os` when this was decided (HTTP 404). Until it is published, the
+   repository says so and gives only install commands from git or from a clone. A test,
+   `tests/test_install_docs.py`, fails if a user-facing file tells anyone to install it
+   by name. The owner publishes when all of these hold:
+   - A release pull request raises `__version__` above 0.3.0, moves the changelog's
+     Unreleased section under the new version, and updates `CITATION.cff`.
+   - In the same pull request, the README works as the PyPI page: install by name,
+     absolute links and an absolute image. The by-name test and the git-only wording are
+     removed.
+   - On PyPI, a trusted publisher for `legal-function-os` names this repository,
+     `release.yml` and the environment `pypi`.
+   - The GitHub environment `pypi` requires the owner's approval.
+   - The repository variable `PYPI_PUBLISH` is `true`.
+   - The owner publishes a GitHub release tagged `v<version>`. A manual run of the
+     workflow skips the tag check, so it is not used.
+
+   The last four steps are the owner's alone.
+10. **Visual migration of committed reviewer artifacts** (D4), with print rules (D3).
+    **Decided on 2026-11-18**, as recommended at the owner's request:
+    - All five renderers moved to the shared tokens, one renderer per commit: the control
+      tower, the RaaS deal room, the knowledge portal, the agent snapshot and the
+      customer package.
+    - Layout and wording stay the same. Colours, fonts, dark mode and the phone layout
+      change. The control tower, deal room and portal gain a focus ring; the snapshot
+      and customer package have nothing to focus.
+    - Each commit has before and after captures, kept locally, and its message records
+      the axe and sideways-scroll numbers. axe finds no violation at 320, 390 and 1280px
+      in light or dark mode.
+    - The same commits fix what axe found:
+      - tables that scroll at phone width but could not take keyboard focus (control
+        tower, deal room);
+      - content outside a main landmark (portal, snapshot, package);
+      - sideways scrolling (snapshot, package).
+    - The deal room keeps its EUR-Lex source links unchanged; a test pins them.
+    - A shared print block makes every migrated page print in the light palette.
+    - D3 is narrowed to the customer package. Each numbered section starts on a new
+      page, and table headers repeat. The synthetic-data notice and the page number
+      print at the foot of every page.
+    - The board pack has no HTML page, so it stays Markdown and JSON. An HTML board pack
+      would be a new candidate.
+    - The dated rehearsal of 6 October 2026 is a record and is not regenerated.
+    - The published control tower and deal room change only when the owner merges and
+      the Pages workflow publishes.
+11. **Candidates found outside the session's repository scope.** **Decided on 2026-11-18:
+    dropped.** The `legal-operations` topic count came from a GitHub search that reached
+    beyond the session's repository scope, so the landscape no longer states it. Its
+    Repository discovery keeps the disclosure. The open-source picture rests on the 17
+    cloned repositories and the owner's curated lists, as weak evidence. No matrix row or
+    verdict changed.
+12. **German coverage.** **Decided on 2026-11-18: run now, at search level.** Twelve German
+    searches ran, including the three named here; see the landscape's
+    [German follow-up](2026-10-competitive-landscape.md#german-follow-up-2026-11-18).
+    The vendor pages tried were still not reachable, so every new fact is Claimed. The
+    matrix gained otris and DEPLAW, and the Wolters Kluwer, BRYTER and Onit rows were
+    updated. No hypothesis verdict changed. Reading the vendor pages waits until the owner
+    allows those hosts in the environment's network settings.
 13. **Intake page defaults** (F9). **Decided on 2026-11-03** (ADR 0006): the page is hosted
     on Pages with its made-up-details notice; the three decision flags keep the "Not sure?
     Choose Yes and say why" hint; every file is `REQ-DRAFT` and legal renumbers; no

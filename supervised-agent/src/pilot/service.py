@@ -22,7 +22,12 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from models import LegalOpsAssessment, ReviewDecision
-from src.docx_redline import DocumentIndex, UnsupportedDocumentError, index_docx
+from src.docx_redline import (
+    DocumentIndex,
+    UnsupportedDocumentError,
+    has_non_xml_char,
+    index_docx,
+)
 from src.export_gate import (
     ExportBlockedError,
     ExportContext,
@@ -1458,6 +1463,10 @@ class PilotService:
                     raise InvalidCommandError(
                         "an amendment needs wording that differs from the proposal"
                     )
+                if has_non_xml_char(wording):
+                    raise InvalidCommandError(
+                        "the amended wording holds characters a Word document cannot hold"
+                    )
                 change.amended_text = wording
             elif outcome == "clarification_requested":
                 text = _require_text(reason, 10, "clarification question")
@@ -2009,6 +2018,7 @@ class PilotService:
             chain_root=self.store.verify_chain(ctx.connection, ctx.matter_id).chain_root_hash or "",
             actor_names=names,
             generated_at=ctx.now,
+            proposed_at=ctx.version_row["created_at"],
         )
 
     def list_actors_in(self, connection: sqlite3.Connection) -> list[Actor]:

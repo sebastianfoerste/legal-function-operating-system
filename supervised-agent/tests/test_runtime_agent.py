@@ -1,12 +1,15 @@
-"""The local runtime: loopback-only Host names, JSON-only POSTs and a bounded body.
+"""The local runtime: loopback only, its own Host and Origin, no framing, JSON-only POSTs.
 
-Every request here goes to a server bound on 127.0.0.1 with a synthetic store.
+Every request here goes to a server bound on 127.0.0.1 with a synthetic store. These
+checks decide which requests the local server answers. They are not authentication.
 """
 
 from __future__ import annotations
 
 import http.client
+import ipaddress
 import json
+import socket
 import threading
 from http.server import ThreadingHTTPServer
 
@@ -14,6 +17,7 @@ import pytest
 
 import runtime_agent.app as app
 from runtime_agent.app import DEFAULT_ALLOWED_HOSTS, MAX_BODY_BYTES, SERVICE_NAME, allowed_hosts
+from tests.pilot_support import OWNER, REQUESTER, run_until
 
 
 def test_runtime_service_name_is_legal_ops_scoped():
@@ -41,10 +45,11 @@ def server(tmp_path, monkeypatch):
     httpd.server_close()
 
 
-def _request(httpd, method, path, *, host=LOOPBACK, headers=None, body=None, declared_length=None):
+def _raw(httpd, method, path, *, host=LOOPBACK, headers=None, body=None, declared_length=None):
     """One raw request over 127.0.0.1 with full control of the Host and length headers.
 
     ``host`` defaults to this server's loopback name and port; ``None`` sends no Host header.
+    Returns the status, the response headers (names lowercased) and the body bytes.
     """
 
     port = httpd.server_address[1]
@@ -66,9 +71,16 @@ def _request(httpd, method, path, *, host=LOOPBACK, headers=None, body=None, dec
     try:
         response = connection.getresponse()
         data = response.read()
-        return response.status, (json.loads(data) if data else None)
+        return response.status, {k.lower(): v for k, v in response.getheaders()}, data
     finally:
         connection.close()
+
+
+def _request(httpd, method, path, **kwargs):
+    """Like ``_raw``, with the body decoded as JSON."""
+
+    status, _, data = _raw(httpd, method, path, **kwargs)
+    return status, (json.loads(data) if data else None)
 
 
 def test_loopback_hosts_are_served(server):
@@ -164,3 +176,193 @@ def test_pilot_and_tool_posts_still_work_over_loopback(server):
     assert status == 400 and "error" in payload
     status, payload = _request(server, "POST", "/tools/call", headers=JSON, body=b"not json")
     assert (status, payload) == (400, {"error": "invalid_json"})
+
+
+# -- listening address -------------------------------------------------------------
+
+
+def _no_listen(*args, **kwargs):
+    raise AssertionError(f"tried to listen on {args[0]!r}")
+
+
+@pytest.mark.parametrize("host", ["0.0.0.0", "0", "192.0.2.10", ""])
+def test_server_refuses_a_non_loopback_address(host, monkeypatch):
+    monkeypatch.setattr(app, "ThreadingHTTPServer", _no_listen)  # refused before any bind
+    with pytest.raises(SystemExit, match="loopback|cannot listen"):
+        app.build_server(host, 0)
+
+
+def test_server_checks_the_address_it_bound(monkeypatch):
+    # A name that resolved to loopback but was bound elsewhere is closed before it listens.
+    loopback = [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+    monkeypatch.setattr(app.socket, "getaddrinfo", lambda *args, **kwargs: loopback)
+
+    def bind_elsewhere(self):
+        self.server_address = ("0.0.0.0", 0)  # nothing is bound; only the address is faked
+
+    def activate(self):
+        raise AssertionError("listened on an address that is not loopback")
+
+    closed = []
+    close = ThreadingHTTPServer.server_close
+    monkeypatch.setattr(ThreadingHTTPServer, "server_bind", bind_elsewhere)
+    monkeypatch.setattr(ThreadingHTTPServer, "server_activate", activate)
+    monkeypatch.setattr(
+        ThreadingHTTPServer, "server_close", lambda self: (closed.append(True), close(self))
+    )
+    with pytest.raises(SystemExit, match="loopback"):
+        app.build_server("rebound.example", 0)
+    assert closed == [True]
+
+
+def test_server_listens_on_loopback(monkeypatch):
+    monkeypatch.delenv(app.ALLOWED_HOSTS_ENV, raising=False)
+    for host in ("127.0.0.1", "localhost"):
+        try:
+            httpd = app.build_server(host, 0)
+        except PermissionError:
+            pytest.skip("this environment does not permit binding a local port")
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+        thread.start()
+        try:
+            assert ipaddress.ip_address(httpd.server_address[0]).is_loopback, host
+            status, payload = _request(httpd, "GET", "/health")
+            assert (status, payload["status"]) == (200, "ok"), host
+        finally:
+            httpd.shutdown()
+            httpd.server_close()
+
+
+def test_run_refuses_a_host_from_the_environment(monkeypatch):
+    monkeypatch.setattr(app, "ThreadingHTTPServer", _no_listen)
+    monkeypatch.setenv("HOST", "0.0.0.0")
+    monkeypatch.setenv("PORT", "0")
+    with pytest.raises(SystemExit, match="loopback"):
+        app.run()
+
+
+# -- origin ------------------------------------------------------------------------
+
+
+def _open(server, matter_id, *, host=LOOPBACK, origin=None):
+    headers = {**JSON, "X-Pilot-Actor": REQUESTER}
+    if origin is not None:
+        headers["Origin"] = origin
+    body = json.dumps({"scenario_id": "routine", "matter_id": matter_id}).encode()
+    return _request(server, "POST", "/pilot/api/matters", host=host, headers=headers, body=body)
+
+
+def test_foreign_origin_is_refused(server):
+    port = server.server_address[1]
+    for origin in (
+        "http://evil.example",
+        f"http://127.0.0.1:{port + 1}",
+        f"http://localhost:{port}",  # the Host header says 127.0.0.1
+        "null",
+        f"http://127.0.0.1:{port}/x",
+        f"https://127.0.0.1:{port}",
+        f"http://user@127.0.0.1:{port}",
+        "not a url",
+        "",
+    ):
+        status, payload = _open(server, "PM-ORIGIN-1", origin=origin)
+        assert (status, payload) == (403, {"error": "origin_not_allowed"}), origin
+    status, payload = _request(
+        server,
+        "GET",
+        "/pilot/api/matters",
+        headers={"X-Pilot-Actor": REQUESTER, "Origin": "http://evil.example"},
+    )
+    assert (status, payload) == (403, {"error": "origin_not_allowed"})
+    status, payload = _request(
+        server, "GET", "/pilot/api/matters", headers={"X-Pilot-Actor": REQUESTER}
+    )
+    assert status == 200 and payload["matters"] == []
+
+
+def test_own_origin_or_none_is_served(server):
+    port = server.server_address[1]
+    assert _open(server, "PM-ORIGIN-2", origin=f"http://127.0.0.1:{port}")[0] == 201
+    assert _open(server, "PM-ORIGIN-3")[0] == 201  # curl, scripts and tests send no Origin
+    host = f"localhost:{port}"
+    assert _open(server, "PM-ORIGIN-4", host=host, origin=f"http://{host}")[0] == 201
+
+
+# -- response headers --------------------------------------------------------------
+
+
+def test_every_response_refuses_framing_and_allows_no_cross_origin_reads(server):
+    port = server.server_address[1]
+    preflight = {
+        "Origin": "http://evil.example",
+        "Access-Control-Request-Method": "POST",
+        "Access-Control-Request-Headers": "content-type,x-pilot-actor",
+    }
+    responses = {
+        "room": _raw(server, "GET", "/pilot"),
+        "actors": _raw(server, "GET", "/pilot/api/actors"),
+        "health": _raw(server, "GET", "/health"),
+        "missing": _raw(server, "GET", "/nope"),
+        "foreign host": _raw(server, "GET", "/health", host=f"evil.example:{port}"),
+        "bad tool": _raw(server, "POST", "/tools/call", headers=JSON, body=b'{"name": 7}'),
+        "preflight": _raw(server, "OPTIONS", "/pilot/api/matters", headers=preflight),
+    }
+    assert [status for status, _, _ in responses.values()] == [200, 200, 200, 404, 403, 400, 501]
+    for name, (_, headers, _) in responses.items():
+        assert headers["x-frame-options"] == "DENY", name
+        assert "frame-ancestors 'none'" in headers["content-security-policy"], name
+        assert headers["x-content-type-options"] == "nosniff", name
+        assert headers["referrer-policy"] == "no-referrer", name
+        assert headers["cross-origin-resource-policy"] == "same-origin", name
+        assert not [h for h in headers if h.startswith("access-control-")], name
+
+
+# -- access log --------------------------------------------------------------------
+
+
+def test_presence_check_ins_are_not_logged(server, capsys):
+    matter = run_until(app.pilot_api().service, "routine", "A06")
+    owner = {"X-Pilot-Actor": OWNER}
+    status, view = _request(server, "GET", f"/pilot/api/matters/{matter}", headers=owner)
+    assert status == 200
+    body = json.dumps({"revision": view["matter"]["revision"]}).encode()
+    for path in (f"/pilot/api/matters/{matter}/presence", f"/pilot/api/matters/{matter}/presence/"):
+        status, _ = _request(server, "POST", path, headers={**JSON, **owner}, body=body)
+        assert status == 200, path
+    refused = {**JSON, "X-Pilot-Actor": REQUESTER}  # a requester's check-in is refused
+    path = f"/pilot/api/matters/{matter}/presence"
+    assert _request(server, "POST", path, headers=refused, body=body)[0] == 403
+    # The matter's other routes are logged, a command included.
+    base = f"/pilot/api/matters/{matter}"
+    history, commands = f"{base}/history", f"{base}/commands"
+    assert _request(server, "GET", history, headers=owner)[0] == 200
+    assert _request(server, "POST", commands, headers={**JSON, **owner}, body=b"{}")[0] == 400
+
+    logged = capsys.readouterr().err
+    assert "presence" not in logged
+    assert f'"GET /pilot/api/matters/{matter} HTTP/1.1" 200' in logged
+    assert f'"GET {history} HTTP/1.1" 200' in logged
+    assert f'"POST {commands} HTTP/1.1" 400' in logged
+
+
+def test_requests_to_a_presence_path_that_are_not_check_ins_are_logged(server, capsys):
+    # Only a check-in the review-room API received is left out. A request refused before
+    # routing (another Host or Origin, another media type) or a GET records no presence.
+    port = server.server_address[1]
+    path = "/pilot/api/matters/PM-LOG-1/presence"
+    owner = {**JSON, "X-Pilot-Actor": OWNER}
+    body = b'{"revision": 1}'
+    foreign_host = _request(
+        server, "POST", path, host=f"evil.example:{port}", headers=owner, body=body
+    )
+    assert foreign_host == (403, {"error": "host_not_allowed"})
+    foreign_origin = {**owner, "Origin": "http://evil.example"}
+    assert _request(server, "POST", path, headers=foreign_origin, body=body)[0] == 403
+    text = {**owner, "Content-Type": "text/plain"}
+    assert _request(server, "POST", path, headers=text, body=body)[0] == 415
+    assert _request(server, "GET", path, headers={"X-Pilot-Actor": OWNER})[0] == 404
+
+    logged = capsys.readouterr().err
+    assert logged.count(f'"POST {path} HTTP/1.1" 403') == 2
+    assert logged.count(f'"POST {path} HTTP/1.1" 415') == 1
+    assert logged.count(f'"GET {path} HTTP/1.1" 404') == 1

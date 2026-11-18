@@ -32,7 +32,7 @@ EVIDENCE: dict[str, str] = {
     "changes_decided": "Every proposed change on the current version is accepted, rejected or amended.",
     "no_open_blockers": "No critical comment, clarification request or coverage gap is open.",
     "specialist_signoffs_current": "Every required specialist signed off on the current version.",
-    "approver_authorised": "The approver holds the required tier and is neither the requester nor the matter owner.",
+    "approver_authorised": "The approver holds the required tier, is neither the requester nor the matter owner, and decided none of the changes.",
     "export_gate_passes": "The single export-eligibility check passes for a delivery package.",
     "delivery_manifest_current": "A delivery manifest exists for the current version and reviewed state.",
     "acceptance_recorded": "The requester recorded an acceptance note.",

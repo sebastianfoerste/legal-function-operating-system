@@ -11,7 +11,7 @@ Recorded on 6 October 2026 for the supervised agent after the pilot workflow was
 | Hash-chained audit trail on an assessment | `src/audit_chain.py`, `models.py` | existing tests |
 | Single export-eligibility check | `src/export_gate.py` | `tests/test_export_gate.py` |
 | Playbook rules that locate a clause and propose a located change | `src/playbook.py` | `tests/test_docx_redline.py` |
-| Tracked changes in a defined DOCX subset | `src/docx_redline.py` | `tests/test_docx_redline.py` |
+| Tracked changes in a defined DOCX subset, attributed per change to the deciding simulated local role | `src/docx_redline.py`, `src/pilot/deliverable.py` | `tests/test_docx_redline.py`, `tests/test_pilot_workflow.py` |
 | Persistent store for matters, versions, assignments, comments, findings, changes, decisions, events and deliverable manifests | `src/pilot/store.py` | `tests/test_pilot_workflow.py` |
 | State machine with roles and evidence per transition | `src/pilot/state_machine.py`, `src/pilot/service.py` | `tests/test_pilot_workflow.py` |
 | Role and assignment checks on every command, refusals logged | `src/pilot/service.py` | `tests/test_pilot_workflow.py`, `tests/test_pilot_api.py` |
@@ -21,6 +21,7 @@ Recorded on 6 October 2026 for the supervised agent after the pilot workflow was
 | Internal review export and approved delivery package | `src/pilot/deliverable.py` | `tests/test_pilot_workflow.py` |
 | Measurement over the event log, on two separate clocks | `src/pilot/metrics.py` | `tests/test_pilot_rehearsal.py` |
 | Review room API and page that save through the application layer | `src/pilot/api.py`, `src/pilot/review_room.py`, `runtime_agent/app.py` | `tests/test_pilot_api.py`, live inspection |
+| Local network hardening of the runtime (not authentication) | `runtime_agent/app.py` | `tests/test_runtime_agent.py`, `tests/test_review_room_browser.py` |
 | End-to-end rehearsal across process restarts | `src/pilot/cli.py` | `tests/test_pilot_rehearsal.py` |
 
 ## Static presentation

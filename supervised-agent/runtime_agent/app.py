@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import ipaddress
 import json
 import os
+import socket
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,21 @@ MAX_BODY_BYTES = 1 << 20
 # proxy) is refused. ALLOWED_HOSTS, a comma-separated list, replaces the default.
 ALLOWED_HOSTS_ENV = "ALLOWED_HOSTS"
 DEFAULT_ALLOWED_HOSTS = ("127.0.0.1", "localhost", "::1")
+# Sent with every response: no page may frame this server's pages (clickjacking), and
+# nothing here is readable or embeddable from another origin. No Access-Control-* header
+# is ever sent, so a browser's cross-origin preflight is never answered.
+SECURITY_HEADERS = (
+    ("X-Frame-Options", "DENY"),
+    ("Content-Security-Policy", "frame-ancestors 'none'; base-uri 'none'; object-src 'none'"),
+    ("X-Content-Type-Options", "nosniff"),
+    ("Referrer-Policy", "no-referrer"),
+    ("Cross-Origin-Resource-Policy", "same-origin"),
+)
+NOT_LOOPBACK = (
+    "refusing to listen on {host!r}: the pilot server answers on a loopback address only "
+    "(127.0.0.1 or localhost). Listening elsewhere needs TLS behind the organisation's access "
+    "proxy (docs/pilot/IDENTITY_CONTROLS.md, control 7)."
+)
 _pilot_api: PilotApi | None = None
 
 
@@ -45,8 +62,37 @@ def allowed_hosts() -> tuple[str, ...]:
     return names or DEFAULT_ALLOWED_HOSTS
 
 
+def _is_loopback(address: str) -> bool:
+    try:
+        return ipaddress.ip_address(address).is_loopback
+    except ValueError:
+        return False
+
+
+def _is_presence_path(path: str) -> bool:
+    """Whether ``path`` addresses a presence check-in, as the review-room API routes paths."""
+
+    parts = [part for part in urlparse(path).path.split("/") if part]
+    return len(parts) == 5 and parts[:3] == ["pilot", "api", "matters"] and parts[4] == "presence"
+
+
 class RuntimeHandler(BaseHTTPRequestHandler):
     server_version = "LegalOpsAgentRuntime/1.0"
+    # Set only while a presence check-in is routed to the review-room API (do_POST).
+    _quiet_log = False
+
+    def end_headers(self) -> None:
+        for name, value in SECURITY_HEADERS:
+            self.send_header(name, value)
+        super().end_headers()
+
+    def log_message(self, format: str, *args: Any) -> None:
+        # Presence is never logged (ADR 0005): a check-in's request line would record
+        # which matter a room had open, and when. A request to a presence path that is
+        # refused before routing, or a GET, records no presence and is logged.
+        if self._quiet_log:
+            return
+        super().log_message(format, *args)
 
     def _write_json(self, status_code: int, payload: dict[str, Any]) -> None:
         body = json.dumps(payload, indent=2).encode("utf-8")
@@ -79,6 +125,31 @@ class RuntimeHandler(BaseHTTPRequestHandler):
         bound_port = address[1] if isinstance(address, tuple) else None
         return port is None or port == bound_port
 
+    def _origin_allowed(self) -> bool:
+        """Whether the Origin header, if sent, is this server's own: http and the Host header.
+
+        Browsers send Origin on every POST and on CORS-mode fetches. A GET that is a
+        navigation or an image, script or stylesheet load sends none, even from another
+        origin, and neither do curl and other clients outside a browser; those are served.
+        'null', another scheme, host or port, user information or a path is refused.
+        """
+
+        origin = self.headers.get("Origin")
+        if origin is None:
+            return True
+        try:
+            parts = urlsplit(origin.strip())
+        except ValueError:
+            return False
+        host = (self.headers.get("Host") or "").strip().lower()
+        return (
+            parts.scheme == "http"
+            and "@" not in parts.netloc
+            and not (parts.path or parts.query or parts.fragment)
+            and bool(host)
+            and parts.netloc.lower() == host
+        )
+
     def _content_length(self) -> int | None:
         """The declared body length, or None when the header is not a non-negative integer."""
 
@@ -110,6 +181,9 @@ class RuntimeHandler(BaseHTTPRequestHandler):
         if not self._host_allowed():
             self._refuse(403, "host_not_allowed")
             return
+        if not self._origin_allowed():
+            self._refuse(403, "origin_not_allowed")
+            return
         parsed = urlparse(self.path)
         if parsed.path == "/pilot" or parsed.path.startswith("/pilot/"):
             self._pilot("GET")
@@ -135,6 +209,9 @@ class RuntimeHandler(BaseHTTPRequestHandler):
         if not self._host_allowed():
             self._refuse(403, "host_not_allowed")
             return
+        if not self._origin_allowed():
+            self._refuse(403, "origin_not_allowed")
+            return
         media_type = self.headers.get("Content-Type", "").split(";", 1)[0].strip().lower()
         if media_type != "application/json":
             self._refuse(415, "unsupported_media_type")
@@ -153,7 +230,11 @@ class RuntimeHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path.startswith("/pilot/"):
-            self._pilot("POST", payload)
+            self._quiet_log = _is_presence_path(parsed.path)
+            try:
+                self._pilot("POST", payload)
+            finally:
+                self._quiet_log = False
             return
 
         if parsed.path == "/tools/call":
@@ -171,10 +252,37 @@ class RuntimeHandler(BaseHTTPRequestHandler):
         self._write_json(404, {"error": "not_found"})
 
 
+def build_server(host: str, port: int) -> ThreadingHTTPServer:
+    """A server listening on ``host`` and ``port``, refused unless the address is loopback.
+
+    The name is resolved first, and the bound address is checked again before the server
+    listens, so a name that resolves elsewhere never gets a listening socket. There is no
+    switch to listen elsewhere: that needs TLS behind an access proxy (control 7).
+    """
+
+    try:
+        resolved = socket.getaddrinfo(host, port, socket.AF_INET, socket.SOCK_STREAM)
+    except OSError as error:
+        raise SystemExit(f"cannot listen on {host!r}: {error}") from error
+    if not resolved or not all(_is_loopback(str(info[4][0])) for info in resolved):
+        raise SystemExit(NOT_LOOPBACK.format(host=host))
+    server = ThreadingHTTPServer((host, port), RuntimeHandler, bind_and_activate=False)
+    try:
+        server.server_bind()
+        bound = server.server_address
+        if not isinstance(bound, tuple) or not _is_loopback(str(bound[0])):
+            raise SystemExit(NOT_LOOPBACK.format(host=host))
+        server.server_activate()
+    except BaseException:
+        server.server_close()
+        raise
+    return server
+
+
 def run() -> None:
     host = os.getenv("HOST", "127.0.0.1")
     port = int(os.getenv("PORT", "18085"))
-    server = ThreadingHTTPServer((host, port), RuntimeHandler)
+    server = build_server(host, port)
     print(f"legal_ops_agent runtime listening on {host}:{port}")
     server.serve_forever()
 

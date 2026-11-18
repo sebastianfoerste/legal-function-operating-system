@@ -13,7 +13,7 @@ from src.pilot.scenario_runner import (
     seed_actors,
 )
 from src.pilot.service import PilotService
-from src.pilot.store import PilotStore
+from src.pilot.store import Clock, PilotStore
 
 OWNER = "syn-owner-legalops"
 OTHER_OWNER = "syn-owner-second"
@@ -23,8 +23,12 @@ APPROVER_LEAD = "syn-approver-lead"
 APPROVER_GC = "syn-approver-gc"
 
 
-def make_service(tmp_path: Path, *, onboard_specialist: bool = False) -> PilotService:
-    service = PilotService(PilotStore(tmp_path / "pilot.sqlite3"), export_root=tmp_path / "exports")
+def make_service(
+    tmp_path: Path, *, onboard_specialist: bool = False, clock: Clock | None = None
+) -> PilotService:
+    service = PilotService(
+        PilotStore(tmp_path / "pilot.sqlite3"), clock=clock, export_root=tmp_path / "exports"
+    )
     seed_actors(service)
     if onboard_specialist:
         service.complete_onboarding(SPECIALIST, all_task_ids("specialist_reviewer"))
