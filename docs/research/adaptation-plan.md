@@ -34,6 +34,15 @@ violations on the baseline captures:
 | Review room as matter owner (closed matter and triage matter), specialist, approver | `select-name` (critical) on 2–3 selects | 0 |
 | New intake form | — | 0 |
 | Review room and Pages index in dark mode | not scanned | 0 |
+| Control tower and RaaS deal room at 320 and 390px (D4 scan, 2026-11-18) | `scrollable-region-focusable` (serious) on the wide tables | 0 (D4) |
+
+The 1280px scan missed that serious finding: the wide tables scroll only at phone
+width, inside a section the keyboard could not reach. The D4 scan of 2026-11-18 ran
+axe-core 4.14 at 320, 390 and 1280px in light and dark mode, with the best-practice
+rules as well. It also found `region` and `landmark-one-main` (moderate) on the portal,
+the snapshot and the customer package, and sideways scroll on the snapshot and the
+package at phone width. After D4 none of the five pages has a violation or sideways
+scroll (decision 10). Captures stay local.
 
 Artifact sizes at baseline:
 
@@ -87,8 +96,8 @@ The build cap is three features and two design upgrades, in rank order.
 | --- | --- | --- | --- | --- | --- | --- |
 | D1 | Inline forms, error summary and ARIA in the review room (H4) | 5 | Observed: GOV.UK Frontend; RETROSPECTIVE | M | 7.5 | **Built** |
 | D2 | Shared tokens, dark mode and narrow layout for the review room and Pages index (H5, phase 1) | 3 | Observed: GOV.UK, Evidence; own captures | M | 4.5 | **Built** |
-| D3 | Print stylesheet for the customer package and board pack | 2 | Inferred | S | 2 | Specced |
-| D4 | Migrate control tower, deal room, portal, snapshot and package to the tokens (H5, phase 2) | 2 | Observed: own captures | L | 1.5 | Specced |
+| D3 | Print stylesheet for the customer package and board pack | 2 | Inferred | S | 2 | **Built** (customer package); board pack withdrawn |
+| D4 | Migrate control tower, deal room, portal, snapshot and package to the tokens (H5, phase 2) | 2 | Observed: own captures | L | 1.5 | **Built** |
 
 Housekeeping, in separate commits:
 
@@ -263,8 +272,8 @@ playbook position next to each change, and the evidence next to each resolution.
   - One `TOKENS_CSS` string, kept in the core with a copy in the agent (ADR 0001).
   - Contrast is tested in both themes.
   - Under 600px the changes table stacks per change, with labelled cells.
-- **Done differently.** The other five renderers keep their colours until they are
-  migrated (D4).
+- **Done differently.** The other five renderers kept their colours until D4 migrated
+  them (decision 10).
 - **Files.**
   - `src/legal_function_os/design_tokens.py`
   - `supervised-agent/src/pilot/design_tokens.py`
@@ -566,13 +575,29 @@ playbook position next to each change, and the evidence next to each resolution.
   - A label that misspells a request field is noted the way a CSV header is, so `Urgent`
     is not taken for `urgency`; the field stays blank and named.
 
-### D3, D4
+### D3, D4 (built)
 
 - **D3.** `@media print` rules for the customer package and board pack: one page per
   section, no navigation, and the disclaimer on every page.
+  - **Built for the customer package** (decision 10). Each numbered section starts a
+    new page and table headers repeat. An `@page` footer prints the synthetic-data
+    notice (the internal-review notice for a draft) and "Page N of M" on every page.
+    The package has no navigation to hide. The footer was checked in Chromium only.
+  - **Withdrawn for the board pack.** It has no HTML page, only Markdown and JSON, so a
+    print stylesheet would mean a new artifact. An HTML board pack would be a new
+    candidate.
 - **D4.** Move the control tower, deal room, portal, snapshot and customer package onto
   `TOKENS_CSS`, one renderer per commit, with before and after captures. These change
   committed examples, so each needs `make demo` and review.
+  - **Built** (decision 10), one commit per renderer. Wording and layout stayed the
+    same: at 1280px the control tower, portal and packages are as tall as before, and
+    the deal room is 5px taller. Each page gained dark mode, a focus ring, a phone
+    layout and `PRINT_CSS`, the shared print block, which prints the light palette.
+  - Only `examples/legal-outcome-control-tower.html` and `examples/raas-deal-room.html`
+    changed among the committed examples. The deal room's EUR-Lex links are unchanged.
+  - `tests/test_reviewer_pages_browser.py` checks the two published pages and the
+    portal in a browser: no sideways scroll at 320 and 390px, dark mode, keyboard reach
+    of every scrolling table, and light print in dark mode.
 
 ## Hypothesis verdicts
 
@@ -582,7 +607,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu, Legisway (Claimed); Plane (Observed) |
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
-| H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
+| H5. One shared design system | **Modified.** One token set, applied to two surfaces first (D2) and to the other five in D4, built | GOV.UK, Evidence (Observed) |
 | H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; built as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
 | H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **not adopted**: it bundles a 44 MB .NET binary (ADR 0004, Accepted); tracked changes are attributed per change in the stdlib writer | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
 | H8. Visual governance views | **Confirmed.** F6 and F8 are built | Temporal UI (Observed); SpotDraft (Claimed) |
@@ -713,8 +738,31 @@ playbook position next to each change, and the evidence next to each resolution.
      workflow skips the tag check, so it is not used.
 
    The last four steps are the owner's alone.
-10. **Visual migration of committed reviewer artifacts** (D4). It changes the look of
-    published pages.
+10. **Visual migration of committed reviewer artifacts** (D4), with print rules (D3).
+    **Decided on 2026-11-18**, as recommended at the owner's request:
+    - All five renderers moved to the shared tokens, one renderer per commit: the control
+      tower, the RaaS deal room, the knowledge portal, the agent snapshot and the
+      customer package.
+    - Layout and wording stay the same. Colours, fonts, dark mode, focus rings and the
+      phone layout change.
+    - Each commit has before and after captures, kept locally, and its message records
+      the axe and sideways-scroll numbers. axe finds no violation at 320, 390 and 1280px
+      in light or dark mode.
+    - The same commits fix what axe found:
+      - tables that scroll at phone width but could not take keyboard focus (control
+        tower, deal room);
+      - content outside a main landmark (portal, snapshot, package);
+      - sideways scrolling (snapshot, package).
+    - The deal room keeps its EUR-Lex source links unchanged; a test pins them.
+    - A shared print block makes every migrated page print in the light palette.
+    - D3 is narrowed to the customer package. Each numbered section starts on a new
+      page, and table headers repeat. The synthetic-data notice and the page number
+      print at the foot of every page.
+    - The board pack has no HTML page, so it stays Markdown and JSON. An HTML board pack
+      would be a new candidate.
+    - The dated rehearsal of 6 October 2026 is a record and is not regenerated.
+    - The published control tower and deal room change only when the owner merges and
+      the Pages workflow publishes.
 11. **Candidates found outside the session's repository scope.** **Decided on 2026-11-18:
     dropped.** The `legal-operations` topic count came from a GitHub search that reached
     beyond the session's repository scope, so the landscape no longer states it. Its
