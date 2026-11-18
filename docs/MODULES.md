@@ -40,6 +40,7 @@ three external-counsel referrals across eight synthetic requests.
 | Outcome control tower | Business-time SLAs, wait-state reconciliation, effort calibration, stalled-work queue, and value proxies | `outcome_control_tower.py` |
 | Approval matrix view | The approval chain for every value band and risk level, unreachable combinations marked, each request in its cell | `approval_matrix.py` |
 | Request intake page | A static page that asks the request fields and per-type questions, checks the answers and saves a `legal-request.v1` file on the requester's device; it sends and decides nothing | `intake_page.py`, `data/intake_questions.json` |
+| Message drafts | Request drafts from a synthetic message export, values copied only from labelled lines, every unstated decision field left blank for legal; it reads a file, sends nothing and decides nothing (ADR 0009) | `message_drafts.py`, `data/sample_messages.jsonl` |
 | Supervised agent runs | Step-by-step matter runs with evidence and a binding approval step | `agent_run.py` |
 | Requester shared space | Status sharing behind a documented approval gate | `shared_space.py` |
 | DPA clause review | Art. 28 Abs. 3 lit. a–h DSGVO coverage per document | `contract_intelligence.py` |
@@ -182,6 +183,7 @@ Python 3.10 or later, standard library only. Execution is offline and determinis
 - [`examples/legal-outcome-control-tower.md`](../examples/legal-outcome-control-tower.md) / [`.json`](../examples/legal-outcome-control-tower.json) / [`.html`](../examples/legal-outcome-control-tower.html)
 - [`examples/approval-matrix.md`](../examples/approval-matrix.md) / [`.json`](../examples/approval-matrix.json) / [`.html`](../examples/approval-matrix.html)
 - [`examples/intake-page.html`](../examples/intake-page.html)
+- [`examples/message-drafts.md`](../examples/message-drafts.md) / [`.json`](../examples/message-drafts.json)
 - [`examples/raas-deal-pack.md`](../examples/raas-deal-pack.md) / [`.json`](../examples/raas-deal-pack.json)
 - [`examples/raas-deal-room.html`](../examples/raas-deal-room.html)
 - [`examples/raas-deal-desk.svg`](../examples/raas-deal-desk.svg)
@@ -208,6 +210,7 @@ src/legal_function_os/
   outcome_control_tower.py observed service outcomes and value proxies
   approval_matrix.py       approval chain by value band and risk, from the rules
   intake_page.py           intake page: question files, the saved request, the page
+  message_drafts.py        request drafts from a synthetic message export (JSON lines)
   workspace.py             request vault and GC command center
   collaboration_workspace.py
                            approved local knowledge and supervised workflows
@@ -221,6 +224,7 @@ src/legal_function_os/
                            file that is not UTF-8
   data/                    synthetic data, packaged so the demo runs uninstalled
     sample_requests.json   synthetic general legal requests
+    sample_messages.jsonl  synthetic message export for message-drafts
     service_events.json    versioned synthetic request lifecycle
     outcome_config.json    business calendar, value assumptions and KPI targets
     capacity_scenarios.json  illustrative capacity constraints

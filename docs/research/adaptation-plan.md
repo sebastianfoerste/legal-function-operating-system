@@ -79,7 +79,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | **Built** |
 | F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | **Built** |
 | F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | Specced |
-| F11 | Local inbound message adapter, from a synthetic export to `legal-request.v1` drafts | 3 | Claimed: Wordsmith, Checkbox | M | pass (inbound only) | 3 | table stakes | Specced |
+| F11 | Local inbound message adapter, from a synthetic export to `legal-request.v1` drafts | 3 | Claimed: Wordsmith, Checkbox | M | pass (inbound only) | 3 | table stakes | **Built** |
 
 ### Design upgrades
 
@@ -527,7 +527,7 @@ playbook position next to each change, and the evidence next to each resolution.
   - Needs new states. Update `parent_bridge.CONTRACT_REVIEW_STATE` and
     `scripts/check_shared_contracts.py`.
 
-### F11. Local inbound adapter (specced; the Slack, Teams and email decision)
+### F11. Local inbound adapter (built; the Slack, Teams and email decision)
 
 - **Decision.** Channel intake that reads or writes a live service is rejected, because
   it breaks the rule "Do not add external delivery, publication, filing or outreach
@@ -539,6 +539,32 @@ playbook position next to each change, and the evidence next to each resolution.
   - Nothing is sent back.
 - **What it loses compared with Wordsmith or Flank.** Real-time capture and replying in
   the same channel (Inferred).
+- **Built.**
+  - `src/legal_function_os/message_drafts.py` and the `message-drafts` command read a
+    JSON-lines export (`message_id`, `sender`, `text`; optional `channel`, `sent_at`,
+    `subject`) and write `message-drafts.json` and `message-drafts.md`. `make demo` writes
+    them from the bundled export, `src/legal_function_os/data/sample_messages.jsonl`, to
+    `examples/`. The format and its rules are [ADR 0009](../adr/0009-message-drafts.md).
+  - Every sender must be a `syn-` handle, the pilot's pattern. That marks the data as
+    synthetic and says nothing about who sent a message; senders are not verified.
+  - Values are copied only from labelled lines, matched like CSV headers, and as written.
+    Prose, quoted replies and list items are not read. Labels for fields legal sets,
+    misspelled labels and fields given two different ways are noted and not copied.
+  - Every draft holds the seven fields the intake page always asks. One a message does not
+    state is `""` and named, so `validate` and `triage` refuse the draft until legal fills
+    it; left out, it would take its default and could lower the risk.
+  - Drafts are `REQ-DRAFT-1` and so on in message order, with the message id in
+    `x_message_id`; nothing goes into `facts`.
+  - It is a CLI command, not an MCP tool, and it imports no network, mail or process
+    module.
+  - Tests: `tests/test_message_drafts.py` (the export checks, the mapping, the committed
+    examples, the MCP and import boundaries), `tests/test_bundled_data.py` and
+    `tests/test_cli_subcommands.py` (every command is in `docs/CLI.md`).
+- **Done differently.**
+  - `.eml` and mailbox files, real chat exports and replies stay out; each needs a new
+    owner decision.
+  - A label that misspells a request field is noted the way a CSV header is, so `Urgent`
+    is not taken for `urgency`; the field stays blank and named.
 
 ### D3, D4
 
@@ -652,8 +678,22 @@ playbook position next to each change, and the evidence next to each resolution.
    settles authentication first.
 7. **Presence records** (F4). **Decided on 2026-10-28:** in memory only, never stored or
    logged, never shown to or recorded for requesters (ADR 0005).
-8. **Channel intake** (F11). Confirm that a local inbound adapter is wanted, or that
-   channel intake stays out.
+8. **Channel intake** (F11). **Decided on 2026-11-18** (ADR 0009): a local inbound
+   adapter is built; live channel intake stays out. `legal-function-os message-drafts`
+   reads a message export saved as JSON lines, one message per line, and every sender must
+   be a synthetic `syn-` handle. That check marks the data as synthetic; it is not an
+   identity, and senders are not verified. The command connects to no Slack, Teams or mail
+   service, captures nothing live and sends nothing back. It copies only labelled lines
+   such as `Value band: <50k`, with labels matched the way CSV headers are, and reads
+   nothing from the rest of the text. The subject becomes the title, and the whole text
+   the description. Every draft holds every field the intake page always asks. A field the
+   message does not state is left blank (`""`) and named, so `validate` and `triage`
+   refuse the draft until a person in legal fills it; left out, it would take its default
+   and could lower the risk. Drafts are numbered `REQ-DRAFT-1`, `REQ-DRAFT-2` and so on in
+   message order, each keeps its message id in `x_message_id`, and legal renumbers them.
+   It is a CLI command, not an MCP tool, so no model feeds it messages or fills its
+   blanks. `.eml` and mailbox files, real chat exports and replies stay out; each would
+   need a new owner decision.
 9. **PyPI publication.** **Decided on 2026-11-18: publish later, and only the owner
    publishes.** The package is not on PyPI, and PyPI had no project named
    `legal-function-os` when this was decided (HTTP 404). Until it is published, the

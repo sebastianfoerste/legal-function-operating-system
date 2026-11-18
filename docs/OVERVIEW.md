@@ -92,6 +92,10 @@ By [@sebastianfoerste](https://github.com/sebastianfoerste):
 10. The MCP server runs only as a local stdio process that the MCP client starts, so a
     client that accepts only a remote MCP server URL cannot use it. The plugin connects
     no remote services ([ADR 0007](adr/0007-mcp-local-stdio-only.md)).
+11. `message-drafts` reads a synthetic message export saved as a file. It connects to no
+    chat or mail service, captures nothing live and replies to no one, and its drafts
+    need legal to fill every blank before triage
+    ([ADR 0009](adr/0009-message-drafts.md)).
 
 Controls (synthetic inputs only, no external communication, no self-approval) are listed in [MODULES.md](MODULES.md#controls).
 
@@ -107,4 +111,4 @@ structured, testable, and reviewable.
 - [Competitive research, October 2026](research/2026-10-competitive-landscape.md) and the [adaptation plan](research/adaptation-plan.md)
 - [Reviewer script](RAAS_REVIEWER_SCRIPT.md) · [Collaboration programme](COLLABORATION_PROGRAMME.md) · [Consolidation](CONSOLIDATION.md)
 - [Supervised agent](../supervised-agent/) and its [pilot case study](../supervised-agent/docs/pilot/CASE_STUDY.md); shared contract: [`contracts/legal-workflow-controls.v1.schema.json`](../contracts/legal-workflow-controls.v1.schema.json)
-- [Board pack](../examples/board-pack.md) · [Outcome control tower](../examples/legal-outcome-control-tower.md) · [Capacity simulation](../examples/legal-capacity-simulation.md) · [Approval matrix](../examples/approval-matrix.md) · [Intake page](../examples/intake-page.html) · [Architecture](architecture.svg)
+- [Board pack](../examples/board-pack.md) · [Outcome control tower](../examples/legal-outcome-control-tower.md) · [Capacity simulation](../examples/legal-capacity-simulation.md) · [Approval matrix](../examples/approval-matrix.md) · [Intake page](../examples/intake-page.html) · [Message drafts](../examples/message-drafts.md) · [Architecture](architecture.svg)

@@ -5,6 +5,7 @@
     legal-function-os board-pack --input requests.json --out reports
     legal-function-os validate --input requests.csv --format json
     legal-function-os intake-page --out reports  writes a page that saves a request file
+    legal-function-os message-drafts --input export.jsonl --out drafts  request drafts for legal
     legal-function-os dpa-review --input agreements.json
     legal-function-os capacity --input requests.json --scenarios scenarios.json
     legal-function-os control-tower --input requests.json --events events.json --config config.json
@@ -57,6 +58,16 @@ from legal_function_os.intake_page import (
     render_intake_markdown,
     write_intake_page,
 )
+from legal_function_os.message_drafts import (
+    MessageExportError,
+    build_message_drafts,
+    load_message_export,
+    read_messages,
+    render_message_drafts_json,
+    render_message_drafts_markdown,
+    summary_line,
+    write_message_drafts,
+)
 from legal_function_os.outcome_control_tower import (
     build_outcome_control_tower,
     render_outcome_markdown,
@@ -87,6 +98,10 @@ INPUT_HELP = (
     "Requests: a JSON array, or a .csv file with one request per row (see "
     "docs/INPUT_FORMAT.md); - reads JSON from standard input. Default: the bundled "
     "synthetic requests."
+)
+MESSAGES_HELP = (
+    "A message export: JSON lines, one message per line, every sender a syn- handle (see "
+    "docs/INPUT_FORMAT.md). Default: the bundled synthetic export."
 )
 
 
@@ -237,6 +252,33 @@ def _intake_page(args: argparse.Namespace) -> int:
             print(f"wrote {path}", file=sys.stderr)
     else:
         _emit(_json(form) if args.format == "json" else render_intake_markdown(form))
+    return 0
+
+
+def _message_drafts(args: argparse.Namespace) -> int:
+    policy = _load_policy(args.policy)
+    try:
+        text, source = load_message_export(args.input)
+        messages = read_messages(text, source)
+    except MessageExportError as exc:
+        for problem in exc.problems:
+            print(f"error: {exc.source}: {problem}", file=sys.stderr)
+        print("The message export cannot be read. Nothing was written.", file=sys.stderr)
+        raise _Failure(2) from None
+    result = build_message_drafts(messages, policy, source)
+    for note in result["notes"]:
+        print(f"note: {note}", file=sys.stderr)
+    for entry in result["messages"]:
+        for note in entry["notes"]:
+            print(f"note: {entry['draft_id']}: {note}", file=sys.stderr)
+    if args.out:
+        for path in write_message_drafts(result, Path(args.out)).values():
+            print(f"wrote {path}", file=sys.stderr)
+    elif args.format == "json":
+        _emit(render_message_drafts_json(result))
+    else:
+        _emit(render_message_drafts_markdown(result))
+    print(summary_line(result), file=sys.stderr)
     return 0
 
 
@@ -426,6 +468,10 @@ COMMANDS: dict[str, tuple[str, Handler]] = {
         "Write a page that helps a requester prepare a request file; it sends and decides nothing.",
         _intake_page,
     ),
+    "message-drafts": (
+        "Turn a synthetic message export into request drafts for legal to complete; it sends and decides nothing.",
+        _message_drafts,
+    ),
     "dpa-review": (
         "Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses.",
         _dpa_review,
@@ -523,6 +569,10 @@ def command_parser() -> argparse.ArgumentParser:
         help="Intake questions JSON (see docs/CUSTOMIZE.md). Default: the bundled synthetic questions.",
     )
     _add_format(intake, out="intake-page.html")
+
+    drafts = parsers["message-drafts"]
+    _add_input(drafts, MESSAGES_HELP)
+    _add_format(drafts, out="message-drafts.json and message-drafts.md")
 
     dpa = parsers["dpa-review"]
     dpa.add_argument(

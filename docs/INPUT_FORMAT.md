@@ -28,7 +28,9 @@ Every input is checked before any decision is made. Use `--input -` to read the
 array from standard input. A requester can also prepare one request in a browser with
 the intake page (`legal-function-os intake-page`, [Your own intake questions](CUSTOMIZE.md#your-own-intake-questions)):
 it saves a file in this format with the id `REQ-DRAFT`, which legal renumbers. A request log kept in a spreadsheet works too: save it
-as CSV ([Spreadsheets (CSV)](#spreadsheets-csv)).
+as CSV ([Spreadsheets (CSV)](#spreadsheets-csv)). Requests written as messages in a chat
+channel or a shared mailbox can be saved as a synthetic message export and turned into
+drafts for legal to complete ([From a message export](#from-a-message-export-drafts)).
 
 ## Fields
 
@@ -158,6 +160,80 @@ along unused, and the run prints a note naming it, so a column like
 `Value band (EUR)` is never ignored without a word. Prefix your own columns with
 `x_` to leave them out of the note. Workbooks (`.xlsx`, `.ods`, `.numbers`) are
 not read: save the sheet as CSV first (in Excel, *CSV UTF-8*).
+
+## From a message export (drafts)
+
+`legal-function-os message-drafts --input export.jsonl --out drafts` reads a message
+export and writes `drafts/message-drafts.json`, a request file of drafts, and
+`drafts/message-drafts.md`, which shows for each message what was copied, what is blank
+and what was noted. It reads a file you saved. It connects to no chat or mail service,
+captures nothing live, replies to no one and decides nothing
+([ADR 0009](adr/0009-message-drafts.md)). Without `--input` it reads the bundled
+synthetic export,
+[`src/legal_function_os/data/sample_messages.jsonl`](../src/legal_function_os/data/sample_messages.jsonl),
+whose drafts are committed as [`examples/message-drafts.md`](../examples/message-drafts.md).
+
+The export is JSON lines: one message object per line, UTF-8, blank lines allowed.
+
+```json
+{"message_id": "syn-msg-0002", "sender": "syn-product-ben", "channel": "legal-requests (synthetic mailbox)", "sent_at": "2026-11-16T10:40:00Z", "subject": "DPA: support tool sub-processor (synthetic)", "text": "Type: dpa\nCounterparty: Support Tools LLC (synthetic)\nPersonal data: ja\nDeadline: 2026-12-04\nWe are not sure where their support staff sit."}
+```
+
+| Key | Required | What it is |
+| --- | --- | --- |
+| `message_id` | yes | The message's id in the export, unique in the file. The draft keeps it in `x_message_id` |
+| `sender` | yes | A synthetic handle: `syn-` followed by lower-case letters, digits or hyphens |
+| `text` | yes | The message. Labelled lines are copied; the whole text becomes the `description` |
+| `subject` | no | Becomes the `title` |
+| `channel`, `sent_at` | no | Shown in the Markdown, not copied into the draft |
+
+Keys starting with `x_` or `_` are ignored. Any other key, a line that is not a JSON
+object, a missing or blank required key, a value that is not a string, a repeated
+`message_id` or a sender that is not a `syn-` handle stops the run with exit status 2,
+one line per problem naming the line, and nothing is written. A JSON array is refused:
+requests go to `validate` or `triage`, not here. The `syn-` check marks the export as
+synthetic data; it says nothing about who sent a message, and senders are not verified.
+
+How each request field reaches a draft:
+
+| Field | In the draft |
+| --- | --- |
+| `id` | `REQ-DRAFT-1`, `REQ-DRAFT-2` and so on, in message order; legal renumbers |
+| `title` | The subject, else a `Title:` line, else blank (`""`) |
+| `type`, `value_band`, `personal_data`, `non_eea_transfer`, `uncapped_liability`, `urgency` | Copied from a labelled line, else blank (`""`) |
+| `counterparty`, `requested_by`, `deadline` | Copied from a labelled line, else left out |
+| `description` | The whole text |
+| `sla_breached`, `awaiting_business_input`, `summary`, `dependencies`, `facts` | Never set: legal sets them |
+
+Labelled lines:
+
+- A label starts the line and ends at the first colon: `Value band: <50k`. It is matched
+  like a CSV header, so `Value band`, `value-band` and `valueBand` mean `value_band`, and
+  `Request type` and `Requester` mean `type` and `requested_by`.
+- Yes/no answers are read with the CSV words (yes/no, true/false, ja/nein, wahr/falsch,
+  1/0 and x). Any other value is copied as written, so `>1M` stays `>1M`, and the drafts'
+  check names it.
+- A quoted reply (`> Value band: >1m`), a list item and the rest of the text are not
+  read. Nothing is inferred from prose: "they want uncapped liability" leaves
+  `uncapped_liability` blank.
+- A label for a field legal sets, such as `SLA breached`, or one that looks like a
+  misspelled field, such as `Value bnad`, is noted and not copied. So is a field given two
+  different ways, such as `Urgency: high` and `Urgency: low`. An empty value counts as not
+  given.
+
+A blank decision field is `""`, which `validate` and `triage` refuse, naming each field:
+
+```text
+error: request 3 (REQ-DRAFT-3): title: missing; every request needs one
+warning: request 3 (REQ-DRAFT-3): type: missing; the request needs manual triage
+error: request 3 (REQ-DRAFT-3): value_band: '' is not a value band; use one of none, <50k, 50k-250k, 250k-1m, >1m
+error: request 3 (REQ-DRAFT-3): urgency: '' is not an urgency; use one of blocker, high, standard, low
+error: request 3 (REQ-DRAFT-3): personal_data: expected true or false, got ''
+```
+
+Fill every blank from the message, or by asking its sender. **Do not delete a blank
+field**: a field left out takes its default (false or none), which can lower the risk.
+Then give each draft a register number and run `validate`, then `triage`.
 
 ## What happens on bad input
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import contextlib
+import io
 import json
 import unittest
 
@@ -29,6 +31,14 @@ class BundledDataTest(unittest.TestCase):
                 self.assertTrue(path.is_file())
                 json.loads(path.read_text(encoding="utf-8"))
 
+    def test_bundled_message_export_is_json_lines(self) -> None:
+        path = bundled_path("sample_messages.jsonl")
+        lines = [line for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+        self.assertEqual(len(lines), 6)
+        for line in lines:
+            with self.subTest(line=line[:40]):
+                self.assertIsInstance(json.loads(line), dict)
+
     def test_missing_bundled_file_is_reported(self) -> None:
         with self.assertRaises(FileNotFoundError):
             bundled_path("not_a_real_fixture.json")
@@ -36,6 +46,10 @@ class BundledDataTest(unittest.TestCase):
     def test_both_entry_points_run_without_an_input_path(self) -> None:
         self.assertEqual(cli_main(["--quiet"]), 0)
         self.assertEqual(raas_main(["--quiet"]), 0)
+
+    def test_message_drafts_run_without_an_input_path(self) -> None:
+        with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+            self.assertEqual(cli_main(["message-drafts"]), 0)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,78 @@
+[
+  {
+    "id": "REQ-DRAFT-1",
+    "title": "NDA: Initech Design (synthetic)",
+    "type": "commercial_contract",
+    "counterparty": "Initech Design (synthetic)",
+    "value_band": "<50k",
+    "personal_data": false,
+    "non_eea_transfer": false,
+    "uncapped_liability": false,
+    "urgency": "low",
+    "requested_by": "sales",
+    "description": "Hi legal, please review the NDA with Initech Design.\nRequest type: commercial_contract\nCounterparty: Initech Design (synthetic)\nValue band: <50k\nPersonal data: no\nNon-EEA transfer: no\nUncapped liability: no\nUrgency: low\nRequested by: sales",
+    "x_message_id": "syn-msg-0001"
+  },
+  {
+    "id": "REQ-DRAFT-2",
+    "title": "DPA: support tool sub-processor (synthetic)",
+    "type": "dpa",
+    "counterparty": "Support Tools LLC (synthetic)",
+    "value_band": "",
+    "personal_data": true,
+    "non_eea_transfer": "",
+    "uncapped_liability": "",
+    "urgency": "",
+    "description": "Type: dpa\nCounterparty: Support Tools LLC (synthetic)\nPersonal data: ja\nDeadline: 2026-12-04\nWe are not sure where their support staff sit.",
+    "deadline": "2026-12-04",
+    "x_message_id": "syn-msg-0002"
+  },
+  {
+    "id": "REQ-DRAFT-3",
+    "title": "",
+    "type": "",
+    "value_band": "",
+    "personal_data": "",
+    "non_eea_transfer": "",
+    "uncapped_liability": "",
+    "urgency": "",
+    "description": "Can someone look at the Globex MSA (synthetic)? They want uncapped liability, and EU customer data would go to their US support team. Need it by Friday.",
+    "x_message_id": "syn-msg-0003"
+  },
+  {
+    "id": "REQ-DRAFT-4",
+    "title": "Renewal: analytics vendor (synthetic)",
+    "type": "",
+    "value_band": ">1M",
+    "personal_data": "",
+    "non_eea_transfer": "",
+    "uncapped_liability": "",
+    "urgency": "soon",
+    "description": "Value band: >1M\nValue bnad: 50k-250k\nUrgency: soon\nSLA breached: yes",
+    "x_message_id": "syn-msg-0004"
+  },
+  {
+    "id": "REQ-DRAFT-5",
+    "title": "Contractor agreement (synthetic)",
+    "type": "employment",
+    "value_band": "",
+    "personal_data": "",
+    "non_eea_transfer": "",
+    "uncapped_liability": "",
+    "urgency": "",
+    "description": "Request type: employment\nUrgency: high\nUrgency: low",
+    "x_message_id": "syn-msg-0005"
+  },
+  {
+    "id": "REQ-DRAFT-6",
+    "title": "Board consent for a new subsidiary (synthetic)",
+    "type": "corporate",
+    "value_band": "",
+    "personal_data": "",
+    "non_eea_transfer": "",
+    "uncapped_liability": "",
+    "urgency": "",
+    "description": "Title: Board consent for a new subsidiary (synthetic)\n> Value band: >1m\nRequest type: corporate\nUrgent: yes",
+    "x_message_id": "syn-msg-0006"
+  }
+]

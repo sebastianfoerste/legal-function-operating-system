@@ -36,6 +36,7 @@ SMOKE_RUNS: tuple[tuple[str, ...], ...] = (
     ("legal-function-os", "--version"),
     ("legal-function-os", "--quiet"),
     ("legal-function-os", "intake-page"),
+    ("legal-function-os", "message-drafts"),
     ("raas-deal-desk", "--quiet"),
     ("legal-function-os-mcp", "--help"),
 )
@@ -53,7 +54,11 @@ def expected_files() -> set[str]:
         for path in PACKAGE.rglob("*.py")
         if "__pycache__" not in path.parts
     }
-    data = {f"legal_function_os/data/{path.name}" for path in (PACKAGE / "data").glob("*.json")}
+    data = {
+        f"legal_function_os/data/{path.name}"
+        for pattern in ("*.json", "*.jsonl")
+        for path in (PACKAGE / "data").glob(pattern)
+    }
     return modules | data
 
 

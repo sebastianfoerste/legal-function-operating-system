@@ -49,6 +49,12 @@ class HelpAndVersion(unittest.TestCase):
             self.assertIn(name, stdout)
         self.assertIn("original all-in-one flags", stdout)
 
+    def test_cli_reference_lists_every_command(self):
+        reference = (ROOT / "docs" / "CLI.md").read_text(encoding="utf-8")
+        for name in COMMANDS:
+            with self.subTest(command=name):
+                self.assertIn(f"| `{name}` |", reference)
+
     def test_version(self):
         code, stdout, _ = run_cli(["--version"])
         self.assertEqual((code, stdout.strip()), (0, f"legal-function-os {__version__}"))

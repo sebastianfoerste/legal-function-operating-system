@@ -182,7 +182,7 @@ All Claimed.
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Specced as F11 |
+  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Built as F11: `message_drafts.py` and the `message-drafts` command ([ADR 0009](../adr/0009-message-drafts.md)) |
   | Reject | Posting back to the channel; invisible completion | Rule 4 and rule 1 |
 
 ## Design donors read in source (Observed)
