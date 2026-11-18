@@ -89,6 +89,9 @@ By [@sebastianfoerste](https://github.com/sebastianfoerste):
 9. The intake page saves a request file on the requester's device; nothing is sent,
    so legal receives it only when the requester passes it on. Every file has the id
    `REQ-DRAFT` until legal numbers it.
+10. The MCP server runs only as a local stdio process that the MCP client starts, so a
+    client that accepts only a remote MCP server URL cannot use it. The plugin connects
+    no remote services ([ADR 0007](adr/0007-mcp-local-stdio-only.md)).
 
 Controls (synthetic inputs only, no external communication, no self-approval) are listed in [MODULES.md](MODULES.md#controls).
 

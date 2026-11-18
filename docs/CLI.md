@@ -91,7 +91,9 @@ legal-function-os-mcp [--policy PATH]
 ```
 
 A local stdio MCP server with four read-only tools: `triage_requests`, `board_pack`,
-`dpa_review` and `legal_request_schema`. Input that breaks the request contract is rejected
+`dpa_review` and `legal_request_schema`. It runs only over stdio, as a process the MCP
+client starts, and offers no HTTP transport ([ADR 0007](adr/0007-mcp-local-stdio-only.md)).
+Input that breaks the request contract is rejected
 rather than decided. The tools take data, never file paths: the model calling the server
 does not choose what the process reads. Your own policy applies either to every call, with
 `--policy PATH` read once at start, or per call as an inline `policy` object in the format

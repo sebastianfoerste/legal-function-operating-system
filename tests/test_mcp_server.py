@@ -7,10 +7,13 @@ import unittest
 from contextlib import redirect_stderr
 from importlib import resources
 from pathlib import Path
+from unittest import mock
 
 from legal_function_os import mcp_server
 from legal_function_os.policy import default_policy
 from legal_function_os.rules import decide
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _data(name):
@@ -112,6 +115,48 @@ class ToolFunctionTests(unittest.TestCase):
         self.assertIsNone(mcp_server.configure([]).policy)
         self.assertEqual(_queue(mcp_server.triage_requests(_data("sample_requests.json"))), "Commercial")
 
+    def test_main_serves_over_stdio_only(self):
+        # ADR 0007: run() gets no transport, so the SDK's default, stdio, applies.
+        with mock.patch.object(mcp_server, "build_server") as build:
+            mcp_server.main([])
+        build.return_value.run.assert_called_once_with()
+        # `mcp run FILE --transport ...` starts a module-level server stored under one of these names.
+        for name in ("mcp", "server", "app"):
+            self.assertFalse(hasattr(mcp_server, name), f"mcp_server.{name} could be started over HTTP")
+
+    def test_no_network_options(self):
+        for option in ("--transport", "--host", "--port"):
+            with self.subTest(option=option):
+                with redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as exited:
+                    mcp_server.parse_args([option, "x"])
+                self.assertEqual(exited.exception.code, 2)
+
+
+class PluginConfigTests(unittest.TestCase):
+    """ADR 0007: the plugin starts the local stdio server and connects no remote service."""
+
+    def test_plugin_servers_are_local_commands(self):
+        files = sorted(ROOT.glob("plugins/*/.mcp.json"))
+        self.assertTrue(files, "no plugin .mcp.json found")
+        for path in files:
+            servers = json.loads(path.read_text(encoding="utf-8"))["mcpServers"]
+            self.assertTrue(servers, path)
+            for name, server in servers.items():
+                with self.subTest(file=str(path.relative_to(ROOT)), server=name):
+                    self.assertNotIn("url", server)
+                    self.assertEqual(server.get("type", "stdio"), "stdio")
+                    self.assertIn("legal-function-os-mcp", [server["command"], *server.get("args", [])])
+
+    def test_no_server_is_declared_elsewhere(self):
+        # A plugin or marketplace entry can declare MCP servers inline; only .mcp.json does here.
+        marketplace = json.loads((ROOT / ".claude-plugin" / "marketplace.json").read_text(encoding="utf-8"))
+        entries = [("marketplace.json", entry) for entry in marketplace["plugins"]]
+        for path in sorted(ROOT.glob("plugins/*/.claude-plugin/plugin.json")):
+            entries.append((str(path.relative_to(ROOT)), json.loads(path.read_text(encoding="utf-8"))))
+        self.assertGreater(len(entries), 1)
+        for source, entry in entries:
+            self.assertNotIn("mcpServers", entry, source)
+
 
 @unittest.skipUnless(importlib.util.find_spec("mcp"), "mcp extra not installed")
 class ServerTests(unittest.TestCase):
@@ -133,6 +178,13 @@ class ServerTests(unittest.TestCase):
         for name in ("triage_requests", "board_pack"):
             self.assertIn("policy", tools[name].inputSchema["properties"])
         self.assertNotIn("policy", tools["dpa_review"].inputSchema.get("properties", {}))
+
+    def test_default_transport_is_stdio(self):
+        # main() relies on this default (ADR 0007). The 2.x migration in ADR 0002 must
+        # check MCPServer.run the same way.
+        from mcp.server.fastmcp import FastMCP
+
+        self.assertEqual(inspect.signature(FastMCP.run).parameters["transport"].default, "stdio")
 
 
 if __name__ == "__main__":

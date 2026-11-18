@@ -43,6 +43,9 @@ a client requires protocol 2026-07-28:
 4. Keep the server local over stdio. Remote HTTP transport and authentication are out
    of scope (owner decision; see `docs/research/adaptation-plan.md`).
 
+   Note (2026-11-18): owner decision 6 settled this step; see
+   [ADR 0007](0007-mcp-local-stdio-only.md).
+
 ## Consequences
 
 - No behaviour changes now. Users with a global 2.x install keep getting a clear

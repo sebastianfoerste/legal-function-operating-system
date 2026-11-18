@@ -8,6 +8,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Added
 
+- [ADR 0007](docs/adr/0007-mcp-local-stdio-only.md): the MCP server stays a local stdio process with no HTTP transport, and the plugin connects no remote services (owner decision 6). Tests check that `legal-function-os-mcp` starts over stdio only, refuses transport, host and port options and keeps no module-level server object, and that every plugin MCP server is a local command that starts it.
 - [Intake wording: legal and policy review](docs/research/2026-11-intake-legal-review.md): the open questions under owner decision 13 settled against EUR-Lex primary sources (GDPR, the AI Act, the Art. 28 and transfer clauses, CJEU case law), each quote checked twice, with what remains a lawyer's call in a given case.
 - An MCP server, `legal-function-os-mcp` (optional `mcp` extra), with four read-only tools: `triage_requests`, `board_pack`, `dpa_review` and `legal_request_schema`. Input that breaks the request contract is rejected rather than decided. A Claude Code plugin with a marketplace (`.claude-plugin/marketplace.json`, `plugins/legal-function-os/`) installs the server and four skills (#17).
 - `docs/OVERVIEW.md`: the sections that left the README (what is inside, the DPA example, the comparison with LLM legal skills, the MCP section, the suite list, known limitations, human-authored judgement). The known limitations now say that the transfer rule treats every transfer of personal data outside the EEA as HIGH risk, without distinguishing adequacy decisions.
@@ -71,6 +72,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Fixed
 
+- The `dpa-coverage` plugin skill told the model to call "the MCP tool named below", but the tool, `dpa_review`, is named above that line. The rule now names it, as the other skills do.
 - "It is not UTF-8 text (byte 0x.. at position N)" now counts N from the file's first byte; it was 3 short after a byte order mark. The legacy `--capacity-scenarios`, `--events-input` and `--outcome-config` files and `raas-deal-desk`'s input name the file and use the same sentence, and accept a byte order mark like every other JSON input.
 - `init`: answers on standard input that are not UTF-8 stop the interview with a message, and a failure no longer leaves an empty policy file that blocks the next run.
 - The intake checker compares labels and choice answers as they read on the page: two that differ only in spaces or invisible characters (a zero-width space, a byte order mark) are refused.

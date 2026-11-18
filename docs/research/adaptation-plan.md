@@ -530,7 +530,8 @@ playbook position next to each change, and the evidence next to each resolution.
 ### F11. Local inbound adapter (specced; the Slack, Teams and email decision)
 
 - **Decision.** Channel intake that reads or writes a live service is rejected, because
-  it breaks rule 4 and the no-network core.
+  it breaks the rule "Do not add external delivery, publication, filing or outreach
+  actions" and the no-network core.
 - **What is allowed instead.**
   - A local, inbound-only adapter that parses a synthetic message export (JSON lines with
     `syn-` senders and fictional organisations) into `legal-request.v1` drafts.
@@ -618,8 +619,17 @@ playbook position next to each change, and the evidence next to each resolution.
      file is the record; this plan restates no date or citation.
    - The research for this plan saw only search snippets (Claimed) and could not reach
      EUR-Lex, so it changed nothing.
-6. **Remote MCP and HTTP transport.** claude-for-legal wires remote connectors. This
-   repository stays local over stdio (rule 4, ADR 0002).
+6. **Remote MCP and HTTP transport.** **Decided on 2026-11-18** (ADR 0007): the MCP
+   server stays a local process. The MCP client starts it and talks to it over stdio. It
+   offers no HTTP or SSE transport and no transport, host or port option. It does not
+   authenticate callers, because nothing reaches it over a network. The plugin's
+   `.mcp.json` starts only this local server and connects no remote services, unlike
+   claude-for-legal, which wires remote connectors. A remote server would need real
+   authentication (decision 1) and would send request data over a network. Remote
+   connectors would add signing, posting and filing, against the rule "Do not add
+   external delivery, publication, filing or outreach actions". Tests in
+   `tests/test_mcp_server.py` keep it this way. Reopening this needs a new ADR that
+   settles authentication first.
 7. **Presence records** (F4). **Decided on 2026-10-28:** in memory only, never stored or
    logged, never shown to or recorded for requesters (ADR 0005).
 8. **Channel intake** (F11). Confirm that a local inbound adapter is wanted, or that
