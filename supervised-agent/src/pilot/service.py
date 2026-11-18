@@ -22,7 +22,12 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from models import LegalOpsAssessment, ReviewDecision
-from src.docx_redline import DocumentIndex, UnsupportedDocumentError, index_docx
+from src.docx_redline import (
+    DocumentIndex,
+    UnsupportedDocumentError,
+    has_non_xml_char,
+    index_docx,
+)
 from src.export_gate import (
     ExportBlockedError,
     ExportContext,
@@ -1457,6 +1462,10 @@ class PilotService:
                 if not wording or wording == change.proposed_text:
                     raise InvalidCommandError(
                         "an amendment needs wording that differs from the proposal"
+                    )
+                if has_non_xml_char(wording):
+                    raise InvalidCommandError(
+                        "the amended wording holds characters a Word document cannot hold"
                     )
                 change.amended_text = wording
             elif outcome == "clarification_requested":

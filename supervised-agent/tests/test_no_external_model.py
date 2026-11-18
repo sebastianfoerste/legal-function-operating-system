@@ -39,7 +39,8 @@ def _requirement_names(path: Path) -> set[str]:
     for line in path.read_text(encoding="utf-8").splitlines():
         line = line.split("#", 1)[0].strip()
         if line:
-            names.add(re.split(r"[<>=!~\[; ]", line, maxsplit=1)[0].lower())
+            name = re.split(r"[<>=!~\[; @]", line, maxsplit=1)[0]
+            names.add(re.sub(r"[-_.]+", "-", name).lower())
     return names
 
 
@@ -59,6 +60,22 @@ def test_runtime_requirements_carry_no_model_sdk():
     for name in ("requirements.in", "requirements.txt"):
         found = _requirement_names(AGENT_ROOT / name) & MODEL_SDKS
         assert not found, f"{name} pins a model SDK: {sorted(found)}"
+
+
+def test_requirement_names_are_compared_in_their_normalised_form(tmp_path):
+    # pip treats "-", "_" and "." alike and ignores case (PEP 503), so every spelling counts.
+    requirements = tmp_path / "requirements.in"
+    requirements.write_text(
+        "Google.GenAI>=1.63.0\ngoogle_generativeai\nOpenAI; python_version >= '3.10'\n"
+        "pydantic==2.12.5  # a comment\n",
+        encoding="utf-8",
+    )
+    assert _requirement_names(requirements) == {
+        "google-genai",
+        "google-generativeai",
+        "openai",
+        "pydantic",
+    }
 
 
 def test_no_runtime_module_imports_a_model_or_network_client():

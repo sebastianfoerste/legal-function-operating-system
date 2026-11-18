@@ -654,18 +654,20 @@ playbook position next to each change, and the evidence next to each resolution.
    `Host` names, as before. It refuses a request whose `Origin` is not its own. No page on
    another origin may frame it. Its request log leaves out presence check-ins. Tests now
    prove that a final approval is refused when the approver holds too low a tier, is also
-   the requester or matter owner, or decided a change. These rules compare actor IDs, not
-   people. A per-start secret was considered and not built: anyone at the machine could
-   still read it, and it would look like a sign-in. Selecting a role is still not
-   authentication.
+   the requester or matter owner, or decided a change; no command can make the matter
+   owner the approver, so that test writes the assignment directly into the store. These
+   rules compare actor IDs, not people. A per-start secret was considered and not built:
+   anyone at the machine could still read it, and it would look like a sign-in. Selecting
+   a role is still not authentication.
 2. **`supervised-agent/.github/workflows/`** (`ci.yml`, `pre-commit.yml`,
    `release-gates.yml`). **Decided on 2026-11-18: deleted.** GitHub runs workflows only
    from the root `.github/workflows`, so these never ran here. The root CI's `agent` job
    already runs the agent's full gate (`make -C supervised-agent check`, with pinned tools
    and browser tests). The export target, `legal-ops-agent`, is archived, and a path
    export could not pass its own pilot tests without the parent package. The agent's
-   `dependabot.yml`, `CODEOWNERS` and `.pre-commit-config.yaml` were removed with them for
-   the same reason. `tests/test_agent_gate.py` keeps it that way.
+   `dependabot.yml` and `CODEOWNERS` were removed with them for the same reason, and its
+   `.pre-commit-config.yaml` because the only thing set up to run it was that `pre-commit`
+   workflow. `tests/test_agent_gate.py` keeps it that way.
 3. **`supervised-agent/src/gemini_client.py`.** **Decided on 2026-11-18: removed.** The
    agent has no external model client. The client, its test, the unused Gemini model list
    `src/config.py`, `.env.example` and the `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` switch are

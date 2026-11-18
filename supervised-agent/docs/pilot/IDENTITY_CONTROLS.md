@@ -15,7 +15,7 @@ The pilot models permissions explicitly and enforces them on every command, whet
 | A critical comment is closed only by its author or the final approver | `PilotService.resolve_comment` |
 | Refused commands are written to the matter's hash-chained event log | `PilotService._record_refusal` |
 
-The three refusals of a final approval are tested in `tests/test_pilot_workflow.py`: an approver whose tier is below the one required, an approver who is also the requester or the matter owner, and an approver who decided a change. These rules compare actor IDs, not people, so one person who holds two IDs passes them (control 4 below). No HTTP route registers an actor or changes a role or an approval tier (`tests/test_pilot_api.py`). The library call that registers actors replaces an existing actor without writing an event (control 3 below).
+The three refusals of a final approval are tested in `tests/test_pilot_workflow.py`: an approver whose tier is below the one required, an approver who is also the requester or the matter owner, and an approver who decided a change. No command can make the matter owner the final approver, so that case is defence in depth, and its test reaches it only by writing the assignment directly into the store (control 10 below). These rules compare actor IDs, not people, so one person who holds two IDs passes them (control 4 below). No HTTP route registers an actor or changes a role or an approval tier (`tests/test_pilot_api.py`). The library call that registers actors replaces an existing actor without writing an event (control 3 below).
 
 ## Local hardening (not authentication)
 
@@ -64,4 +64,4 @@ None of the following exists. Each is a precondition for use with real matters b
 
 Until items 1 to 6 exist, the system is suitable for a supervised trial with synthetic matters and for walkthroughs. It is not suitable for work product a practitioner relies on.
 
-Owner decision 1 (2026-11-18): none of controls 1 to 11 is built; items 1 to 6 remain the precondition for practitioner use.
+Owner decision 1 (2026-11-18): none of controls 1 to 11 is built; all eleven stay preconditions for practitioner use with real matters, and until items 1 to 6 exist the system is not suitable for work product a practitioner relies on.

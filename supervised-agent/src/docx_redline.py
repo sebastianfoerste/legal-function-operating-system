@@ -120,6 +120,12 @@ class RevisionMark:
     date: str
 
 
+def has_non_xml_char(text: str) -> bool:
+    """Whether ``text`` holds a character XML 1.0, and so a Word document, cannot hold."""
+
+    return _NOT_XML_CHAR.search(text) is not None
+
+
 def revision_label(text: str) -> str:
     """An author label that XML can hold: no control characters, one line, at most 255."""
 
@@ -320,6 +326,10 @@ def resolve_edit(index: DocumentIndex, edit: RedlineEdit) -> Paragraph:
     ):
         raise UnsupportedDocumentError(
             f"{edit.change_id}: inserted text must be non-empty single-line text"
+        )
+    if edit.operation != "delete_paragraph" and has_non_xml_char(edit.new_text):
+        raise UnsupportedDocumentError(
+            f"{edit.change_id}: inserted text holds characters a Word document cannot hold"
         )
     return paragraph
 

@@ -1,3 +1,4 @@
+import hashlib
 import io
 import zipfile
 from xml.etree import ElementTree
@@ -11,6 +12,7 @@ from src.docx_redline import (
     RevisionMark,
     UnsupportedDocumentError,
     apply_tracked_changes,
+    has_non_xml_char,
     index_docx,
     list_tracked_changes,
     read_paragraph_texts,
@@ -156,10 +158,22 @@ def test_tracked_changes_carry_author_and_date() -> None:
     assert [c.kind for c in changes].count("insertion") == 2
 
 
-def test_per_change_marks_default_to_the_single_mark_byte_for_byte() -> None:
-    source = build_synthetic_msa("specialist")
+# SHA-256 of word/document.xml from one mark for the whole file, as the writer gave it
+# before per-change marks (ADR 0004). The XML is pinned, not the zip, whose deflate output
+# can vary with the zlib version.
+SINGLE_MARK_DOCUMENT_XML = {
+    "routine": "c66c16599026db56e370d23698f77c8c24ea83dc4b2a30ea776f56f7646a33df",
+    "specialist": "685727ca69e586234454f930be97ad09fca80ba6f66fc251a0327b5b830e9503",
+}
+
+
+@pytest.mark.parametrize("variant", sorted(SINGLE_MARK_DOCUMENT_XML))
+def test_per_change_marks_default_to_the_single_mark_byte_for_byte(variant) -> None:
+    source = build_synthetic_msa(variant)
     edits = _edits(source)
     single, _ = apply_tracked_changes(source, edits, MARK)
+    digest = hashlib.sha256(_document_xml(single)).hexdigest()
+    assert digest == SINGLE_MARK_DOCUMENT_XML[variant]
     for marks in (None, {}, {edit.change_id: MARK for edit in edits}):
         assert apply_tracked_changes(source, edits, MARK, marks=marks)[0] == single
 
@@ -361,3 +375,15 @@ def test_non_docx_and_multiline_insertions_are_refused() -> None:
     multiline = RedlineEdit(**{**edit.__dict__, "new_text": "thirty\n(30) days"})
     with pytest.raises(UnsupportedDocumentError, match="single-line"):
         apply_tracked_changes(source, [multiline], MARK)
+
+
+def test_inserted_text_a_word_document_cannot_hold_is_refused() -> None:
+    # Written as is into w:t, such a character would leave word/document.xml malformed.
+    source = build_synthetic_msa("routine")
+    edit = next(e for e in _edits(source) if e.change_id.startswith("chg-payment-terms"))
+    for text in ("thirty (30) days\x01", "thirty\x0b(30) days", "thirty days\ufffe", "\ud800"):
+        unsafe = RedlineEdit(**{**edit.__dict__, "new_text": text})
+        with pytest.raises(UnsupportedDocumentError, match="a Word document cannot hold"):
+            apply_tracked_changes(source, [unsafe], MARK)
+        assert has_non_xml_char(text)
+    assert not has_non_xml_char("forty-five (45) days, \u00a7 3 \u20ac\t\U0001f600")

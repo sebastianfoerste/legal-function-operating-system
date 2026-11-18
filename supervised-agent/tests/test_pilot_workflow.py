@@ -222,7 +222,7 @@ FINAL_APPROVAL = (
     ],
     ids=["tier too low", "requester", "decided a change"],
 )
-def test_final_approval_refuses_tier_requester_owner_or_change_decider(
+def test_final_approval_refuses_tier_requester_or_change_decider(
     tmp_path, approver: str, promote: bool, refusal: str
 ) -> None:
     # The separation rules compare actor ids. Giving the requester or the specialist the
@@ -253,6 +253,32 @@ def test_final_approval_refuses_tier_requester_owner_or_change_decider(
     [item] = [entry for entry in blocked.value.evidence if entry["name"] == "approver_authorised"]
     assert refusal in item["detail"]
     assert item["requirement"].endswith("and decided none of the changes.")
+    assert revision(service, matter_id) == start and state(service, matter_id) == "review"
+    assert event_types(service, matter_id).count("command_refused") == refusals + 1
+    assert service.view_matter(OWNER, matter_id)["audit_chain"]["verified"]
+
+
+def test_final_approval_refuses_an_approver_who_is_also_matter_owner(tmp_path) -> None:
+    # No command can produce this state: only the matter owner assigns the final approver,
+    # one actor ID holds one role, and a matter has one owner, who claimed it at triage. The
+    # owner half of the check is defence in depth, so this test reaches it by writing the
+    # assignment row straight into the store (the direct database access of control 10).
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B41")
+    with service.store.transaction() as connection:
+        connection.execute(
+            "INSERT INTO assignments (matter_id, role, actor_id, assigned_by, assigned_at) "
+            "VALUES (?, 'matter_owner', ?, ?, ?)",
+            (matter_id, APPROVER_GC, OWNER, "2026-01-01T00:00:00Z"),
+        )
+    start = revision(service, matter_id)
+    refusals = event_types(service, matter_id).count("command_refused")
+
+    with pytest.raises(TransitionBlockedError) as blocked:
+        service.approve(APPROVER_GC, matter_id, start, note=FINAL_APPROVAL)
+    assert _failing(blocked.value) == {"approver_authorised"}
+    [item] = [entry for entry in blocked.value.evidence if entry["name"] == "approver_authorised"]
+    assert item["detail"] == "the approver is also requester or matter owner on this matter"
     assert revision(service, matter_id) == start and state(service, matter_id) == "review"
     assert event_types(service, matter_id).count("command_refused") == refusals + 1
     assert service.view_matter(OWNER, matter_id)["audit_chain"]["verified"]
@@ -290,6 +316,26 @@ def test_stale_submission_is_refused_and_overwrites_nothing(tmp_path) -> None:
     assert stale.value.current_revision == loaded + 1
     change = next(c for c in service.view_matter(OWNER, matter_id)["changes"] if c["id"] == target)
     assert change["decision"] == "accepted"
+
+
+def test_amended_wording_a_word_document_cannot_hold_is_refused(tmp_path) -> None:
+    # JSON can carry "\u0001"; written into the redline it would make the document malformed,
+    # and the delivery package would fail only after the final approval was recorded.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "routine", "A07")
+    target = change_id(service, matter_id, "payment-terms")
+    start, events = revision(service, matter_id), event_types(service, matter_id)
+    for wording in ("forty-five (45) days\x01", "forty-five (45) days\ufffe", "\ud800 days"):
+        with pytest.raises(InvalidCommandError, match="a Word document cannot hold"):
+            service.decide_change(
+                OWNER, matter_id, start, change_id=target, outcome="amended",
+                reason="Finance agreed forty-five days for this account.",
+                amended_text=wording, source_support_confirmed=True,
+            )  # fmt: skip
+    # Refused as an invalid command, like other invalid wording: nothing is recorded.
+    assert revision(service, matter_id) == start and event_types(service, matter_id) == events
+    change = next(c for c in service.view_matter(OWNER, matter_id)["changes"] if c["id"] == target)
+    assert change["decision"] == "pending" and change["amended_text"] is None
 
 
 def test_concurrent_writers_only_one_wins(tmp_path) -> None:
@@ -861,6 +907,8 @@ def test_css_string_escapes_quotes_and_refuses_line_breaks() -> None:
     assert deliverable._css_string('Say "no" \\ </style>') == 'Say \\"no\\" \\\\ \\3c /style>'
     with pytest.raises(ValueError):
         deliverable._css_string("two\nlines")
+    with pytest.raises(ValueError):  # CSS treats a form feed as a line break too
+        deliverable._css_string("form\ffeed")
 
 
 def test_reviewed_document_names_the_deciding_role_and_decision_time(tmp_path) -> None:

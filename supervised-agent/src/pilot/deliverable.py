@@ -387,8 +387,11 @@ def render_markdown(data: PackageData, *, draft: bool) -> str:
 
 
 def _css_string(text: str) -> str:
-    """The body of a double-quoted CSS string; a line break is refused, not escaped."""
-    if "\n" in text or "\r" in text:
+    """The body of a double-quoted CSS string; a line break is refused, not escaped.
+
+    CSS counts a line feed, a carriage return and a form feed as line breaks.
+    """
+    if "\n" in text or "\r" in text or "\f" in text:
         raise ValueError("a CSS string must be one line")
     return text.replace("\\", "\\\\").replace('"', '\\"').replace("<", "\\3c ")
 

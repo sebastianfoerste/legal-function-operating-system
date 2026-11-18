@@ -332,7 +332,37 @@ def test_presence_check_ins_are_not_logged(server, capsys):
     refused = {**JSON, "X-Pilot-Actor": REQUESTER}  # a requester's check-in is refused
     path = f"/pilot/api/matters/{matter}/presence"
     assert _request(server, "POST", path, headers=refused, body=body)[0] == 403
+    # The matter's other routes are logged, a command included.
+    base = f"/pilot/api/matters/{matter}"
+    history, commands = f"{base}/history", f"{base}/commands"
+    assert _request(server, "GET", history, headers=owner)[0] == 200
+    assert _request(server, "POST", commands, headers={**JSON, **owner}, body=b"{}")[0] == 400
 
     logged = capsys.readouterr().err
     assert "presence" not in logged
     assert f'"GET /pilot/api/matters/{matter} HTTP/1.1" 200' in logged
+    assert f'"GET {history} HTTP/1.1" 200' in logged
+    assert f'"POST {commands} HTTP/1.1" 400' in logged
+
+
+def test_requests_to_a_presence_path_that_are_not_check_ins_are_logged(server, capsys):
+    # Only a check-in the review-room API received is left out. A request refused before
+    # routing (another Host or Origin, another media type) or a GET records no presence.
+    port = server.server_address[1]
+    path = "/pilot/api/matters/PM-LOG-1/presence"
+    owner = {**JSON, "X-Pilot-Actor": OWNER}
+    body = b'{"revision": 1}'
+    foreign_host = _request(
+        server, "POST", path, host=f"evil.example:{port}", headers=owner, body=body
+    )
+    assert foreign_host == (403, {"error": "host_not_allowed"})
+    foreign_origin = {**owner, "Origin": "http://evil.example"}
+    assert _request(server, "POST", path, headers=foreign_origin, body=body)[0] == 403
+    text = {**owner, "Content-Type": "text/plain"}
+    assert _request(server, "POST", path, headers=text, body=body)[0] == 415
+    assert _request(server, "GET", path, headers={"X-Pilot-Actor": OWNER})[0] == 404
+
+    logged = capsys.readouterr().err
+    assert logged.count(f'"POST {path} HTTP/1.1" 403') == 2
+    assert logged.count(f'"POST {path} HTTP/1.1" 415') == 1
+    assert logged.count(f'"GET {path} HTTP/1.1" 404') == 1

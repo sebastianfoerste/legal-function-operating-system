@@ -252,9 +252,13 @@ Output schema:
 
 Served by `runtime_agent/app.py` under `/pilot` on `127.0.0.1`. Every data route needs the
 `X-Pilot-Actor` header naming a registered synthetic actor. The header selects a simulated
-local role. It is not authentication; see `docs/pilot/IDENTITY_CONTROLS.md`. A browser
-request from another origin is refused: an `Origin` header, when sent, must be `http://`
-with the host and port of the `Host` header.
+local role. It is not authentication; see `docs/pilot/IDENTITY_CONTROLS.md`. A request
+whose `Origin` header is not this server's own is refused: the header, when sent, must be
+`http://` with the host and port of the `Host` header. Browsers send it on every POST and
+every CORS-mode fetch, but not on a navigation or an image or script load, so such a GET
+from another origin is still answered. That origin can neither read nor embed the response
+(same-origin policy, `Cross-Origin-Resource-Policy`, no framing), and a data route also
+needs `X-Pilot-Actor`.
 
 | Method and path | Purpose |
 | --- | --- |
@@ -273,7 +277,7 @@ Answers to a refused request or command:
 | --- | --- | --- |
 | 401 | `actor_required` | No actor header |
 | 403 | `host_not_allowed` | The `Host` header is not this server |
-| 403 | `origin_not_allowed` | A browser request from another origin |
+| 403 | `origin_not_allowed` | The `Origin` header names another origin |
 | 403 | `permission_denied` | Unknown actor, wrong role, or not assigned to the matter |
 | 409 | `stale_submission` | The matter changed; `current_revision` is returned |
 | 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |

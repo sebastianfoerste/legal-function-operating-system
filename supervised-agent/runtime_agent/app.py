@@ -78,6 +78,8 @@ def _is_presence_path(path: str) -> bool:
 
 class RuntimeHandler(BaseHTTPRequestHandler):
     server_version = "LegalOpsAgentRuntime/1.0"
+    # Set only while a presence check-in is routed to the review-room API (do_POST).
+    _quiet_log = False
 
     def end_headers(self) -> None:
         for name, value in SECURITY_HEADERS:
@@ -86,8 +88,9 @@ class RuntimeHandler(BaseHTTPRequestHandler):
 
     def log_message(self, format: str, *args: Any) -> None:
         # Presence is never logged (ADR 0005): a check-in's request line would record
-        # which matter a room had open, and when.
-        if _is_presence_path(getattr(self, "path", "")):
+        # which matter a room had open, and when. A request to a presence path that is
+        # refused before routing, or a GET, records no presence and is logged.
+        if self._quiet_log:
             return
         super().log_message(format, *args)
 
@@ -125,9 +128,10 @@ class RuntimeHandler(BaseHTTPRequestHandler):
     def _origin_allowed(self) -> bool:
         """Whether the Origin header, if sent, is this server's own: http and the Host header.
 
-        Browsers send Origin on cross-origin requests and on every POST; scripts and
-        same-origin GETs send none. 'null', another scheme, host or port, user information
-        or a path is refused.
+        Browsers send Origin on every POST and on CORS-mode fetches. A GET that is a
+        navigation or an image, script or stylesheet load sends none, even from another
+        origin, and neither do curl and other clients outside a browser; those are served.
+        'null', another scheme, host or port, user information or a path is refused.
         """
 
         origin = self.headers.get("Origin")
@@ -226,7 +230,11 @@ class RuntimeHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path.startswith("/pilot/"):
-            self._pilot("POST", payload)
+            self._quiet_log = _is_presence_path(parsed.path)
+            try:
+                self._pilot("POST", payload)
+            finally:
+                self._quiet_log = False
             return
 
         if parsed.path == "/tools/call":

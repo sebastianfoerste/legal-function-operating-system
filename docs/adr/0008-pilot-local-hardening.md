@@ -59,27 +59,38 @@ repository, so it cannot be built or tested here.
      `Cross-Origin-Resource-Policy: same-origin`. The policy does not restrict scripts or
      styles, which the review room sets inline. No `Access-Control-*` header is sent and
      no `OPTIONS` handler exists.
-   - The request log leaves out presence check-ins; other requests are logged as before.
+   - The request log leaves out a presence check-in that reaches the review-room API; other
+     requests, including one to a presence path that is refused before it gets there, are
+     logged as before.
 3. Tests prove that a final approval is refused when the approver holds too low a tier, is
    also the requester or matter owner, or decided a change, and that no HTTP route
    registers an actor or changes a role or tier. These rules compare actor IDs, not
-   people.
+   people. No command can make the matter owner the final approver, so the owner case is
+   defence in depth: its test reaches it only by writing the assignment directly into the
+   store.
 
 ## Consequences
 
 - `HOST=0.0.0.0`, or any address that is not loopback, now stops the server with a message
   that names control 7. No tracked file sets `HOST`.
-- A page on another origin can no longer frame the review room, and a browser request from
-  another origin is refused on the server, not only by the browser's preflight. The room's
-  own package view still works: the room fetches the package and shows it in a sandboxed
-  `srcdoc` frame, so no server response is framed (checked in Chromium).
+- A page on another origin can no longer frame the review room, and a browser request that
+  carries a foreign `Origin` (every cross-origin POST and every CORS-mode fetch) is refused
+  on the server, not only by the browser's preflight. A cross-origin GET that sends no
+  `Origin` (a navigation, an image or script load) is still answered, but the other origin
+  can neither read nor embed the response (same-origin policy,
+  `Cross-Origin-Resource-Policy`, no framing), and a data route also needs `X-Pilot-Actor`,
+  a custom header that only an answered preflight could allow. The room's own package view
+  still works: the room fetches the package and shows it in a sandboxed `srcdoc` frame, so
+  no server response is framed (checked in Chromium).
 - A TLS-terminating proxy that sends an `https://` origin would be refused. That
   deployment is control 7 and unsupported today; revisit the rule with control 7.
 - `ALLOWED_HOSTS` can still name a host that resolves elsewhere and reopen DNS rebinding;
   `SETUP.md` says to name only hosts that resolve to this machine.
 - Anyone who can use the machine can still act as any role, and any process running as the
-  same user can still write the SQLite store (control 10). The approval refusals are tested through `register_actor`, which replaces an actor without
-  writing an event: a control 3 gap that these tests show but do not close.
+  same user can still write the SQLite store (control 10). The requester and change-decider
+  refusals are tested through `register_actor`, which replaces an actor without writing an
+  event: a control 3 gap that these tests show but do not close. The matter-owner refusal
+  is tested through such a direct write to the store.
 - The `approver_authorised` requirement text now names all three rules, as the check
   already enforced, in `state_machine.py` and `RUNBOOK.md`.
 - Tests: `supervised-agent/tests/test_runtime_agent.py` (listening address, `Origin`,

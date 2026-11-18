@@ -62,9 +62,12 @@ Python-Redlines is not adopted.
 1. `apply_tracked_changes` and `write_reviewed_docx` take an optional `marks` mapping,
    keyed by change ID, beside the single mark. Each `w:ins` and `w:del` of a change,
    including the paragraph mark of an inserted or deleted clause, carries that change's
-   author and date. Without `marks` the output is byte for byte what it was. A key that
-   names no edit is refused. An author keeps only characters XML 1.0 allows, on one line,
-   at most 255 of them, and must not end up empty; a date must be UTC to the second.
+   author and date. Without `marks` the output is byte for byte what it was for a mark
+   whose author is already XML-safe on one line and whose date is UTC to the second. A key
+   that names no edit is refused. An author keeps only characters XML 1.0 allows, on one
+   line, at most 255 of them, and must not end up empty; a date must be UTC to the second.
+   The single mark is now checked like the per-change ones, so its author is normalised
+   too and any other date form (a date alone, fractional seconds, an offset) is refused.
 2. The pilot gives each change its own mark. In a delivery package the author is
    "Simulated local role: <display name> (<actor ID>)" of the role that recorded the
    decision, and the date is when that decision was recorded, to the second. In an

@@ -1,9 +1,12 @@
 """The supervised agent is gated by this repository's CI, not by workflows of its own.
 
 GitHub runs workflows, and reads dependabot.yml and CODEOWNERS, only from ``.github`` at
-the repository root, and pre-commit reads its configuration only from the repository
-root. Files of that kind under ``supervised-agent/`` therefore never run. The root CI's
-agent job runs the agent's full gate instead (owner decision 2).
+the repository root, so those files under ``supervised-agent/`` never ran. pre-commit uses
+the configuration in the directory it is run from, so the agent's
+``.pre-commit-config.yaml`` was used only by its own pre-commit workflow, which never ran,
+or by someone running pre-commit inside ``supervised-agent/``; nothing documented that,
+and the root CI does not run pre-commit. The root CI's agent job runs the agent's full
+gate instead (owner decision 2).
 """
 
 import unittest
