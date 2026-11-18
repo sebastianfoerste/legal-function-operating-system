@@ -634,7 +634,25 @@ playbook position next to each change, and the evidence next to each resolution.
    logged, never shown to or recorded for requesters (ADR 0005).
 8. **Channel intake** (F11). Confirm that a local inbound adapter is wanted, or that
    channel intake stays out.
-9. **PyPI publication.** Still not published. Not touched here.
+9. **PyPI publication.** **Decided on 2026-11-18: publish later, and only the owner
+   publishes.** The package is not on PyPI, and PyPI had no project named
+   `legal-function-os` when this was decided (HTTP 404). Until it is published, the
+   repository says so and gives only install commands from git or from a clone. A test,
+   `tests/test_install_docs.py`, fails if a user-facing file tells anyone to install it
+   by name. The owner publishes when all of these hold:
+   - A release pull request raises `__version__` above 0.3.0, moves the changelog's
+     Unreleased section under the new version, and updates `CITATION.cff`.
+   - In the same pull request, the README works as the PyPI page: install by name,
+     absolute links and an absolute image. The by-name test and the git-only wording are
+     removed.
+   - On PyPI, a trusted publisher for `legal-function-os` names this repository,
+     `release.yml` and the environment `pypi`.
+   - The GitHub environment `pypi` requires the owner's approval.
+   - The repository variable `PYPI_PUBLISH` is `true`.
+   - The owner publishes a GitHub release tagged `v<version>`. A manual run of the
+     workflow skips the tag check, so it is not used.
+
+   The last four steps are the owner's alone.
 10. **Visual migration of committed reviewer artifacts** (D4). It changes the look of
     published pages.
 11. **Candidates found outside the session's repository scope.** The GitHub topic

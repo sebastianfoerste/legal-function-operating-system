@@ -98,9 +98,10 @@ rather than decided. The tools take data, never file paths: the model calling th
 does not choose what the process reads. Your own policy applies either to every call, with
 `--policy PATH` read once at start, or per call as an inline `policy` object in the format
 `legal-function-os init` writes; an inline policy wins, and one that cannot be applied is
-rejected like any other bad input. It needs the optional extra
-(`pip install "legal-function-os[mcp]"`), which is pinned to `mcp>=1.30,<2`;
-[ADR 0002](adr/0002-mcp-2x-path.md) records why.
+rejected like any other bad input. It needs the optional extra, which is pinned to
+`mcp>=1.30,<2`; [ADR 0002](adr/0002-mcp-2x-path.md) records why. The package is not on
+PyPI: in a clone, install the extra with `pip install -e ".[mcp]"`; without a clone, run
+the server with the `uvx` command in the [README](../README.md#mcp-server-and-claude-code-plugin).
 
 ## Related
 
