@@ -2009,6 +2009,7 @@ class PilotService:
             chain_root=self.store.verify_chain(ctx.connection, ctx.matter_id).chain_root_hash or "",
             actor_names=names,
             generated_at=ctx.now,
+            proposed_at=ctx.version_row["created_at"],
         )
 
     def list_actors_in(self, connection: sqlite3.Connection) -> list[Actor]:

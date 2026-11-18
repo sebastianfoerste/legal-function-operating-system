@@ -14,6 +14,16 @@ drawings, comment ranges, existing tracked changes) is indexed as unsupported, a
 an edit that targets it fails. Only the bytes of an edited paragraph are replaced;
 every other byte of ``word/document.xml`` and every other package part is copied
 unchanged.
+
+Revision marks
+--------------
+Every tracked change is a ``w:ins`` or ``w:del`` carrying ``w:id``, ``w:author`` and
+``w:date``; deleted text is written as ``w:delText``, and an inserted or deleted
+paragraph also marks its paragraph mark under ``w:pPr/w:rPr``. One revision mark
+applies to every change unless a mark is given for a change by its ``change_id``, so
+the author and date may differ per change. An author keeps only characters XML 1.0
+allows, on one line, at most 255 of them; a date is UTC to the second
+(``YYYY-MM-DDTHH:MM:SSZ``). No ``word/settings.xml``, comments or tables are written.
 """
 
 from __future__ import annotations
@@ -23,8 +33,9 @@ import hashlib
 import io
 import re
 import zipfile
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Literal
 from xml.etree import ElementTree as ET
@@ -40,6 +51,9 @@ _PARAGRAPH_CHILDREN = {"pPr", "r", "bookmarkStart", "bookmarkEnd", "proofErr"}
 _ZERO_WIDTH_RUN_CHILDREN = {"lastRenderedPageBreak"}
 _CLAUSE_REF = re.compile(r"^\s*(\d+(?:\.\d+)*)[.)]?\s")
 _ANNOTATION_ID = re.compile(rb'w:id="(\d+)"')
+# Characters outside the XML 1.0 Char production; ElementTree would write them unescaped.
+_NOT_XML_CHAR = re.compile("[^\t\n\r\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
+_REVISION_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z")
 
 
 class UnsupportedDocumentError(ValueError):
@@ -104,6 +118,26 @@ class RedlineEdit:
 class RevisionMark:
     author: str
     date: str
+
+
+def revision_label(text: str) -> str:
+    """An author label that XML can hold: no control characters, one line, at most 255."""
+
+    return " ".join(_NOT_XML_CHAR.sub("", text).split())[:255].rstrip()
+
+
+def _checked_mark(mark: RevisionMark) -> RevisionMark:
+    author = revision_label(mark.author)
+    if not author:
+        raise ValueError("revision mark author is empty without the characters XML cannot hold")
+    problem = f"revision mark date must be UTC to the second (YYYY-MM-DDTHH:MM:SSZ): {mark.date!r}"
+    if not _REVISION_DATE.fullmatch(mark.date):
+        raise ValueError(problem)
+    try:
+        datetime.strptime(mark.date, "%Y-%m-%dT%H:%M:%SZ")
+    except ValueError as error:
+        raise ValueError(problem) from error
+    return RevisionMark(author=author, date=mark.date)
 
 
 @dataclass(frozen=True)
@@ -299,17 +333,23 @@ class _Span:
 
 
 class _Marker:
-    def __init__(self, mark: RevisionMark, first_id: int) -> None:
-        self._mark = mark
+    """Hands out revision wrappers with unique ids and the mark of their own change."""
+
+    def __init__(
+        self, mark: RevisionMark, first_id: int, marks: Mapping[str, RevisionMark]
+    ) -> None:
+        self._mark = _checked_mark(mark)
+        self._marks = {change_id: _checked_mark(m) for change_id, m in marks.items()}
         self._next_id = first_id
 
-    def element(self, local: str) -> ET.Element:
+    def element(self, local: str, change_id: str) -> ET.Element:
+        mark = self._marks.get(change_id, self._mark)
         element = ET.Element(
             _w(local),
             {
                 _w("id"): str(self._next_id),
-                _w("author"): self._mark.author,
-                _w("date"): self._mark.date,
+                _w("author"): mark.author,
+                _w("date"): mark.date,
             },
         )
         self._next_id += 1
@@ -348,8 +388,8 @@ def _build_run(
     return run
 
 
-def _wrap(marker: _Marker, local: str, run: ET.Element) -> ET.Element:
-    wrapper = marker.element(local)
+def _wrap(marker: _Marker, local: str, run: ET.Element, change_id: str) -> ET.Element:
+    wrapper = marker.element(local, change_id)
     wrapper.append(run)
     return wrapper
 
@@ -392,7 +432,9 @@ def _apply_spans(paragraph: ET.Element, spans: list[_Span], marker: _Marker) -> 
             if span is None:
                 rebuilt.append(_build_run(properties, segment, deleted=False))
                 continue
-            rebuilt.append(_wrap(marker, "del", _build_run(properties, segment, deleted=True)))
+            rebuilt.append(
+                _wrap(marker, "del", _build_run(properties, segment, deleted=True), span.change_id)
+            )
             # The replacement starts where the deleted text started, so it takes that
             # run's formatting even when the span ends in differently formatted text.
             first_properties.setdefault(span.change_id, properties)
@@ -403,12 +445,13 @@ def _apply_spans(paragraph: ET.Element, spans: list[_Span], marker: _Marker) -> 
                         marker,
                         "ins",
                         _build_run(first_properties[span.change_id], inserted, deleted=False),
+                        span.change_id,
                     )
                 )
     paragraph[:] = rebuilt
 
 
-def _mark_paragraph(paragraph: ET.Element, marker: _Marker, local: str) -> None:
+def _mark_paragraph(paragraph: ET.Element, marker: _Marker, local: str, change_id: str) -> None:
     """Mark the paragraph mark itself as inserted or deleted."""
 
     properties = paragraph.find(_w("pPr"))
@@ -420,22 +463,25 @@ def _mark_paragraph(paragraph: ET.Element, marker: _Marker, local: str) -> None:
     run_properties = properties.find(_w("rPr"))
     if run_properties is None:
         run_properties = ET.SubElement(properties, _w("rPr"))
-    run_properties.insert(0, marker.element(local))
+    run_properties.insert(0, marker.element(local, change_id))
 
 
-def _delete_paragraph(paragraph: ET.Element, marker: _Marker) -> None:
+def _delete_paragraph(paragraph: ET.Element, marker: _Marker, change_id: str) -> None:
     rebuilt: list[ET.Element] = []
     for child in list(paragraph):
         if _local(child.tag) != "r":
             rebuilt.append(child)
             continue
         atoms = _run_atoms(child) or []
-        rebuilt.append(_wrap(marker, "del", _build_run(child.find(_w("rPr")), atoms, deleted=True)))
+        run = _build_run(child.find(_w("rPr")), atoms, deleted=True)
+        rebuilt.append(_wrap(marker, "del", run, change_id))
     paragraph[:] = rebuilt
-    _mark_paragraph(paragraph, marker, "del")
+    _mark_paragraph(paragraph, marker, "del", change_id)
 
 
-def _inserted_paragraph(anchor: ET.Element, text: str, marker: _Marker) -> ET.Element:
+def _inserted_paragraph(
+    anchor: ET.Element, text: str, marker: _Marker, change_id: str
+) -> ET.Element:
     paragraph = ET.Element(_w("p"))
     anchor_properties = anchor.find(_w("pPr"))
     if anchor_properties is not None:
@@ -446,8 +492,9 @@ def _inserted_paragraph(anchor: ET.Element, text: str, marker: _Marker) -> ET.El
     first_run = anchor.find(_w("r"))
     run_properties = first_run.find(_w("rPr")) if first_run is not None else None
     atoms: list[tuple[str, object]] = [("char", char) for char in text]
-    paragraph.append(_wrap(marker, "ins", _build_run(run_properties, atoms, deleted=False)))
-    _mark_paragraph(paragraph, marker, "ins")
+    run = _build_run(run_properties, atoms, deleted=False)
+    paragraph.append(_wrap(marker, "ins", run, change_id))
+    _mark_paragraph(paragraph, marker, "ins", change_id)
     return paragraph
 
 
@@ -462,16 +509,29 @@ def _serialise(element: ET.Element, namespaces: tuple[tuple[str, str], ...]) -> 
 
 
 def apply_tracked_changes(
-    source: bytes, edits: list[RedlineEdit], mark: RevisionMark
+    source: bytes,
+    edits: list[RedlineEdit],
+    mark: RevisionMark,
+    *,
+    marks: Mapping[str, RevisionMark] | None = None,
 ) -> tuple[bytes, DocumentIndex]:
-    """Return a new DOCX with the edits applied as tracked changes."""
+    """Return a new DOCX with the edits applied as tracked changes.
 
+    ``mark`` is the author and date of every change that ``marks`` does not name by
+    its ``change_id``. Without ``marks`` the output is byte for byte what one mark
+    for the whole file gives.
+    """
+
+    per_change = dict(marks or {})
+    unknown = sorted(set(per_change) - {edit.change_id for edit in edits})
+    if unknown:
+        raise ValueError(f"revision marks name no edit: {', '.join(unknown)}")
     index = index_docx(source)
     by_paragraph: dict[int, list[RedlineEdit]] = {}
     for edit in edits:
         by_paragraph.setdefault(resolve_edit(index, edit).index, []).append(edit)
 
-    marker = _Marker(mark, index.max_annotation_id + 1)
+    marker = _Marker(mark, index.max_annotation_id + 1, per_change)
     replacements: list[tuple[int, int, bytes]] = []
     for paragraph_index in sorted(by_paragraph):
         paragraph = index.paragraphs[paragraph_index]
@@ -502,11 +562,12 @@ def apply_tracked_changes(
         if spans:
             _apply_spans(element, spans, marker)
         if deletions:
-            _delete_paragraph(element, marker)
+            _delete_paragraph(element, marker, deletions[0].change_id)
         payload = _serialise(element, index.namespaces)
         for insertion in insertions:
             payload += _serialise(
-                _inserted_paragraph(anchor, insertion.new_text, marker), index.namespaces
+                _inserted_paragraph(anchor, insertion.new_text, marker, insertion.change_id),
+                index.namespaces,
             )
         replacements.append((paragraph.start, paragraph.end, payload))
 
@@ -596,11 +657,16 @@ def list_tracked_changes(data: bytes) -> list[TrackedChange]:
 
 
 def write_reviewed_docx(
-    source: Path, output: Path, edits: list[RedlineEdit], mark: RevisionMark
+    source: Path,
+    output: Path,
+    edits: list[RedlineEdit],
+    mark: RevisionMark,
+    *,
+    marks: Mapping[str, RevisionMark] | None = None,
 ) -> Path:
     if source.resolve() == output.resolve():
         raise ValueError("reviewed DOCX output must not overwrite the source document")
-    reviewed, _ = apply_tracked_changes(source.read_bytes(), edits, mark)
+    reviewed, _ = apply_tracked_changes(source.read_bytes(), edits, mark, marks=marks)
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_bytes(reviewed)
     return output

@@ -40,6 +40,7 @@ For that reason:
 - every page of the review room, every API actor listing and every delivery manifest states that roles are simulated local roles;
 - actor identifiers must start with `syn-`, so a real name cannot be registered by accident;
 - the approval record in a delivery package names its approvers as simulated local roles;
+- each tracked change in a reviewed document names the role that decided it as "Simulated local role: <display name> (<actor ID>)", and section 3 of the package says these names are not authenticated identities; the stateless reviewed DOCX, which has no recorded reviewer, says "Legal reviewer (not authenticated)";
 - the "Also open" presence line in the review room names simulated local roles, says it is not authentication, and is held in server memory only: it is never stored, logged or exported, and requesters are not part of it. The local server leaves presence check-ins out of its request log, which would otherwise record which matter a room had open and when (`RuntimeHandler.log_message`, `tests/test_runtime_agent.py`);
 - the charter treats approvals recorded in a trial as evidence of the workflow, with the named participants confirming their own decisions in the retrospective.
 

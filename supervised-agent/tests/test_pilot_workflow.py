@@ -1,11 +1,12 @@
 import hashlib
 import json
 import threading
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import pytest
 
-from src.docx_redline import index_docx, read_paragraph_texts
+from src.docx_redline import index_docx, list_tracked_changes, read_paragraph_texts
 from src.export_gate import ExportBlockedError
 from src.pilot import deliverable
 from src.pilot.fixtures import build_synthetic_msa
@@ -37,6 +38,33 @@ from tests.pilot_support import (
 )
 
 APPROVAL = "All deviations decided and evidenced; approving the reviewed draft."
+OWNER_LABEL = (
+    "Simulated local role: Synthetic Matter Owner B (Commercial Counsel) (syn-owner-legalops)"
+)
+SPECIALIST_LABEL = (
+    "Simulated local role: Synthetic Specialist C (Privacy Counsel) (syn-specialist-privacy)"
+)
+PROPOSAL_LABEL = "Playbook proposal, no reviewer decision yet"
+DRAFT_PREFIX = "DRAFT, not approved. "
+
+
+class FixedClock:
+    def __init__(self, now: str) -> None:
+        self.value = now
+
+    def now(self) -> str:
+        return self.value
+
+
+class TickingClock:
+    """Moves on a minute at every reading, so no two recorded times share a second."""
+
+    def __init__(self) -> None:
+        self.value = datetime(2026, 9, 7, 8, 0, tzinfo=UTC)
+
+    def now(self) -> str:
+        self.value += timedelta(minutes=1)
+        return self.value.isoformat(timespec="microseconds").replace("+00:00", "Z")
 
 
 def _failing(error: TransitionBlockedError) -> set[str]:
@@ -728,6 +756,13 @@ def test_internal_review_export_is_a_separate_marked_draft(tmp_path) -> None:
     text = (folder / "internal-review.md").read_text()
     assert text.splitlines()[2].startswith("> INTERNAL REVIEW DRAFT. Not approved.")
     assert "Not yet decided" in text
+    assert "a change not yet decided is marked as a playbook proposal" in text
+    with service.store.reading() as connection:
+        proposed_at = service._version(connection, matter_id, 2)[1]["created_at"]
+    tracked = list_tracked_changes((folder / "draft-redline.docx").read_bytes())
+    assert tracked and {(c.author, c.date) for c in tracked} == {
+        (DRAFT_PREFIX + PROPOSAL_LABEL, proposed_at[:19] + "Z")
+    }
     assert view["matter"]["state"] == "review" and not view["eligibility"]["eligible"]
     assert not (tmp_path / "exports" / matter_id / "v2" / "delivery").exists()
     with pytest.raises(PermissionDeniedError):
@@ -769,6 +804,64 @@ def test_delivery_package_contents_and_document_integrity(tmp_path) -> None:
     issues = json.loads((folder / "issue-list.json").read_text())
     assert len(issues["issues"]) == 7 and len(issues["obligations"]) == 4
     assert all(o["owner"] != "unassigned" and o["due"] != "not set" for o in issues["obligations"])
+
+
+def test_reviewed_document_names_the_deciding_role_and_decision_time(tmp_path) -> None:
+    service = make_service(tmp_path, clock=TickingClock())
+    matter_id = run_until(service, "specialist-revision", "B44")
+    with service.store.reading() as connection:
+        changes = service._changes(connection, matter_id, 3)
+    decided = [c for c in changes if c.decision in {"accepted", "amended"}]
+    labels = {OWNER: OWNER_LABEL, SPECIALIST: SPECIALIST_LABEL}
+    expected = {c.id: (labels[str(c.decided_by)], str(c.decided_at)[:19] + "Z") for c in decided}
+    assert len({date for _, date in expected.values()}) == len(decided) == 6
+    folder = tmp_path / "exports" / matter_id / "v3" / "delivery"
+    manifest = json.loads((folder / "manifest.json").read_text())
+    reviewed = (folder / "reviewed-document.docx").read_bytes()
+    tracked = list_tracked_changes(reviewed)
+    assert {(c.author, c.date) for c in tracked} == set(expected.values())
+    assert manifest["generated_at_utc"][:19] + "Z" not in {c.date for c in tracked}
+    for change in decided:  # each inserted wording carries its own decision's mark
+        if change.operation != "delete_paragraph":
+            insertion = next(
+                t for t in tracked if t.kind == "insertion" and t.text == change.final_text
+            )
+            assert (insertion.author, insertion.date) == expected[change.id]
+    subprocessors = next(c for c in tracked if "Supplier may engage the subprocessors" in c.text)
+    assert subprocessors.author == SPECIALIST_LABEL
+    assert all(c.author.startswith("Simulated local role: ") for c in tracked)
+    assert not any("Approved" in c.author or "DRAFT" in c.author for c in tracked)
+    # Payment terms were rejected: the customer's wording stays and nothing is tracked there.
+    assert not any(c.text == "thirty (30) days" or "ninety (90) days" in c.text for c in tracked)
+    source = build_synthetic_msa("specialist")
+    assert read_paragraph_texts(reviewed, "rejected") == read_paragraph_texts(source, "accepted")
+    assert "two hundred percent (200%)" in "\n".join(read_paragraph_texts(reviewed, "accepted"))
+    package = (folder / "customer-package.md").read_text()
+    assert "Each tracked change names the simulated local role that decided it" in package
+    assert "These names are not authenticated identities." in package
+
+
+def test_draft_redline_names_deciders_and_does_not_depend_on_export_time(tmp_path) -> None:
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B19")
+    folder = tmp_path / "exports" / matter_id / "v2" / "internal-review"
+    service.export_internal_review(OWNER, matter_id, revision(service, matter_id))
+    draft = (folder / "draft-redline.docx").read_bytes()
+    summary = (folder / "internal-review.md").read_bytes()
+    assert {c.author for c in list_tracked_changes(draft)} == {
+        DRAFT_PREFIX + OWNER_LABEL,
+        DRAFT_PREFIX + SPECIALIST_LABEL,
+        DRAFT_PREFIX + PROPOSAL_LABEL,  # the liability cap waits for clarification
+    }
+
+    later = PilotService(
+        service.store,
+        clock=FixedClock("2030-01-01T00:00:00.000000Z"),
+        export_root=tmp_path / "exports",
+    )
+    later.export_internal_review(OWNER, matter_id, revision(later, matter_id))
+    assert (folder / "draft-redline.docx").read_bytes() == draft
+    assert (folder / "internal-review.md").read_bytes() != summary
 
 
 def test_package_writer_refuses_data_that_did_not_pass_the_delivery_gate(tmp_path) -> None:

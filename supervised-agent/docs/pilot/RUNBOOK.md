@@ -116,6 +116,17 @@ The tracked-change engine reads and edits body-level paragraphs whose runs conta
 - Only the bytes of an edited paragraph change. Every other byte of the document and every other part of the package is copied unchanged, and the source file is never written to.
 - An inserted clause is not numbered.
 
+Each change is a Word tracked change (`w:ins` or `w:del`, deleted text as `w:delText`) with its own author and date:
+
+- In a delivery package the author is "Simulated local role: <display name> (<actor ID>)", the role that recorded the decision, and the date is when that decision was recorded, to the second (UTC). A decision carried forward to a new version keeps its role and time.
+- In an internal review draft every author starts "DRAFT, not approved.". A change nobody has decided yet, including one waiting for clarification, reads "Playbook proposal, no reviewer decision yet" and is dated when the matter version was recorded.
+- A change decided as "rejected" writes no tracked change. The customer's wording stays, and the reason is in the issue list and section 4 of the package.
+- The dates are recorded times, not the export time, so exporting the same version again gives the same document.
+- The stateless `render_annotated_docx` has no recorded reviewer. It labels every change "Legal reviewer (not authenticated)", dated from `SOURCE_DATE_EPOCH`.
+- In Word, "Accept all" gives the reviewed wording and "Reject all" gives the customer draft. Accepting a tracked change in Word is a different step from "accepted" in the pilot, which means the reviewer took the playbook proposal.
+- The names are simulated local roles, not authenticated identities. Selecting an actor is not authentication.
+- Tables, Word comments and `w:trackRevisions` are not written. The rehearsal of 2026-10-06 in `examples/pilot/rehearsal-2026-10-06/` predates these labels: each of its documents carries one label and the export time on every change.
+
 ## 9. Recovery and troubleshooting
 
 | Situation | Action |
@@ -138,4 +149,4 @@ make -C .. check
 python -m src.pilot.cli rehearse --db /tmp/pilot-rehearsal/pilot.sqlite3 --out /tmp/pilot-rehearsal/out
 ```
 
-Then open one `reviewed-document.docx` in Microsoft Word with tracked changes shown, and one `customer-package.html` in a browser.
+Then open one `reviewed-document.docx` in Microsoft Word with tracked changes shown, check that each change names its simulated local role and decision time, and open one `customer-package.html` in a browser.

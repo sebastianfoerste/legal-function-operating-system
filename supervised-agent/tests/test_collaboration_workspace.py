@@ -63,7 +63,8 @@ def test_change_set_is_bound_to_its_assessment(tmp_path) -> None:
         )
 
 
-def test_document_specific_changes_are_tracked_at_their_locator(tmp_path) -> None:
+def test_document_specific_changes_are_tracked_at_their_locator(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "1767225600")
     assessment = assess_matter(build_sample_matter())
     source = tmp_path / "source.docx"
     source.write_bytes(build_synthetic_msa("routine"))
@@ -97,6 +98,10 @@ def test_document_specific_changes_are_tracked_at_their_locator(tmp_path) -> Non
         ("deletion", "ninety (90) days"),
         ("insertion", "thirty (30) days"),
     ]
+    # A stateless call has no recorded reviewer, so the label says it is not authenticated.
+    assert {(c.author, c.date) for c in list_tracked_changes(reviewed)} == {
+        ("Legal reviewer (not authenticated)", "2026-01-01T00:00:00Z")
+    }
 
 
 def test_changed_source_document_is_refused(tmp_path) -> None:

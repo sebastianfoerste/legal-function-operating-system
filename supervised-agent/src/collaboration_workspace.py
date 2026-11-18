@@ -322,6 +322,6 @@ def render_annotated_docx(
     )
     change_timestamp = _reproducible_now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     edits = [change.to_edit() for change in change_set.changes if change.decision == "accepted"]
-    return write_reviewed_docx(
-        source, output, edits, RevisionMark(author="Legal reviewer", date=change_timestamp)
-    )
+    # No reviewer decision is recorded on this path, so the label says who it is not.
+    mark = RevisionMark(author="Legal reviewer (not authenticated)", date=change_timestamp)
+    return write_reviewed_docx(source, output, edits, mark)

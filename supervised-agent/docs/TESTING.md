@@ -51,7 +51,9 @@ python -m src.pilot.cli rehearse --db /tmp/pilot-rehearsal/pilot.sqlite3 --out /
 
 These cover persistence and restart recovery, unauthorised decisions, stale approvals,
 cross-matter access, source and playbook changes, direct export bypasses, conflicting
-edits, unresolved blockers and document integrity. `test_runtime_server_serves_the_review_room`
+edits, unresolved blockers and document integrity, and that each tracked change in a
+reviewed document carries the simulated local role and recorded time of its own decision.
+`test_runtime_server_serves_the_review_room`
 needs permission to bind a local port and is skipped where that is refused.
 
 ## Quality Expectations

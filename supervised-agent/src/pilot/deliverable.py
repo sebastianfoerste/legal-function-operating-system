@@ -56,6 +56,8 @@ class PackageData:
     chain_root: str
     actor_names: dict[str, str]
     generated_at: str
+    # When this matter version was recorded: the date of a change nobody has decided yet.
+    proposed_at: str
 
 
 _OUTCOME = {
@@ -207,7 +209,15 @@ def _sections(data: PackageData, *, draft: bool) -> list[tuple[str, list[Block]]
                     + ("proposed" if draft else "approved")
                     + " change as a tracked change against the unmodified customer draft "
                     f"(SHA-256 {hashlib.sha256(data.document).hexdigest()}). Rejecting all tracked "
-                    "changes in Word restores the customer draft exactly.",
+                    "changes in Word restores the customer draft exactly. Each tracked change "
+                    "names the simulated local role that decided it and the time that decision "
+                    "was recorded"
+                    + (
+                        "; a change not yet decided is marked as a playbook proposal"
+                        if draft
+                        else ""
+                    )
+                    + ". These names are not authenticated identities.",
                 )
             ],
         ),
@@ -387,6 +397,35 @@ def render_html(data: PackageData, *, draft: bool) -> str:
     return "".join(parts) + "\n"
 
 
+def _recorded_second(recorded: str) -> str:
+    return recorded[:19] + "Z"
+
+
+def _revision_mark(data: PackageData, change: Any, *, draft: bool) -> RevisionMark:
+    """The Word author and date of one tracked change: who decided it and when.
+
+    The times are the recorded ones, so the document does not change with the export
+    time. The names are simulated local roles, not authenticated identities.
+    """
+
+    prefix = "DRAFT, not approved. " if draft else ""
+    if change.decision in {"accepted", "amended"}:
+        decided_by = getattr(change, "decided_by", None)
+        decided_at = getattr(change, "decided_at", None)
+        if not decided_by or not decided_at:
+            raise ValueError(
+                f"{change.id}: a decided change has no recorded decider or decision time"
+            )
+        return RevisionMark(
+            author=f"{prefix}Simulated local role: {data.actor_names.get(decided_by, decided_by)}",
+            date=_recorded_second(decided_at),
+        )
+    return RevisionMark(
+        author=f"{prefix}Playbook proposal, no reviewer decision yet",
+        date=_recorded_second(data.proposed_at),
+    )
+
+
 def _redline(data: PackageData, *, draft: bool) -> bytes:
     """Apply the decided wording. A rejected change leaves the counterparty text alone."""
 
@@ -400,11 +439,17 @@ def _redline(data: PackageData, *, draft: bool) -> bytes:
             else {"accepted", "amended"}
         )
     ]
+    # Fallback only: every applicable change has its own mark below, so this is never written.
     mark = RevisionMark(
         author="DRAFT proposal, not approved" if draft else "Approved review (synthetic pilot)",
-        date=data.generated_at[:19] + "Z",
+        date=_recorded_second(data.generated_at),
     )
-    reviewed, _ = apply_tracked_changes(data.document, [c.to_edit() for c in applicable], mark)
+    reviewed, _ = apply_tracked_changes(
+        data.document,
+        [c.to_edit() for c in applicable],
+        mark,
+        marks={c.id: _revision_mark(data, c, draft=draft) for c in applicable},
+    )
     return reviewed
 
 

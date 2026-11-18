@@ -558,7 +558,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces now (D2) and the rest later (D4) | GOV.UK, Evidence (Observed) |
 | H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; built as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
-| H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **parked**: it bundles a 44 MB .NET binary (ADR 0004, Proposed) | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
+| H7. Playbook-driven redline UX | **Confirmed, built** (F2). Python-Redlines is **not adopted**: it bundles a 44 MB .NET binary (ADR 0004, Accepted); tracked changes are attributed per change in the stdlib writer | Python-Redlines wheel listing (Observed); Ironclad, LegalOn (Claimed) |
 | H8. Visual governance views | **Confirmed.** F6 and F8 are built | Temporal UI (Observed); SpotDraft (Claimed) |
 
 ## Design direction
@@ -622,8 +622,17 @@ playbook position next to each change, and the evidence next to each resolution.
    pins pydantic and its four dependencies. A model call would be a new, reviewed change
    with its own controls, not a setting. `supervised-agent/tests/test_no_external_model.py`
    checks the lockfile, the imports and `mcp.json`.
-4. **Python-Redlines** (ADR 0004). A new dependency with a bundled native binary, or an
-   extension of the stdlib DOCX writer.
+4. **Python-Redlines** (ADR 0004). **Decided on 2026-11-18:** not adopted. It would add a
+   dependency and a 44 MB bundled .NET binary that runs as a subprocess. Word tracked
+   changes stay in the stdlib writer, `supervised-agent/src/docx_redline.py`. That writer
+   already wrote `w:ins` and `w:del` with an author and a date, but with one label and the
+   export time for the whole file. Now each tracked change names the simulated local role
+   that decided it and the time that decision was recorded. In an internal draft every
+   label starts "DRAFT, not approved", and an undecided change is marked as a playbook
+   proposal. A change decided as "rejected" writes no tracked change. The names are
+   simulated local roles, not authenticated identities. Tables, Word comments and
+   `w:trackRevisions` stay out of scope. Python-Redlines comes back only through a new
+   ADR, if the owner accepts a bundled binary.
 5. **AI Act timing after the Digital Omnibus.** **Settled on 2026-10-29 by PR #15.**
    - `src/legal_function_os/raas_sources.py` now follows the amending regulation and
      records when each source was re-checked against the EUR-Lex consolidated texts. That
