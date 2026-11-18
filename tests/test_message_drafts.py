@@ -20,6 +20,7 @@ import time
 import unittest
 from pathlib import Path
 from typing import Any
+from unittest import mock
 
 import legal_function_os.message_drafts as module
 from legal_function_os import mcp_server
@@ -113,18 +114,38 @@ class ReadExport(unittest.TestCase):
         )
 
     def test_a_line_nested_too_deeply_names_its_line(self) -> None:
-        # Deep enough to exhaust the JSON reader's recursion limit on every supported Python,
-        # although the x_ key holding it is otherwise ignored.
-        deep = "[" * 100_000 + "]" * 100_000
-        text = line() + "\n" + '{"message_id": "syn-msg-2", "sender": "syn-ana", "text": "hi", "x_thread": ' + deep + "}"
-        self.assertEqual(problems(text), ["line 2: nested too deeply to read"])
-        with tempfile.TemporaryDirectory() as tmp:
-            export = Path(tmp) / "deep.jsonl"
-            export.write_text(text, encoding="utf-8")
-            code, stdout, stderr = run_cli(["message-drafts", "--input", str(export), "--out", str(Path(tmp) / "out")])
-            self.assertFalse((Path(tmp) / "out").exists())
+        # How deep the JSON reader can go depends on the interpreter and, from Python 3.14,
+        # on the machine's stack size, so the reader's RecursionError is forced here.
+        deep_line = '{"message_id": "syn-msg-2", "sender": "syn-ana", "text": "hi", "x_thread": [[[]]]}'
+        text = line() + "\n" + deep_line
+        real_loads = json.loads
+
+        def too_deep(raw: str, *args: Any, **kwargs: Any) -> Any:
+            if "[[[" in raw:
+                raise RecursionError("maximum recursion depth exceeded")
+            return real_loads(raw, *args, **kwargs)
+
+        with mock.patch.object(module.json, "loads", too_deep):
+            self.assertEqual(problems(text), ["line 2: nested too deeply to read"])
+            with tempfile.TemporaryDirectory() as tmp:
+                export = Path(tmp) / "deep.jsonl"
+                export.write_text(text, encoding="utf-8")
+                code, stdout, stderr = run_cli(["message-drafts", "--input", str(export), "--out", str(Path(tmp) / "out")])
+                self.assertFalse((Path(tmp) / "out").exists())
         self.assertEqual((code, stdout), (2, ""))
         self.assertIn(f"error: {export}: line 2: nested too deeply to read\n", stderr)
+
+    def test_a_deeply_nested_line_never_ends_in_a_traceback(self) -> None:
+        # On a real interpreter the same line is either read (its x_ key is ignored) or
+        # named as too deep, whichever this machine's stack allows; it never escapes.
+        deep = "[" * 100_000 + "]" * 100_000
+        text = line() + "\n" + '{"message_id": "syn-msg-2", "sender": "syn-ana", "text": "hi", "x_thread": ' + deep + "}"
+        try:
+            messages = read_messages(text, "x")
+        except MessageExportError as exc:
+            self.assertEqual(exc.problems, ["line 2: nested too deeply to read"])
+        else:
+            self.assertEqual([m.message_id for m in messages], ["syn-msg-1", "syn-msg-2"])
 
     def test_a_json_array_of_requests_is_pointed_at_validate(self) -> None:
         for text in ('[{"id": "REQ-1", "title": "T"}]', '  \n[\n  {"id": "REQ-1"}\n]\n'):
