@@ -106,6 +106,8 @@ There is one eligibility check, `src/export_gate.py::evaluate_export_eligibility
 
 A delivery package contains `customer-package.md`, `customer-package.html`, `reviewed-document.docx`, `issue-list.json` and `manifest.json`. The manifest is also stored in the database. A folder without a matching stored manifest is not an approved package. Sending, filing and publication are not implemented.
 
+`customer-package.html` uses the shared colour tokens, with dark mode on screen and a stacked table layout on a phone. It always prints in the light palette: each numbered section starts a new page, table headers repeat, and the synthetic-data notice and the page number print at the foot of every page. The page footer was checked in Chromium only. The packages in the dated rehearsal of 2026-10-06 were written before this and keep the older look.
+
 ## 8. Supported DOCX subset
 
 The tracked-change engine reads and edits body-level paragraphs whose runs contain text, tabs, simple line breaks and page-break markers. It replaces a span, deletes a paragraph or inserts a paragraph after an anchor.
@@ -149,4 +151,4 @@ make -C .. check
 python -m src.pilot.cli rehearse --db /tmp/pilot-rehearsal/pilot.sqlite3 --out /tmp/pilot-rehearsal/out
 ```
 
-Then open one `reviewed-document.docx` in Microsoft Word with tracked changes shown, check that each change names its simulated local role and decision time, and open one `customer-package.html` in a browser.
+Then open one `reviewed-document.docx` in Microsoft Word with tracked changes shown, check that each change names its simulated local role and decision time, and open one `customer-package.html` in a browser and in its print preview.

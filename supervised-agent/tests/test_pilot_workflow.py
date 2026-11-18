@@ -1,5 +1,6 @@
 import hashlib
 import json
+import re
 import threading
 from datetime import UTC, datetime, timedelta
 from typing import Any
@@ -9,6 +10,7 @@ import pytest
 from src.docx_redline import index_docx, list_tracked_changes, read_paragraph_texts
 from src.export_gate import ExportBlockedError
 from src.pilot import deliverable
+from src.pilot.design_tokens import PRINT_CSS, TOKENS_CSS
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.models import Actor
 from src.pilot.service import (
@@ -804,6 +806,61 @@ def test_delivery_package_contents_and_document_integrity(tmp_path) -> None:
     issues = json.loads((folder / "issue-list.json").read_text())
     assert len(issues["issues"]) == 7 and len(issues["obligations"]) == 4
     assert all(o["owner"] != "unassigned" and o["due"] != "not set" for o in issues["obligations"])
+
+
+def test_package_page_uses_shared_tokens_and_prints_the_notice_on_every_page(
+    tmp_path, monkeypatch
+) -> None:
+    seen: list[deliverable.PackageData] = []
+    render = deliverable.render_html
+
+    def spy(data: deliverable.PackageData, *, draft: bool) -> str:
+        seen.append(data)
+        return render(data, draft=draft)
+
+    monkeypatch.setattr(deliverable, "render_html", spy)
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B44")
+    folder = tmp_path / "exports" / matter_id / "v3" / "delivery"
+    page = (folder / "customer-package.html").read_text()
+    style = page.split("<style>", 1)[1].split("</style>", 1)[0]
+    assert style.startswith(TOKENS_CSS) and PRINT_CSS in style
+    own, page_rules = style[len(TOKENS_CSS) :].split(PRINT_CSS, 1)
+    assert not re.search(r"#[0-9a-fA-F]{3,6}\b", own)
+    # D3: the notice and page number at the foot of every printed page, each numbered
+    # section on a new page, in the light palette (the margin box cannot read tokens).
+    assert page_rules.startswith("@page{")
+    foot = (
+        '@bottom-center{content:"'
+        + deliverable.SYNTHETIC_NOTICE
+        + ' Page " counter(page) " of " counter(pages);'
+    )
+    assert foot in page_rules
+    colour = re.search(r"color:(#[0-9a-f]{6})\}", page_rules)
+    assert colour and f"--muted:{colour.group(1)};" in TOKENS_CSS.split("@media", 1)[0]
+    assert "section+section{break-before:page}" in page_rules
+    assert "<meta name='viewport' content='width=device-width, initial-scale=1'>" in page
+    body = page.split("<body>", 1)[1]
+    assert body.startswith("<main>") and body.rstrip().endswith("</main></body></html>")
+    # Every cell is labelled with its column header, for the stacked phone layout.
+    tables = re.findall(r"<table>.*?</table>", page)
+    assert tables
+    for table in tables:
+        headers = re.findall(r"<th>(.*?)</th>", table)
+        for row in re.findall(r"<tbody>.*?</tbody>", table)[0].split("<tr>")[1:]:
+            assert re.findall(r"<td data-label='(.*?)'>", row) == headers[: row.count("<td")]
+            assert row.count("<td") == row.count("<td data-label=") == len(headers)
+    assert "<script" not in page and "http://" not in page and "https://" not in page
+
+    draft = render(seen[-1], draft=True)
+    assert '@bottom-center{content:"' + deliverable.DRAFT_NOTICE + ' Page "' in draft
+    assert deliverable.SYNTHETIC_NOTICE not in draft.split("</style>", 1)[0]
+
+
+def test_css_string_escapes_quotes_and_refuses_line_breaks() -> None:
+    assert deliverable._css_string('Say "no" \\ </style>') == 'Say \\"no\\" \\\\ \\3c /style>'
+    with pytest.raises(ValueError):
+        deliverable._css_string("two\nlines")
 
 
 def test_reviewed_document_names_the_deciding_role_and_decision_time(tmp_path) -> None:
