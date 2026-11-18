@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import tempfile
 import unittest
 from copy import deepcopy
@@ -8,6 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 from legal_function_os.cli import main as cli_main
+from legal_function_os.design_tokens import PRINT_CSS, TOKENS_CSS
 from legal_function_os.outcome_control_tower import (
     ServiceCalendar,
     build_outcome_control_tower,
@@ -93,6 +95,33 @@ class OutcomeControlTowerTests(unittest.TestCase):
 
     def _tiles(self, tower: dict) -> dict:
         return {tile["kpi"]: tile for tile in tower["kpi_tiles"]}
+
+    def test_html_uses_shared_tokens_and_focusable_tables(self) -> None:
+        tower = build_outcome_control_tower(self.requests, self.ledger, self.config)
+        rendered = render_outcome_html(tower)
+        style = rendered.split("<style>\n", 1)[1].split("</style>", 1)[0]
+
+        self.assertTrue(style.startswith(TOKENS_CSS))
+        self.assertTrue(style.endswith(PRINT_CSS))
+        own = style[len(TOKENS_CSS) : -len(PRINT_CSS)]
+        self.assertNotRegex(own, r"#[0-9a-fA-F]{3,6}\b")
+        self.assertNotRegex(own, r"(?<![-\w])white(?![-\w])")
+        for retired in ("Inter", "rgba(", "--teal"):
+            self.assertNotIn(retired, own)
+        self.assertIn(":focus-visible", own)
+        # A table wider than a phone scrolls inside a region the keyboard can reach,
+        # named by its section heading.
+        tables = re.findall(r'(<div[^>]*>)<table>', rendered)
+        self.assertEqual(len(tables), rendered.count("<table>"))
+        self.assertEqual(len(tables), 2)
+        for wrapper in tables:
+            label = re.fullmatch(
+                r'<div class="table-scroll" role="region" aria-labelledby="([a-z-]+)" tabindex="0">',
+                wrapper,
+            )
+            assert label is not None, wrapper
+            self.assertIn(f'<h2 id="{label.group(1)}">', rendered)
+        self.assertNotIn("overflow:auto", own)
 
     def test_kpi_tiles_show_target_delta_as_of_and_source(self) -> None:
         tower = build_outcome_control_tower(self.requests, self.ledger, self.config)

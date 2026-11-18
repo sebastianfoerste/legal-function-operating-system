@@ -5,16 +5,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legal Function Outcome Control Tower</title>
 <style>
-:root { color-scheme: light; --ink:#17202a; --muted:#5c6773; --line:#dfe5ea; --panel:#f7f9fa; --accent:#134e4a; --ok:#2f6b3a; --bad:#a12622; }
+:root{color-scheme:light dark;
+--bg:#fbf9f7;--surface:#ffffff;--panel:#f5f0ec;--ink:#211d1c;--muted:#6e6462;
+--line:#e2dad4;--pill-line:#8f847f;--accent:#8a2d2b;--accent-soft:#f2e4e2;--on-accent:#ffffff;
+--ok:#2f6b3a;--ok-bg:#eaf3ec;--warn:#8a4b08;--warn-bg:#fbf1e4;--bad:#a12622;--bad-bg:#fbeceb;
+--focus:#8a2d2b;
+--font:system-ui,-apple-system,"Segoe UI",sans-serif;--font-head:Georgia,"Times New Roman",serif;
+--font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+@media (prefers-color-scheme:dark){:root{
+--bg:#191413;--surface:#221c1a;--panel:#2a2321;--ink:#ede7e4;--muted:#a89c98;
+--line:#38302d;--pill-line:#857873;--accent:#d97d75;--accent-soft:#3a2523;--on-accent:#191413;
+--ok:#7ccf8e;--ok-bg:#1d2a20;--warn:#e8b06a;--warn-bg:#2e2416;--bad:#f08a84;--bad-bg:#33201f;
+--focus:#e8a09a}}
 * { box-sizing:border-box; }
-body { margin:0; font:15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; color:var(--ink); background:#eef2f3; }
+body { margin:0; font:15px/1.5 var(--font); color:var(--ink); background:var(--bg); }
 main { max-width:1180px; margin:0 auto; padding:42px 24px 64px; }
-h1 { margin:0; font:700 35px/1.15 Georgia, serif; }
+h1 { margin:0; font:700 35px/1.15 var(--font-head); }
 h2 { margin:34px 0 14px; font-size:19px; }
 .eyebrow { color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:12px; }
 .muted { color:var(--muted); }
 .metrics { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0; }
-.metric, section { background:white; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(20,40,50,.05); }
+.metric, section { background:var(--surface); border:1px solid var(--line); border-radius:10px; }
 .metric { padding:18px; min-width:0; overflow-wrap:anywhere; }
 .metric strong { display:block; font-size:28px; }
 .metric span { color:var(--muted); }
@@ -23,16 +34,27 @@ h2 { margin:34px 0 14px; font-size:19px; }
 .metric .kpi-status.on { color:var(--ok); }
 .metric .kpi-status.off { color:var(--bad); }
 .metric .kpi-meta { display:block; margin-top:6px; font-size:12.5px; }
-section { padding:22px; margin-top:18px; overflow:auto; }
+section { padding:22px; margin-top:18px; }
+.table-scroll { overflow-x:auto; }
 table { width:100%; border-collapse:collapse; min-width:760px; }
 th, td { padding:10px 9px; border-bottom:1px solid var(--line); text-align:left; }
 th { color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
 ul { padding-left:20px; }
 li { margin:12px 0; }
-code { background:var(--panel); padding:2px 5px; border-radius:4px; }
+code { font-family:var(--font-mono); background:var(--panel); padding:2px 5px; border-radius:4px; }
 details { margin-top:24px; }
+pre { font-family:var(--font-mono); white-space:pre-wrap; overflow-wrap:anywhere; }
+:focus-visible { outline:3px solid var(--focus); outline-offset:2px; }
 @media (max-width:900px) { .metrics { grid-template-columns:repeat(2,minmax(0,1fr)); } }
 @media (max-width:480px) { .metrics { grid-template-columns:1fr; } }
+@media print{:root{color-scheme:light;
+--bg:#fbf9f7;--surface:#ffffff;--panel:#f5f0ec;--ink:#211d1c;--muted:#6e6462;
+--line:#e2dad4;--pill-line:#8f847f;--accent:#8a2d2b;--accent-soft:#f2e4e2;--on-accent:#ffffff;
+--ok:#2f6b3a;--ok-bg:#eaf3ec;--warn:#8a4b08;--warn-bg:#fbf1e4;--bad:#a12622;--bad-bg:#fbeceb;
+--focus:#8a2d2b;
+--font:system-ui,-apple-system,"Segoe UI",sans-serif;--font-head:Georgia,"Times New Roman",serif;
+--font-mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace}
+*{box-shadow:none!important}thead{display:table-header-group}tr,li,article,.metric,.issue{break-inside:avoid}h1,h2,h3{break-after:avoid}}
 </style>
 </head>
 <body>
@@ -44,10 +66,10 @@ details { margin-top:24px; }
 <div class="metric"><span class="metric-title">Completed requests</span><strong>6/8</strong><span class="kpi-status on">✓ +5.0 pp against target 70.0%: on target</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Service-event ledger, 52 events over 8 requests; target from the outcome config.</span></div><div class="metric"><span class="metric-title">Response SLA attainment</span><strong>87.5%</strong><span class="kpi-status off">✗ -2.5 pp against target 90.0%: below target</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Service-event ledger, 52 events over 8 requests; first response in business hours against each service level; target from the outcome config.</span></div><div class="metric"><span class="metric-title">Stalled requests</span><strong>2</strong><span class="kpi-status off">✗ +2 against target 0: above target</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Service-event ledger, 52 events over 8 requests; open and inactive for 16 business hours or more; target from the outcome config.</span></div><div class="metric"><span class="metric-title">Binding queue</span><strong>Commercial</strong><span class="kpi-status ">No target set</span><span class="kpi-meta">As of 2026-07-17T16:00:00+00:00. Queue calibration; most stalled, then most open requests.</span></div>
 </div>
 <section><h2>Stalled action queue</h2><ul><li><strong>REQ-1002</strong> DPA: US support sub-processor (synthetic)<br><span>Privacy · waiting_on_business · 35.00 business hours inactive</span><br>Confirm the next business input and owner.</li><li><strong>REQ-1001</strong> Enterprise MSA: Globex (synthetic)<br><span>Commercial · work_started · 26.00 business hours inactive</span><br>Review ownership, priority, and the next controlled step.</li></ul></section>
-<section><h2>Queue calibration</h2><table><thead><tr><th>Queue</th><th>Requests</th><th>Open</th><th>Stalled</th><th>Planned points</th><th>Observed minutes</th><th>Minutes / point</th></tr></thead><tbody><tr><td>Commercial</td><td>3</td><td>1</td><td>1</td><td>14</td><td>645</td><td>46.07</td></tr><tr><td>Corporate / GC</td><td>1</td><td>0</td><td>0</td><td>10</td><td>365</td><td>36.5</td></tr><tr><td>Employment</td><td>1</td><td>0</td><td>0</td><td>3</td><td>115</td><td>38.33</td></tr><tr><td>Litigation</td><td>1</td><td>0</td><td>0</td><td>13</td><td>340</td><td>26.15</td></tr><tr><td>Privacy</td><td>2</td><td>1</td><td>1</td><td>17</td><td>465</td><td>27.35</td></tr></tbody></table></section>
+<section><h2 id="calibration-h">Queue calibration</h2><div class="table-scroll" role="region" aria-labelledby="calibration-h" tabindex="0"><table><thead><tr><th>Queue</th><th>Requests</th><th>Open</th><th>Stalled</th><th>Planned points</th><th>Observed minutes</th><th>Minutes / point</th></tr></thead><tbody><tr><td>Commercial</td><td>3</td><td>1</td><td>1</td><td>14</td><td>645</td><td>46.07</td></tr><tr><td>Corporate / GC</td><td>1</td><td>0</td><td>0</td><td>10</td><td>365</td><td>36.5</td></tr><tr><td>Employment</td><td>1</td><td>0</td><td>0</td><td>3</td><td>115</td><td>38.33</td></tr><tr><td>Litigation</td><td>1</td><td>0</td><td>0</td><td>13</td><td>340</td><td>26.15</td></tr><tr><td>Privacy</td><td>2</td><td>1</td><td>1</td><td>17</td><td>465</td><td>27.35</td></tr></tbody></table></div></section>
 <section><h2>Value proxies</h2><p>All monetary figures are assumption-based management proxies over synthetic effort records. They are not realised savings or accounting conclusions.</p>
 <p><strong>EUR 3673.33</strong> estimated labour-efficiency value · <strong>EUR 5005.00</strong> estimated external-spend avoidance</p></section>
-<section><h2>Request outcomes</h2><table><thead><tr><th>Request</th><th>Queue</th><th>State</th><th>Gross h</th><th>Business wait h</th><th>Controlled h</th><th>Response SLA</th><th>Resolution SLA</th></tr></thead><tbody><tr><td>REQ-1001</td><td>Commercial</td><td>work_started</td><td>81.00</td><td>5.00</td><td>76.00</td><td>met</td><td>open</td></tr><tr><td>REQ-1002</td><td>Privacy</td><td>waiting_on_business</td><td>45.00</td><td>35.00</td><td>10.00</td><td>met</td><td>open</td></tr><tr><td>REQ-1003</td><td>Commercial</td><td>completed</td><td>3.00</td><td>0.00</td><td>3.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1004</td><td>Privacy</td><td>completed</td><td>22.00</td><td>0.00</td><td>22.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1005</td><td>Corporate / GC</td><td>completed</td><td>34.50</td><td>0.00</td><td>34.50</td><td>met</td><td>breached</td></tr><tr><td>REQ-1006</td><td>Commercial</td><td>completed</td><td>5.00</td><td>0.00</td><td>5.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1007</td><td>Litigation</td><td>completed</td><td>36.00</td><td>0.00</td><td>36.00</td><td>breached</td><td>breached</td></tr><tr><td>REQ-1008</td><td>Employment</td><td>completed</td><td>7.00</td><td>0.00</td><td>7.00</td><td>met</td><td>met</td></tr></tbody></table></section>
+<section><h2 id="outcomes-h">Request outcomes</h2><div class="table-scroll" role="region" aria-labelledby="outcomes-h" tabindex="0"><table><thead><tr><th>Request</th><th>Queue</th><th>State</th><th>Gross h</th><th>Business wait h</th><th>Controlled h</th><th>Response SLA</th><th>Resolution SLA</th></tr></thead><tbody><tr><td>REQ-1001</td><td>Commercial</td><td>work_started</td><td>81.00</td><td>5.00</td><td>76.00</td><td>met</td><td>open</td></tr><tr><td>REQ-1002</td><td>Privacy</td><td>waiting_on_business</td><td>45.00</td><td>35.00</td><td>10.00</td><td>met</td><td>open</td></tr><tr><td>REQ-1003</td><td>Commercial</td><td>completed</td><td>3.00</td><td>0.00</td><td>3.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1004</td><td>Privacy</td><td>completed</td><td>22.00</td><td>0.00</td><td>22.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1005</td><td>Corporate / GC</td><td>completed</td><td>34.50</td><td>0.00</td><td>34.50</td><td>met</td><td>breached</td></tr><tr><td>REQ-1006</td><td>Commercial</td><td>completed</td><td>5.00</td><td>0.00</td><td>5.00</td><td>met</td><td>met</td></tr><tr><td>REQ-1007</td><td>Litigation</td><td>completed</td><td>36.00</td><td>0.00</td><td>36.00</td><td>breached</td><td>breached</td></tr><tr><td>REQ-1008</td><td>Employment</td><td>completed</td><td>7.00</td><td>0.00</td><td>7.00</td><td>met</td><td>met</td></tr></tbody></table></div></section>
 <section><h2>Review gate</h2><p>A human legal-operations owner must validate event completeness, calendar settings, effort records, value assumptions, and every staffing or external-counsel decision.</p></section>
 <details><summary>Machine-readable snapshot</summary><pre>{
   &quot;schema&quot;: &quot;legal-function-os.outcome-control-tower.v1&quot;,
