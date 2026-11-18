@@ -23,9 +23,9 @@ commercial material, personal data or production matter files through this
 repository. Source references that begin with `client:`, `candidate:`,
 `privileged:` or `confidential:` are deliberately treated as blockers.
 
-External model processing is disabled by default. Do not add API keys or route
-matter facts to external systems unless a separate, explicit review decision has
-approved that use for non-sensitive data.
+The agent contains no external model client and makes no outbound network calls.
+Adding one, or routing matter facts to an external system, would be a separate change
+with its own review decision, for non-sensitive data only; it is not a setting.
 
 Generated packets, manifests and registers are draft reviewer artifacts. They
 are not legal advice, legal opinions, signatures or external communications.

@@ -67,6 +67,7 @@ All notable changes to this project are recorded here. The format follows
 - The weekly repository-traffic snapshot workflow added in 0.3.0.
 - Internal material from `supervised-agent/docs/`: agent plans and the development checklist `tasks.md`.
 - `supervised-agent/.github/` (the `ci`, `pre-commit` and `release-gates` workflows, `dependabot.yml` and `CODEOWNERS`) and `supervised-agent/.pre-commit-config.yaml`. GitHub runs workflows only from the repository root, so they never ran; the root CI `agent` job runs the agent's gate with pinned tools and browser tests. `tests/test_agent_gate.py` keeps them out (owner decision 2).
+- The supervised agent's optional Gemini client (`src/gemini_client.py`, used only by its own test), the unused Gemini model list `src/config.py`, `.env.example` and the `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` switch. `google-genai` and the unused `python-dotenv` left the agent's runtime lockfile, which now pins pydantic and its four dependencies (21 fewer pins). `supervised-agent/tests/test_no_external_model.py` keeps a model or network client out (owner decision 3).
 
 ### Fixed
 

@@ -603,8 +603,13 @@ playbook position next to each change, and the evidence next to each resolution.
    export could not pass its own pilot tests without the parent package. The agent's
    `dependabot.yml`, `CODEOWNERS` and `.pre-commit-config.yaml` were removed with them for
    the same reason. `tests/test_agent_gate.py` keeps it that way.
-3. **`supervised-agent/src/gemini_client.py`.** It is used only by its own test. The
-   decision path keeps `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` false.
+3. **`supervised-agent/src/gemini_client.py`.** **Decided on 2026-11-18: removed.** The
+   agent has no external model client. The client, its test, the unused Gemini model list
+   `src/config.py`, `.env.example` and the `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED` switch are
+   gone. `google-genai` and the unused `python-dotenv` left the runtime lockfile, which now
+   pins pydantic and its four dependencies. A model call would be a new, reviewed change
+   with its own controls, not a setting. `supervised-agent/tests/test_no_external_model.py`
+   checks the lockfile, the imports and `mcp.json`.
 4. **Python-Redlines** (ADR 0004). A new dependency with a bundled native binary, or an
    extension of the stdlib DOCX writer.
 5. **AI Act timing after the Digital Omnibus.** **Settled on 2026-10-29 by PR #15.**
