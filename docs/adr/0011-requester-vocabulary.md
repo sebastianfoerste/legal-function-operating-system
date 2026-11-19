@@ -44,7 +44,10 @@ aligning the two, German labels included. Read side by side, they do not line up
 - **`blocked` means different things.** The core sets it when a request's urgency is
   `blocker` (priority `P1_blocker`) or its response SLA was missed. In
   `legal-workflow-controls.v1` the pilot reports `blocked` for a matter that a charter
-  exclusion or a blocked source holds; such a matter stays in triage.
+  exclusion or a blocked source holds. `complete_triage` refuses such a matter, so a
+  matter held when it reaches triage stays there. A matter that an amendment after triage
+  brings under a charter exclusion moves to `revised`, cannot be exported, and stays
+  `blocked` in the contract until a new version removes the exclusion.
 - **Nothing in the repository reads the shared space** except its tests. No page renders
   it, no schema in `contracts/` describes it, no MCP tool returns it and `make demo` does
   not write it. It is JSON a team can use.
@@ -76,8 +79,11 @@ aligning the two, German labels included. Read side by side, they do not line up
 5. **A pin test.** `tests/test_requester_vocabulary.py`, in the core's test suite, reads
    `requester_status.py` by path, without the agent's dependencies, and checks:
    - the six ids and their order;
-   - that every state in the pilot's `State` literal maps to one of them, that each is
-     reached, and that `closed`, `declined` and `duplicate` map to `closed`;
+   - the stage of each state in the pilot's `State` literal: `intake` is `draft`,
+     `triage` and `assignment` are `received`, `review`, `revision_requested` and
+     `revised` are `in_review`, `approved` is `approved`, `ready_for_delivery` is
+     `ready`, and `closed`, `declined` and `duplicate` are `closed`, so each of the six
+     is reached;
    - that the core's `in_review` is one of them and its `blocked` is not;
    - both German sentences, exactly.
 
@@ -88,10 +94,11 @@ aligning the two, German labels included. Read side by side, they do not line up
 - No code changes. The pilot's requester view, `legal-function-os.shared-space.v1` and
   `legal-workflow-controls.v1` are unchanged, and `make demo` writes the same examples.
 - Three existing behaviours are recorded here, not changed:
-  - The pilot shows a held matter, `blocked` in `legal-workflow-controls.v1`, to its
-    requester as "Received by legal", with "Legal has the request and is assigning a
-    reviewer.", because the matter stays in triage. Scenario 3's `PM-BLOCKED-003` shows
-    this.
+  - The pilot shows a matter held in triage, `blocked` in `legal-workflow-controls.v1`,
+    to its requester as "Received by legal", with "Legal has the request and is
+    assigning a reviewer.". Scenario 3's `PM-BLOCKED-003` shows this. A matter held
+    after triage shows its ordinary stage, such as "In review", while the contract says
+    `blocked`.
   - The core shares the owner queue and the response SLA in hours with requesters, behind
     the documented approval. The pilot's requester view carries neither.
   - The core reports `blocked` for a request whose urgency is `blocker` or whose response

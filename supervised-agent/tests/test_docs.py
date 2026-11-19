@@ -61,3 +61,7 @@ def test_contributing_names_only_make_targets_that_exist():
     named = re.findall(r"^make ([a-z][a-z-]*)", text, re.M)
     assert named and set(named) <= targets, set(named) - targets
     assert "scenario-docs" in text
+    # The worked example has a regenerator, and a test requires the committed copy to be
+    # current (tests/test_evidence_record.py), so the guide names it.
+    assert "python -m src.pilot.evidence.example" in text
+    assert "nothing regenerates" not in " ".join(text.split())

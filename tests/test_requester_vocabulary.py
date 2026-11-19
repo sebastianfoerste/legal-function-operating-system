@@ -80,6 +80,23 @@ class RequesterVocabularyTests(unittest.TestCase):
         # Every final state, the two legal sets in triage (ADR 0010) too, is closed.
         for state in ("closed", "declined", "duplicate"):
             self.assertEqual(stages[state], "closed", state)
+        # Each state's own stage, so an approved matter is never shown "Ready for you".
+        self.assertEqual(
+            stages,
+            {
+                "intake": "draft",
+                "triage": "received",
+                "assignment": "received",
+                "review": "in_review",
+                "revision_requested": "in_review",
+                "revised": "in_review",
+                "approved": "approved",
+                "ready_for_delivery": "ready",
+                "closed": "closed",
+                "declined": "closed",
+                "duplicate": "closed",
+            },
+        )
 
     def test_the_core_in_review_is_the_pilot_stage(self) -> None:
         status = _core_entry()["status"]

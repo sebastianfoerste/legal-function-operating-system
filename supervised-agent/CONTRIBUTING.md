@@ -16,12 +16,14 @@ make install
 make test     # must pass before any PR
 make check    # the full gate: Ruff, Black, mypy, the tests and a compile check
 python -m src.pilot.cli scenario-docs   # after changing a scenario in examples/pilot/scenarios/
+python -m src.pilot.evidence.example    # after changing src/pilot/evidence/; rewrites examples/pilot/synthetic-worked-example/
 ```
 
 `scenario-docs` regenerates the facilitator scripts in `docs/pilot/scenarios/` and the
 synthetic DOCX fixtures in `examples/pilot/documents/` from the scenario files; commit what
-it changes. There is no `make demo` here: the other runs under `examples/` are committed
-snapshots, which nothing regenerates.
+it changes. There is no `make demo` here: `python -m src.pilot.evidence.example` rewrites
+the synthetic worked example, which a test checks is current; the other runs under
+`examples/` are committed snapshots.
 
 ## Reporting an issue
 

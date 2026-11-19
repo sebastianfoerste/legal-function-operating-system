@@ -44,7 +44,7 @@ A matter is eligible when all of the following hold. The software checks each co
 - Any client, candidate, privileged or confidential source material. Those source prefixes stop document processing.
 - Drafts whose relevant clauses sit in tables, text boxes, headers, footnotes or content controls, unless a person records how that content was reviewed.
 
-An excluded matter stays in triage. The matter owner can decline it with a reason the requester sees, the requester can withdraw it, or a new version can remove the cause. The software never declines a matter or proposes a reason; a person types it.
+A matter excluded at triage stays in triage. The matter owner can decline it with a reason the requester sees, the requester can withdraw it, or a new version can remove the cause. A matter that an amendment after triage brings under an exclusion moves to `revised` and is held from export: it can be withdrawn or corrected by a new version, but not declined, because `decline` works only in triage. The software never declines a matter or proposes a reason; a person types it.
 
 ## Roles and responsibilities
 

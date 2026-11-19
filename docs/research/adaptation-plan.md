@@ -537,7 +537,8 @@ playbook position next to each change, and the evidence next to each resolution.
     type, title, passage and source as the file gives them. A text changed after its
     review no longer matches, and the message names the digest it has now.
   - Every problem is reported at once with its place, and nothing is written: a missing
-    or stale record, a review recorded by the person who prepared the text (compared
+    or stale record, a text that reads empty on the page (blank, or only invisible
+    characters), a review recorded by the person who prepared the text (compared
     after folding case, spacing and invisible characters), a date that is not one, a
     link or unpaired surrogate, a passage over 800 characters, more than three resources
     for a type, a repeated id, look-alike titles in a type, or an unknown key. A resource
@@ -916,7 +917,8 @@ Five small corrections made after the decisions above. None needed the owner.
    MCP-style tools and says that `supervised-agent/mcp.json` starts the runtime canary, an
    HTTP server on a loopback address, not an MCP stdio server; whether to keep, remove or
    replace that file is the owner's call, and a stdio server would add the `mcp` SDK to the
-   agent as a new dependency. The agent's contributing guide names `make check` and
-   `scenario-docs` instead of a `make demo` it does not have. The Round 3 research note has
-   a dated update saying its parked patterns are built, and the root `.gitignore` no
-   longer excepts the removed `.env.example`.
+   agent as a new dependency. The agent's contributing guide names `make check`,
+   `scenario-docs` and `python -m src.pilot.evidence.example`, which rewrites the
+   synthetic worked example a test requires to be current, instead of a `make demo` it
+   does not have. The Round 3 research note has a dated update saying its parked patterns
+   are built, and the root `.gitignore` no longer excepts the removed `.env.example`.

@@ -53,6 +53,8 @@ What the repository has does not meet those conditions:
 4. **Every problem is reported at once, with its place, and nothing is written**, as for
    a question file:
    - a resource with no review record, or a record with a field missing;
+   - a text that reads empty on the page: blank, or only invisible characters such as a
+     zero-width space;
    - a digest that is not one, or that does not match the text;
    - `by` naming the person in `prepared_by`, compared after folding case, compatibility
      forms (NFKC), runs of whitespace and invisible characters;
