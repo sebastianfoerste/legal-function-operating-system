@@ -167,5 +167,17 @@ class ResearchRulesTest(unittest.TestCase):
                 self.assertIsNone(re.search(r"\b[Rr]ules? \d", text))
 
 
+class FollowUpsTest(unittest.TestCase):
+    def test_the_plan_ends_with_the_follow_ups_and_leaves_built_items_to_their_specs(self) -> None:
+        text = (RESEARCH / "adaptation-plan.md").read_text(encoding="utf-8")
+        headings = re.findall(r"^## (.+)$", text, re.M)
+        self.assertEqual(headings[-1], "Follow-ups after the owner decisions (2026-11-19)")
+        follow_ups = text.split("\n## Follow-ups after the owner decisions (2026-11-19)\n", 1)[1]
+        self.assertEqual(re.findall(r"^(\d+)\. ", follow_ups, re.M), ["1", "2", "3", "4", "5"])
+        # F3, F9a and F10 record their own follow-ups in their specs and ADRs.
+        for name in ("F3", "F9a", "F10", "ADR 0010", "ADR 0011", "ADR 0012"):
+            self.assertNotIn(name, follow_ups)
+
+
 if __name__ == "__main__":
     unittest.main()

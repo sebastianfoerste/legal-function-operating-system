@@ -739,6 +739,8 @@ playbook position next to each change, and the evidence next to each resolution.
    assignment directly into the store. These rules compare actor IDs, not people. A
    per-start secret was considered and not built: anyone at the machine could still read
    it, and it would look like a sign-in. Selecting a role is still not authentication.
+   Since 2026-11-19 no command can change a registered actor either, which narrows control
+   3 ([follow-up 2](#follow-ups-after-the-owner-decisions-2026-11-19)).
 2. **`supervised-agent/.github/workflows/`** (`ci.yml`, `pre-commit.yml`,
    `release-gates.yml`). **Decided on 2026-11-18: deleted.** GitHub runs workflows only
    from the root `.github/workflows`, so these never ran here. The root CI's `agent` job
@@ -883,3 +885,38 @@ playbook position next to each change, and the evidence next to each resolution.
         so EUR 250,000 is `250k-1m` (`>1m` means over EUR 1 million);
       - the pilot's label reads "Changes the other party asked for".
     - What remains a lawyer's call in a given case is listed at the end of that memo.
+
+## Follow-ups after the owner decisions (2026-11-19)
+
+Five small corrections made after the decisions above. None needed the owner.
+
+1. **The agent's word filter is removed.** `supervised-agent/src/intelligence_core.py`
+   replaced words such as "leverage" and "delve" in any text it was given. Its only
+   caller was the Gemini client removed under decision 3. Applied to a contract it would
+   have rewritten defined terms ("Leverage Ratio" became "use Ratio"), so it and its test
+   were removed rather than wired in elsewhere.
+2. **A registered pilot actor cannot be changed.** `register_actor` used to replace an
+   actor without writing an event, and the export gate reads the author of each recorded
+   decision as stored now: re-registering the General Counsel approver with a lower tier
+   made a recorded approval stop counting. It now refuses a change to an actor's display
+   name, role, specialty, approval tier or availability. Registering the same actor again
+   keeps its onboarding, so `pilot seed` no longer resets it. The approval-refusal tests
+   write their promotions directly into the store. Control 3 in `IDENTITY_CONTROLS.md` is
+   narrower but stays open ([ADR 0008](../adr/0008-pilot-local-hardening.md), amended).
+3. **The research documents quote rules in their own words.** The design teardown and this
+   plan named rules by numbers that no rule list uses. The landscape's counts now follow
+   the matrix: in 15 rows every capability cell is unknown, so 52 rows hold capability
+   data. Flank, Josef, Eudia and GC AI are listed as adjacent products, as the matrix has
+   them. `tests/test_research_docs.py` recomputes the counts and rings from the matrix.
+4. **CI rejects a dirty tree after the agent gate.** The CI agent job ends with a step that
+   fails if the agent gate or the browser tests changed a tracked file or left an untracked
+   one; `tests/test_agent_gate.py` keeps it the last step.
+5. **Stale statements are corrected.** The agent reports `"external_processing": "none"`,
+   because no setting can turn external processing on. The agent README counts nine
+   MCP-style tools and says that `supervised-agent/mcp.json` starts the runtime canary, an
+   HTTP server on a loopback address, not an MCP stdio server; whether to keep, remove or
+   replace that file is the owner's call, and a stdio server would add the `mcp` SDK to the
+   agent as a new dependency. The agent's contributing guide names `make check` and
+   `scenario-docs` instead of a `make demo` it does not have. The Round 3 research note has
+   a dated update saying its parked patterns are built, and the root `.gitignore` no
+   longer excepts the removed `.env.example`.
