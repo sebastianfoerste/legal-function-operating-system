@@ -12,8 +12,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -225,6 +227,38 @@ def _require_text(value: str | None, minimum: int, label: str) -> str:
     text = " ".join((value or "").split())
     if len(text) < minimum:
         raise InvalidCommandError(f"{label} must be at least {minimum} characters")
+    return text
+
+
+# Default-ignorable code points outside general category Cf: a combining grapheme joiner,
+# Hangul fillers, Khmer and Mongolian inherent vowels and selectors, variation selectors
+# and the reserved ones. None is drawn, or each draws a blank. A fixed list, so what counts
+# does not depend on the Unicode tables of the Python version.
+_IGNORABLE = re.compile(
+    "[\u034f\u115f\u1160\u17b4\u17b5\u180b-\u180f\u2065\u3164\ufe00-\ufe0f\uffa0"
+    "\ufff0-\ufff8\U000e0000-\U000e0fff]"
+)
+
+
+def _visible_length(text: str) -> int:
+    """The characters of ``text`` a reader sees.
+
+    Format characters (category Cf, such as a zero-width space or a word joiner) and the
+    other default-ignorable code points are not counted, and a run of whitespace counts
+    as one space.
+    """
+
+    visible = _IGNORABLE.sub("", "".join(c for c in text if unicodedata.category(c) != "Cf"))
+    return len(" ".join(visible.split()))
+
+
+def _require_visible_text(value: str | None, minimum: int, label: str) -> str:
+    """Text that someone else reads: only the characters they see count toward the
+    minimum, and the text is kept as typed, with runs of whitespace collapsed."""
+
+    text = " ".join((value or "").split())
+    if _visible_length(text) < minimum:
+        raise InvalidCommandError(f"{label} must be at least {minimum} visible characters")
     return text
 
 
@@ -839,9 +873,9 @@ class PilotService:
         )
 
     def _ev_closure_reason_recorded(self, ctx: _Ctx) -> tuple[bool, str]:
-        reason = " ".join(str(ctx.extra.get("reason") or "").split())
-        if len(reason) < 20:
-            return False, f"the reason has {len(reason)} characters; at least 20 are needed"
+        seen = _visible_length(str(ctx.extra.get("reason") or ""))
+        if seen < 20:
+            return False, f"the reason has {seen} visible characters; at least 20 are needed"
         return True, "reason recorded; the requester sees it"
 
     def _ev_duplicate_original_visible(self, ctx: _Ctx) -> tuple[bool, str]:
@@ -1085,22 +1119,23 @@ class PilotService:
         try:
             with self.store.transaction() as connection:
                 ctx = self._context(connection, actor_id, matter_id, stamp or Stamp())
+                assigned = self._assigned(connection, matter_id)
+                on_matter = any(ctx.actor.actor_id in ids for ids in assigned.values())
+                # A triage verb on a matter in triage, which claims it, is the only action
+                # open to someone who is not yet on the matter. Outside triage, a closed
+                # matter included, they are told only that they are not on it, not which
+                # state it is in.
+                claiming = command in TRIAGE_CLAIM_COMMANDS and ctx.matter["state"] == "triage"
+                if not on_matter and not claiming:
+                    raise PermissionDeniedError(
+                        f"{ctx.actor.actor_id} is not assigned to matter {matter_id}"
+                    )
                 if ctx.matter["state"] in TERMINAL_STATES:
                     detail = "the matter is closed"
                     if ctx.matter["state"] != "closed":
                         detail += f" ({ctx.matter['state']})"
                     raise TransitionBlockedError(
                         command, [{"name": "state", "ok": False, "detail": detail}]
-                    )
-                assigned = self._assigned(connection, matter_id)
-                on_matter = any(ctx.actor.actor_id in ids for ids in assigned.values())
-                # A triage verb on a matter in triage, which claims it, is the only action
-                # open to someone who is not yet on the matter. Outside triage they are
-                # told only that they are not on it, not which state it is in.
-                claiming = command in TRIAGE_CLAIM_COMMANDS and ctx.matter["state"] == "triage"
-                if not on_matter and not claiming:
-                    raise PermissionDeniedError(
-                        f"{ctx.actor.actor_id} is not assigned to matter {matter_id}"
                     )
                 if ctx.matter["revision"] != expected_revision:
                     raise StaleSubmissionError(expected_revision, ctx.matter["revision"])
@@ -1322,7 +1357,7 @@ class PilotService:
                     ],
                 )
             self._check_claim(ctx)
-            text = _require_text(str(reason or ""), 20, "snooze reason")
+            text = _require_visible_text(str(reason or ""), 20, "snooze reason")
             clock, now, events = self._snooze_now(ctx)
             if active_snooze(events, clock, now):
                 raise InvalidCommandError("the matter is already snoozed; end that snooze first")
@@ -1349,7 +1384,7 @@ class PilotService:
                     )
                 payload = {"until": utc_text(moment)}
             else:
-                payload = {"question": _require_text(wanted_question, 10, "question")}
+                payload = {"question": _require_visible_text(wanted_question, 10, "question")}
             self._claim(ctx)
             self._event(ctx, "matter_snoozed", text, payload)
 
@@ -1364,7 +1399,9 @@ class PilotService:
             snooze = active_snooze(events, clock, now)
             if snooze is None or not snooze["question"]:
                 raise InvalidCommandError("no snooze question is waiting for an answer")
-            self._event(ctx, "snooze_answered", _require_text(str(answer or ""), 10, "answer"))
+            self._event(
+                ctx, "snooze_answered", _require_visible_text(str(answer or ""), 10, "answer")
+            )
 
         return self._execute(
             actor_id, matter_id, expected_revision, "answer_snooze", handler, stamp

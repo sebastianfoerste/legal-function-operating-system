@@ -48,20 +48,26 @@ Four constraints shape it here:
    `mark_duplicate` moves it to `duplicate`. Like `closed`, both accept no further
    command. The closing outcome is recorded as `declined_by_legal` or
    `duplicate_of_another_matter`.
-2. **Evidence.** Both need `closure_reason_recorded`: a reason of at least 20 characters
-   after spaces are collapsed. `mark_duplicate` also needs `duplicate_original_visible`:
-   the original is another matter the owner can see (`_can_read`), and it is not itself a
-   duplicate. An unknown ID and one the owner may not see get the same refusal, so the
-   refusal says nothing about matters outside the owner's view.
+2. **Evidence.** Both need `closure_reason_recorded`: a reason of at least 20 visible
+   characters. A run of whitespace counts as one, and characters that draw nothing are
+   not counted: format characters (general category Cf, such as a zero-width space or a
+   word joiner) and, from a fixed list, the other default-ignorable code points (such as
+   a combining grapheme joiner or a Hangul filler). The reason is kept as typed.
+   `mark_duplicate` also needs `duplicate_original_visible`: the original is another
+   matter the owner can see (`_can_read`), and it is not itself a duplicate. An unknown
+   ID and one the owner may not see get the same refusal, so the refusal says nothing
+   about matters outside the owner's view.
 3. **A snooze is not a state.** `snooze` on a matter in triage writes one hash-chained
-   event, `matter_snoozed`, with a reason of at least 20 characters and exactly one of:
+   event, `matter_snoozed`, with a reason of at least 20 visible characters and exactly
+   one of:
    - `until`: a date and time with a time zone, later than now on the command's clock
      and at most 30 days ahead, stored in UTC;
-   - `question`: at least 10 characters, for the requester.
+   - `question`: at least 10 visible characters, for the requester.
 
    The matter stays in triage. A second snooze is refused while one runs.
-4. **How a snooze ends.** The requester answers its question with `answer_snooze`, or the
-   owning matter owner runs `end_snooze`; each writes its own event. A triage verb
+4. **How a snooze ends.** The requester answers its question with `answer_snooze`, in at
+   least 10 visible characters, or the owning matter owner runs `end_snooze`; each writes
+   its own event. A triage verb
    (`complete_triage`, `decline`, `mark_duplicate`) or a withdrawal also ends it. When its
    time passes it ends too, and nothing is written and nothing runs: every reader works
    it out from the events with `supervised-agent/src/pilot/snooze.py`, on the matter's one
@@ -71,16 +77,19 @@ Four constraints shape it here:
    Each claims the matter exactly as `complete_triage` does (`TRIAGE_CLAIM_COMMANDS`), so
    another owner can then neither act on it nor see it. Outside triage, an actor who is
    not on the matter is told only that, not the matter's state; this now holds for
-   `complete_triage` too. After triage, `withdraw` stays the way to close a matter without
-   delivery.
+   `complete_triage` too, and for every command on a closed, declined or duplicate
+   matter. After triage, `withdraw` stays the way to close a matter without delivery.
 6. **A person types every reason.** The room's forms start empty and propose no reason,
    no original and no time. The software never declines a matter, marks a duplicate or
    snoozes on its own, and never suggests doing so.
 7. **What the requester sees.**
    - Declined: "Closed: declined by legal", "Legal declined this request. The reason is
      below." and the reason as typed.
-   - Duplicate: "Closed: duplicate of another matter" and the reason. The original's
-     matter ID is shown only when the requester also asked for that matter.
+   - Duplicate: "Closed: duplicate of another matter", "Legal closed this request as a
+     duplicate of another matter. The reason is below." and the reason as typed. The
+     sentence holds whatever state the original is in: open, delivered, withdrawn or
+     declined. The original's matter ID is shown only when the requester also asked for
+     that matter.
    - A running snooze: the stage stays "Received by legal", with the reason, its start and
      its end time. With a question, the request is waiting on the requester, the next step
      is "Answer legal's question below." and the room offers an Answer form.

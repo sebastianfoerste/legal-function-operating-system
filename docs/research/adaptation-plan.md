@@ -580,15 +580,15 @@ playbook position next to each change, and the evidence next to each resolution.
 - **Built** ([ADR 0010](../adr/0010-triage-verbs.md)).
   - `decline` and `mark_duplicate` move a matter from `triage` to two new final states,
     `declined` and `duplicate`, which accept no further command. Both need a reason of at
-    least 20 characters. A duplicate names an original the owner can see that is not
-    itself a duplicate; an unknown and a hidden matter get the same refusal. Each is also
-    kept in the decision record, bound to the version it closed.
-  - A snooze is not a state. `snooze` records a reason of at least 20 characters and
-    either a time with a time zone, at most 30 days ahead, or a question for the
-    requester. The requester's answer (`answer_snooze`), the owner's `end_snooze`, a
-    triage verb or a withdrawal ends it, and so does its time passing, which writes no
-    event: `src/pilot/snooze.py` works it out from the events on the matter's clock for
-    every reader.
+    least 20 visible characters. A duplicate names an original the owner can see that is
+    not itself a duplicate; an unknown and a hidden matter get the same refusal. Each is
+    also kept in the decision record, bound to the version it closed.
+  - A snooze is not a state. `snooze` records a reason of at least 20 visible
+    characters and either a time with a time zone, at most 30 days ahead, or a question
+    for the requester. The requester's answer (`answer_snooze`), the owner's
+    `end_snooze`, a triage verb or a withdrawal ends it, and so does its time passing,
+    which writes no event: `src/pilot/snooze.py` works it out from the events on the
+    matter's clock for every reader.
   - All three run only in triage, for an onboarded matter owner, and claim the matter as
     `complete_triage` does. So a matter owner can now close a matter that cannot leave
     triage; before, only the requester could withdraw it.

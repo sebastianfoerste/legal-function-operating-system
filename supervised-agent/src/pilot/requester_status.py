@@ -49,7 +49,7 @@ _CLOSED_IN_TRIAGE = {
     "declined": ("Closed: declined by legal", "Legal declined this request. The reason is below."),
     "duplicate": (
         "Closed: duplicate of another matter",
-        "Legal is handling the same request in another matter. The reason is below.",
+        "Legal closed this request as a duplicate of another matter. The reason is below.",
     ),
 }
 

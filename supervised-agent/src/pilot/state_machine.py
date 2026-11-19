@@ -41,7 +41,7 @@ EVIDENCE: dict[str, str] = {
     "delivery_manifest_current": "A delivery manifest exists for the current version and reviewed state.",
     "acceptance_recorded": "The requester recorded an acceptance note.",
     "withdrawal_reason_recorded": "A reason for closing without delivery is recorded.",
-    "closure_reason_recorded": "A reason of at least 20 characters is recorded. The requester sees it.",
+    "closure_reason_recorded": "A reason of at least 20 visible characters is recorded. The requester sees it.",
     "duplicate_original_visible": "The original is another matter the matter owner can see, and is not itself a duplicate.",
 }
 

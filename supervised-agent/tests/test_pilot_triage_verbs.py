@@ -209,6 +209,31 @@ def test_after_triage_the_verbs_are_refused_without_saying_the_state_to_outsider
         )
     assert state(service, matter_id) == "review"
 
+    # However a matter closed, an outsider learns only that they are not on it: not that
+    # it was delivered, declined or closed as a duplicate.
+    closed = make_service(tmp_path / "closed")
+    delivered = run_until(closed, "routine", "A13")
+    declined = run_until(closed, "blocked", "C03")
+    closed.decline(OWNER, declined, revision(closed, declined), reason=REASON)
+    _open(PilotApi(closed), REQUESTER, "PM-DUP-1")
+    closed.mark_duplicate(
+        OWNER, "PM-DUP-1", revision(closed, "PM-DUP-1"), original_matter_id=delivered, reason=REASON
+    )
+    for closed_id, final in (
+        (delivered, "closed"),
+        (declined, "declined"),
+        ("PM-DUP-1", "duplicate"),
+    ):
+        assert state(closed, closed_id) == final
+        for command, args in (
+            ("complete_triage", None),
+            ("decline", {"reason": REASON}),
+            ("withdraw", {"note": REASON}),
+        ):
+            with pytest.raises(PermissionDeniedError) as refused:
+                closed.execute(OTHER_OWNER, closed_id, command, revision(closed, closed_id), args)
+            assert str(refused.value) == f"{OTHER_OWNER} is not assigned to matter {closed_id}"
+
 
 # -- duplicate --------------------------------------------------------------------------
 
@@ -301,6 +326,32 @@ def test_the_requester_sees_the_original_only_when_they_asked_for_it_too(tmp_pat
     other = service.view_matter(OTHER_REQUESTER, "PM-SAME-2")
     assert other["requester_status"]["closure"] == {"reason": REASON, "original_matter_id": None}
     assert original not in json.dumps(other)
+
+
+def test_a_duplicate_s_explanation_holds_whatever_state_the_original_is_in(tmp_path) -> None:
+    # An original may be open, delivered or declined; the requester is told only what legal
+    # did with their own request.
+    service = make_service(tmp_path)
+    api = PilotApi(service)
+    delivered = run_until(service, "routine", "A13")
+    declined = run_until(service, "blocked", "C03")
+    service.decline(OWNER, declined, revision(service, declined), reason=REASON)
+    _open(api, REQUESTER, "PM-OPEN")
+    for n, original in enumerate(("PM-OPEN", delivered, declined)):
+        matter_id = f"PM-DUP-{n}"
+        _open(api, REQUESTER, matter_id)
+        service.mark_duplicate(
+            OWNER,
+            matter_id,
+            revision(service, matter_id),
+            original_matter_id=original,
+            reason=REASON,
+        )
+        status = service.view_matter(REQUESTER, matter_id)["requester_status"]
+        assert (status["label"], status["explanation"]) == (
+            "Closed: duplicate of another matter",
+            "Legal closed this request as a duplicate of another matter. The reason is below.",
+        ), original
 
 
 # -- snooze -----------------------------------------------------------------------------
@@ -464,6 +515,58 @@ def test_a_timed_snooze_tells_the_requester_until_when(tmp_path) -> None:
     assert status["your_action"] == "No action needed from you." and not status["waiting_on_you"]
     clock.value = "2026-11-04T08:00:00Z"
     assert service.view_matter(REQUESTER, "PM-OP-1")["requester_status"]["snooze"] is None
+
+
+# -- what the requester reads -----------------------------------------------------------
+
+# None of these draws anything: a zero-width space and a word joiner (format characters),
+# a combining grapheme joiner (a mark) and a Hangul filler (a letter).
+INVISIBLE = ("\u200b", "\u2060", "\u034f", "\u3164")
+
+
+@pytest.mark.parametrize("blank", INVISIBLE, ids=lambda c: f"U+{ord(c):04X}")
+def test_only_characters_a_reader_sees_count_toward_a_minimum(tmp_path, blank) -> None:
+    service, _ = _recorded(tmp_path)
+    _open(PilotApi(service), REQUESTER, "PM-OP-2")  # in triage, so the owner can see it
+    start = revision(service, "PM-OP-1")
+    short = "Out of scope." + blank * 20  # 13 characters a reader sees
+    for reason in (blank * 20, f" {blank} " * 20, short):
+        for command, args in (
+            ("decline", {"reason": reason}),
+            ("mark_duplicate", {"original_matter_id": "PM-OP-2", "reason": reason}),
+        ):
+            with pytest.raises(TransitionBlockedError) as refused:
+                service.execute(OWNER, "PM-OP-1", command, start, args)
+            assert _failing(refused.value) == {"closure_reason_recorded"}, (command, reason)
+            seen = 13 if reason == short else 0
+            assert _detail(refused.value, "closure_reason_recorded") == (
+                f"the reason has {seen} visible characters; at least 20 are needed"
+            )
+    with pytest.raises(InvalidCommandError, match="snooze reason must be at least 20 visible"):
+        service.snooze(OWNER, "PM-OP-1", start, reason=short, question=QUESTION)
+    with pytest.raises(InvalidCommandError, match="question must be at least 10 visible"):
+        service.snooze(OWNER, "PM-OP-1", start, reason=PAUSE, question="Which?" + blank * 10)
+    assert revision(service, "PM-OP-1") == start and state(service, "PM-OP-1") == "triage"
+    assert "matter_owner" not in service.view_matter(OWNER, "PM-OP-1")["assignments"]
+
+    # What a reader sees counts, and the text is kept as it was typed.
+    service.snooze(OWNER, "PM-OP-1", start, reason=PAUSE + blank, question=blank + QUESTION)
+    status = service.view_matter(REQUESTER, "PM-OP-1")["requester_status"]["snooze"]
+    assert (status["reason"], status["question"]) == (PAUSE + blank, blank + QUESTION)
+    with pytest.raises(InvalidCommandError, match="answer must be at least 10 visible"):
+        service.answer_snooze(
+            REQUESTER, "PM-OP-1", revision(service, "PM-OP-1"), answer="OF-1" + blank * 10
+        )
+    service.answer_snooze(
+        REQUESTER, "PM-OP-1", revision(service, "PM-OP-1"), answer="Order form" + blank
+    )
+    typed = f"Outside the{blank} charter."  # exactly 20 characters a reader sees
+    view = service.decline(OWNER, "PM-OP-1", revision(service, "PM-OP-1"), reason=typed)
+    assert view["matter"]["state"] == "declined"
+    [decision] = _decisions(service, "PM-OP-1")
+    assert decision["note"] == typed
+    closure = service.view_matter(REQUESTER, "PM-OP-1")["requester_status"]["closure"]
+    assert closure["reason"] == typed
 
 
 # -- clocks -----------------------------------------------------------------------------
