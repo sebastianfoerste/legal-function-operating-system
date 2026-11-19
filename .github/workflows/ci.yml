@@ -110,3 +110,7 @@ jobs:
           NODE_PATH: ${{ runner.temp }}/pw/node_modules
           REQUIRE_BROWSER_TESTS: "1"
         run: PYTHONPATH=src python -m unittest tests.test_intake_page_browser tests.test_reviewer_pages_browser -v
+      - name: Reject files the agent gate changed or left behind
+        run: |
+          git status --porcelain
+          test -z "$(git status --porcelain)"

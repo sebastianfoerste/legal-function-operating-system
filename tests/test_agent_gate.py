@@ -27,6 +27,19 @@ class AgentGateTest(unittest.TestCase):
         ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
         self.assertIn("make -C supervised-agent check", ci)
 
+    def test_root_ci_rejects_a_dirty_tree_after_the_agent_gate(self) -> None:
+        # The agent gate and the browser tests run in the agent job; a file they change or
+        # leave behind (a regenerated example, a stray export) fails the job, so the check
+        # comes after both and is the job's last step.
+        ci = (ROOT / ".github" / "workflows" / "ci.yml").read_text(encoding="utf-8")
+        _, agent = ci.split("\n  agent:\n", 1)
+        clean = 'test -z "$(git status --porcelain)"'
+        self.assertIn(clean, agent)
+        position = agent.index(clean)
+        for step in ("make -C supervised-agent check", "tests.test_reviewer_pages_browser"):
+            self.assertIn(step, agent[:position])
+        self.assertNotIn("\n      - ", agent[position:])
+
 
 if __name__ == "__main__":
     unittest.main()
