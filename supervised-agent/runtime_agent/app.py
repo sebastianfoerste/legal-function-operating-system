@@ -194,7 +194,7 @@ class RuntimeHandler(BaseHTTPRequestHandler):
                 {
                     "status": "ok",
                     "service_name": SERVICE_NAME,
-                    "external_processing": "disabled_by_default",
+                    "external_processing": "none",
                 },
             )
             return

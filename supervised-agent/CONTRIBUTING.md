@@ -14,8 +14,14 @@ This is a personal, public-safe prototype. Issues and corrections are welcome.
 ```bash
 make install
 make test     # must pass before any PR
-make demo     # regenerate examples/ if output changed, and commit it
+make check    # the full gate: Ruff, Black, mypy, the tests and a compile check
+python -m src.pilot.cli scenario-docs   # after changing a scenario in examples/pilot/scenarios/
 ```
+
+`scenario-docs` regenerates the facilitator scripts in `docs/pilot/scenarios/` and the
+synthetic DOCX fixtures in `examples/pilot/documents/` from the scenario files; commit what
+it changes. There is no `make demo` here: the other runs under `examples/` are committed
+snapshots, which nothing regenerates.
 
 ## Reporting an issue
 

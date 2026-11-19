@@ -9,6 +9,8 @@ import json
 import re
 from pathlib import Path
 
+from src.mcp_tools import run_tool
+
 AGENT_ROOT = Path(__file__).resolve().parents[1]
 RUNTIME_SOURCES = [
     AGENT_ROOT / "models.py",
@@ -93,3 +95,19 @@ def test_no_external_model_switch_is_offered():
         assert "LEGAL_AGENT_EXTERNAL_MODEL_ENABLED" not in server.get("env", {})
     for path in RUNTIME_SOURCES:
         assert "LEGAL_AGENT_EXTERNAL_MODEL_ENABLED" not in path.read_text(encoding="utf-8")
+
+
+def test_the_source_boundary_says_nothing_is_processed_externally():
+    # Not "disabled by default": there is no setting that could enable it.
+    assert run_tool("legal.sources.list", {})["external_processing"] == "none"
+
+
+def test_no_environment_file_is_offered():
+    # The removed .env.example held the external model's settings; none is tracked or
+    # excepted from the ignore rules, so no file invites a key.
+    root = AGENT_ROOT.parent
+    assert not (AGENT_ROOT / ".env.example").exists()
+    assert not (root / ".env.example").exists()
+    for path in (root / ".gitignore", AGENT_ROOT / ".gitignore"):
+        lines = path.read_text(encoding="utf-8").splitlines()
+        assert not [line for line in lines if line.startswith("!") and ".env" in line], path

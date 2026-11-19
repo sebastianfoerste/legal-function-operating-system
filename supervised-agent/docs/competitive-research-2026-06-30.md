@@ -273,6 +273,11 @@ The patterns parked for later are a presence badge labelled as a simulated role,
 grouped event timeline and attributed DOCX tracked changes. The reasons are in the root
 `docs/research/adaptation-plan.md`.
 
+**Update, 2026-11-19.** All three are now built, as the root adaptation plan records: the
+"Also open" presence line labelled as a simulated local role (F4, ADR 0005), the
+audit-chain timeline grouped by version (F6), and tracked changes that name the simulated
+local role that decided each change (owner decision 4, ADR 0004).
+
 ### Source Links
 
 - `claude-for-legal`: <https://github.com/anthropics/claude-for-legal>

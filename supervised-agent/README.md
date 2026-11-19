@@ -48,7 +48,7 @@ blocker finding remains. Run the proof gate with `make check`.
 1. `models.py` defines typed matter, finding, routing, review and assessment contracts.
 2. `src/legal_ops.py` performs deterministic intake, risk triage and reviewer routing.
 3. `src/source_verification.py` validates synthetic and public-regulatory source references.
-4. `src/mcp_tools.py` exposes seven local MCP-style tools behind a controlled dispatcher.
+4. `src/mcp_tools.py` defines nine local MCP-style tools behind a controlled dispatcher.
 5. `src/trust_cockpit.py` renders the reviewer-facing trust cockpit.
 6. `src/review_packet.py` renders the lawyer-facing Markdown packet.
 7. `src/cli.py` runs fixture-to-packet flows for local verification.
@@ -261,7 +261,7 @@ is fabricated and labelled as such in its data.
 - Review notes required for approval, rejection and escalation.
 - Blocked source prefixes for client, candidate, privileged and confidential material.
 - Public regulatory source verification without external fetching.
-- Local MCP configuration for controlled tool access.
+- Local MCP-style tools behind a controlled dispatcher.
 - Synthetic sample data only.
 
 ## Repository structure
@@ -283,7 +283,7 @@ is fabricated and labelled as such in its data.
 - [`examples/matters/`](examples/matters): Synthetic SaaS, DPA, AI-vendor, product and regulatory-monitoring fixtures.
 - [`examples/clauses/`](examples/clauses): Synthetic redacted clause fixtures.
 - [`runtime_agent/app.py`](runtime_agent/app.py): Small HTTP canary for health checks and local workflow calls.
-- [`mcp.json`](mcp.json): Explicit local MCP server configuration.
+- [`mcp.json`](mcp.json): Starts the runtime canary (`python -m runtime_agent.app`), an HTTP server on a loopback address; it is not an MCP stdio server.
 - [`tests/`](tests): Unit tests for validation, risk logic, review gates, MCP manifest and runtime behavior.
 
 
@@ -298,7 +298,8 @@ This runs Ruff, Black, MyPy and Pytest.
 
 ## MCP surface
 
-`mcp.json` exposes a local `legal-ops-agent` server with eight controlled tools:
+`src/mcp_tools.py` defines nine MCP-style tools, which the runtime canary serves over HTTP on a
+loopback address (`GET /mcp/manifest`, `POST /tools/call`):
 
 - `legal.matter.assess`: create a structured assessment from a typed legal matter.
 - `legal.review.decide`: apply a documented human review decision.
@@ -313,6 +314,10 @@ This runs Ruff, Black, MyPy and Pytest.
 The local Review-workspace layer adds a versioned matter playbook, review-gated `document.change-set.v2` DOCX drafts with document-specific tracked changes, evidence-gated matter Lists with a hash-chained timeline, and a static HTML snapshot. Sensitive source prefixes still block processing and no external delivery action is available.
 
 These tools are designed for local verification. They do not send client, candidate, matter or account data to an external system.
+
+`mcp.json` starts that canary with `python -m runtime_agent.app`: an HTTP server on a loopback
+address, not an MCP stdio server, so an MCP client that reads `mcp.json` cannot use these tools
+through it.
 
 See [docs/API.md](docs/API.md) for input schemas, output schemas, safety limits
 and example calls.

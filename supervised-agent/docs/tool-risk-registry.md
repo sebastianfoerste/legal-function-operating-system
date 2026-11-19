@@ -48,7 +48,7 @@ Risk: users may assume arbitrary material is acceptable.
 Controls:
 
 1. Allowed and blocked categories are explicit.
-2. External processing is disabled by default.
+2. Nothing is processed externally: the agent has no external model or network client, and no setting adds one (`tests/test_no_external_model.py`).
 
 ## `legal.sources.verify`
 
