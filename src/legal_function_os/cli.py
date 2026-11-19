@@ -52,8 +52,11 @@ from legal_function_os.contract_intelligence import (
 )
 from legal_function_os.intake import InputError, load_requests
 from legal_function_os.intake_page import (
+    IntakeGuidanceError,
     IntakeQuestionsError,
+    add_guidance,
     build_intake_form,
+    load_intake_guidance,
     load_intake_questions,
     render_intake_markdown,
     write_intake_page,
@@ -245,6 +248,15 @@ def _intake_page(args: argparse.Namespace) -> int:
             print(f"error: {exc.source}: {problem}", file=sys.stderr)
         print("The policy cannot be used for the intake page. Nothing was written.", file=sys.stderr)
         raise _Failure(2) from None
+    if args.guidance is not None:
+        try:
+            guidance, source = load_intake_guidance(args.guidance)
+            form = add_guidance(form, guidance, source)
+        except IntakeGuidanceError as exc:
+            for problem in exc.problems:
+                print(f"error: {exc.source}: {problem}", file=sys.stderr)
+            print("The intake guidance cannot be used. Nothing was written.", file=sys.stderr)
+            raise _Failure(2) from None
     for note in form["notes"]:
         print(f"note: {note}", file=sys.stderr)
     if args.out:
@@ -567,6 +579,14 @@ def command_parser() -> argparse.ArgumentParser:
         "--questions",
         metavar="PATH",
         help="Intake questions JSON (see docs/CUSTOMIZE.md). Default: the bundled synthetic questions.",
+    )
+    intake.add_argument(
+        "--guidance",
+        metavar="PATH",
+        help=(
+            "Guidance from legal per request type, each text with a record of who reviewed it "
+            "(see docs/CUSTOMIZE.md). Default: none; no guidance is bundled."
+        ),
     )
     _add_format(intake, out="intake-page.html")
 

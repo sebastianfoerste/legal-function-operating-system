@@ -13,6 +13,12 @@ person in legal reviews every file. A question may depend only on an answer give
 above it (forward-only conditions), which ``build_intake_form`` checks when the page is
 built, so a requester never has to go back up the page.
 
+A team may also give the page guidance from legal for a request type
+(``add_guidance``, ADR 0012): short texts, each with a record of who reviewed it for
+requesters. None is bundled. The texts are static HTML at the top of their type's
+section and stay out of the script and its data block, so the checks, the review and
+the saved file are the same with and without them.
+
 The page script and this module implement the same rules: ``clean_text``,
 ``evaluate``, ``check_answers``, ``request_from_answers``, ``review_rows``,
 ``render_download`` and ``download_name``. A test runs the script in Node on every
@@ -29,6 +35,7 @@ import html
 import json
 import re
 import unicodedata
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -80,6 +87,23 @@ WHITESPACE = (
 _SURROGATE = re.compile("[\ud800-\udfff]")
 _SPACES = re.compile("[" + re.escape(WHITESPACE) + "]+")
 _SLUG = re.compile("[^A-Za-z0-9]+")
+
+GUIDANCE_SCHEMA = "legal-function-os.intake-guidance.v1"
+# A guidance passage is a short pointer, not a memo; the page shows a few per type.
+MAX_GUIDANCE_PASSAGE = 800
+MAX_GUIDANCE_PER_TYPE = 3
+_GUIDANCE_TOP_KEYS = ("schema", "name", "resources")
+# The four keys of a portal.share.v1 resource, an optional type and the review record.
+_GUIDANCE_RESOURCE_KEYS = ("id", "type", "title", "passage", "source_ref", "prepared_by", "approval")
+_REQUIRED_GUIDANCE_KEYS = ("id", "title", "passage", "source_ref", "prepared_by", "approval")
+_REVIEW_KEYS = ("by", "on", "text_sha256")
+# What a requester reads of a resource, and so what its review record binds.
+_SHOWN_GUIDANCE_KEYS = ("type", "title", "passage", "source_ref")
+_EXPLAIN_GUIDANCE_KEYS = {
+    "approved": "a flag is not a review record; give prepared_by and approval (by, on, text_sha256) instead",
+}
+_ISO_DATE = re.compile(r"[0-9]{4}-[0-9]{2}-[0-9]{2}\Z")
+_DIGEST = re.compile(r"[0-9a-f]{64}\Z")
 
 _TOP_KEYS = ("schema", "name", "description", "fields", "types")
 # A key that is not in the file at all, which check.obj already reports as missing; a
@@ -151,6 +175,12 @@ def _hint(value: str, choices: tuple[str, ...] | list[str]) -> str:
     return f" (did you mean {close[0]!r}?)" if close else ""
 
 
+# Unknown keys that get their own message instead of a did-you-mean hint.
+_EXPLAIN_QUESTION_KEYS = {
+    "show_if": "only a type question can have a condition; a request field is always asked",
+}
+
+
 class _Check:
     def __init__(self) -> None:
         self.problems: list[str] = []
@@ -159,18 +189,23 @@ class _Check:
     def problem(self, where: str, message: str) -> None:
         self.problems.append(f"{where}: {message}" if where else message)
 
-    def obj(self, data: Any, where: str, allowed: tuple[str, ...], required: tuple[str, ...]) -> dict:
+    def obj(
+        self,
+        data: Any,
+        where: str,
+        allowed: tuple[str, ...],
+        required: tuple[str, ...],
+        explain: dict[str, str] | None = None,
+    ) -> dict:
         if not isinstance(data, dict):
             self.problem(where, f"expected an object, got {_kind(data)}")
             return {}
+        explain = _EXPLAIN_QUESTION_KEYS if explain is None else explain
         for key in data:
             if key in allowed or str(key).startswith(EXTENSION_PREFIXES):
                 continue
-            if key == "show_if":
-                self.problem(
-                    _join(where, key),
-                    "only a type question can have a condition; a request field is always asked",
-                )
+            if key in explain:
+                self.problem(_join(where, key), explain[key])
                 continue
             self.problem(
                 _join(where, str(key)),
@@ -648,6 +683,207 @@ def build_intake_form(
     }
 
 
+# --- Guidance from legal (ADR 0012) -------------------------------------------------
+#
+# A team may give the page short texts for a request type, each with a record of who
+# reviewed it for requesters. Nothing is bundled, so without a guidance file the page
+# shows none. The texts are static HTML at the top of their type's section: they stay
+# out of the script and its data block, so the checks, the review and the saved file
+# are the same with and without them, and the page never matches a requester's answers
+# against them. A review record is not authentication: anyone who can edit the file can
+# type a name and copy a digest. The digest only means that a text changed after its
+# review was recorded cannot be shown.
+
+
+class IntakeGuidanceError(ValueError):
+    """A guidance file that cannot be used; ``problems`` lists every reason."""
+
+    def __init__(self, source: str, problems: list[str]) -> None:
+        super().__init__(f"{source}: " + "; ".join(problems))
+        self.source = source
+        self.problems = problems
+
+
+def load_intake_guidance(path: str) -> tuple[Any, str]:
+    """The guidance file at ``path``, and its name for messages. There is no bundled one."""
+
+    try:
+        text = read_utf8(path)
+    except OSError as exc:
+        raise IntakeGuidanceError(path, [f"cannot read the file: {exc.strerror or exc}"]) from None
+    except UnicodeDecodeError as exc:
+        raise IntakeGuidanceError(path, [f"cannot read the file: {not_utf8(exc)}"]) from None
+    try:
+        return json.loads(text), path
+    except json.JSONDecodeError as exc:
+        raise IntakeGuidanceError(path, [f"not valid JSON: {exc}"]) from None
+
+
+def guidance_digest(resource: dict[str, Any]) -> str:
+    """The SHA-256, in lower-case hex, of what a requester reads of a resource: its
+    type, title, passage and source_ref as the file gives them, as JSON with sorted keys,
+    no spaces and UTF-8 text (a missing type is null). A review record names this digest,
+    so a text changed after its review no longer matches."""
+
+    shown = {key: resource.get(key) for key in _SHOWN_GUIDANCE_KEYS}
+    text = json.dumps(shown, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    return hashlib.sha256(text.encode("utf-8", "surrogatepass")).hexdigest()
+
+
+def _fold(text: str) -> str:
+    """Text as a reader tells it apart: as it reads on the page (``_looks``), in
+    compatibility form and without case."""
+
+    return _looks(unicodedata.normalize("NFKC", text)).casefold()
+
+
+def _review_date(value: Any) -> bool:
+    """Whether ``value`` is a calendar date written YYYY-MM-DD. Only the form is checked:
+    nothing here reads a clock, so a date in the future or long ago is not refused."""
+
+    if not isinstance(value, str) or not _ISO_DATE.match(value):
+        return False
+    try:
+        date(int(value[:4]), int(value[5:7]), int(value[8:]))
+    except ValueError:
+        return False
+    return True
+
+
+def _review_record(check: _Check, raw: Any, where: str, prepared_by: str, digest: str | None) -> None:
+    # text_sha256 is checked last, on its own, so that a missing one names the digest of
+    # the text as it stands: the reviewer records it after reading that text.
+    record = check.obj(raw, where, _REVIEW_KEYS, ("by", "on"), _EXPLAIN_GUIDANCE_KEYS)
+    by = check.text(record, "by", where)
+    if by and prepared_by and _fold(by) == _fold(prepared_by):
+        check.problem(
+            _join(where, "by"),
+            f"{by!r} is also who prepared the text (prepared_by); another person records the review",
+        )
+    if "on" in record and not _review_date(record["on"]):
+        shown = repr(record["on"]) if isinstance(record["on"], str) else _kind(record["on"])
+        check.problem(_join(where, "on"), f"expected the date of the review as YYYY-MM-DD, got {shown}")
+    if not isinstance(raw, dict):
+        return
+    now = f"; the text now has the digest {digest}" if digest else ""
+    if "text_sha256" not in record:
+        check.problem(_join(where, "text_sha256"), f"missing{now}")
+        return
+    recorded = record["text_sha256"]
+    if not isinstance(recorded, str) or not _DIGEST.match(recorded):
+        shown = repr(recorded) if isinstance(recorded, str) else _kind(recorded)
+        check.problem(
+            _join(where, "text_sha256"),
+            f"expected a SHA-256 digest as 64 lower-case hex characters, got {shown}{now}",
+        )
+    elif digest and recorded != digest:
+        check.problem(
+            _join(where, "text_sha256"),
+            "does not match the text (type, title, passage and source_ref), so the review record "
+            f"is not for this text{now}. Have this text reviewed and record that review",
+        )
+
+
+def _guidance_resource(check: _Check, raw: Any, where: str) -> dict[str, Any] | None:
+    entry = check.obj(raw, where, _GUIDANCE_RESOURCE_KEYS, _REQUIRED_GUIDANCE_KEYS, _EXPLAIN_GUIDANCE_KEYS)
+    if not entry:
+        return None
+    texts = {key: check.text(entry, key, where) for key in _GUIDANCE_RESOURCE_KEYS if key != "approval"}
+    passage = texts["passage"]
+    if len(passage) > MAX_GUIDANCE_PASSAGE:
+        check.problem(
+            _join(where, "passage"),
+            f"is {len(passage)} characters long; the page shows at most {MAX_GUIDANCE_PASSAGE}. "
+            "Shorten it, and name the longer text in source_ref",
+        )
+    # The digest is worked out only from text that passed its own checks, so a problem
+    # there is not reported a second time as a digest that does not match.
+    given = [key for key in _GUIDANCE_RESOURCE_KEYS if key in entry and key != "approval"]
+    shown_ok = all(texts[key] for key in _SHOWN_GUIDANCE_KEYS if key in given or key != "type")
+    digest = guidance_digest(entry) if shown_ok else None
+    if "approval" in entry:
+        _review_record(check, entry["approval"], _join(where, "approval"), texts["prepared_by"], digest)
+    record = entry.get("approval")
+    if not isinstance(record, dict) or not all(texts[key] for key in given):
+        return None
+    # Only the keys the format knows: x_ keys stay in the file.
+    resource: dict[str, Any] = {key: entry[key] for key in given}
+    resource["approval"] = {key: record.get(key) for key in _REVIEW_KEYS}
+    return resource
+
+
+def add_guidance(form: dict[str, Any], guidance: Any, source: str) -> dict[str, Any]:
+    """The form with ``guidance`` checked against ``form``'s request types. Raises
+    ``IntakeGuidanceError`` with every problem: a missing or stale review record, a
+    review recorded by the person who prepared the text, a date that is not one, a link,
+    a passage over the limit, too many resources for a type, a repeated id, titles that
+    look alike within a type, or an unknown key. A resource with no type, or a type the
+    policy lacks, is a note and is not shown. The page script never reads the result."""
+
+    check = _Check()
+    top = check.obj(guidance, "", _GUIDANCE_TOP_KEYS, _GUIDANCE_TOP_KEYS, _EXPLAIN_GUIDANCE_KEYS)
+    if "schema" in top and top["schema"] != GUIDANCE_SCHEMA:
+        check.problem("schema", f"expected {GUIDANCE_SCHEMA!r}, got {top['schema']!r}")
+    name = check.text(top, "name", "")
+    raw = top.get("resources", [])
+    if not isinstance(raw, list):
+        check.problem("resources", f"expected a list of resources, got {_kind(raw)}")
+        raw = []
+    elif "resources" in top and not raw:
+        check.notes.append("the guidance file lists no resources, so the page shows none")
+    ids: dict[str, int] = {}
+    per_type: dict[str, list[tuple[int, str]]] = {}
+    kept: list[tuple[int, dict[str, Any]]] = []
+    for index, item in enumerate(raw):
+        where = f"resources[{index}]"
+        resource = _guidance_resource(check, item, where)
+        entry = item if isinstance(item, dict) else {}
+        key = entry.get("id")
+        if isinstance(key, str) and key in ids:
+            check.problem(_join(where, "id"), f"{key!r} is used twice (also resources[{ids[key]}])")
+        elif isinstance(key, str):
+            ids[key] = index
+        kind, title = entry.get("type"), entry.get("title")
+        if isinstance(kind, str) and isinstance(title, str):
+            same = per_type.setdefault(kind, [])
+            if len(same) >= MAX_GUIDANCE_PER_TYPE:
+                check.problem(
+                    _join(where, "type"),
+                    f"{kind!r} already has {MAX_GUIDANCE_PER_TYPE} resources; the page shows at most "
+                    f"{MAX_GUIDANCE_PER_TYPE} for one request type",
+                )
+            twin = next((i for i, t in same if _fold(t) == _fold(title)), None)
+            if twin is not None:
+                check.problem(
+                    _join(where, "title"),
+                    f"{title!r} reads the same as the title of resources[{twin}] for this type; "
+                    "give each its own title",
+                )
+            same.append((index, title))
+        if resource is not None:
+            kept.append((index, resource))
+    types = [t["key"] for t in form["types"]]
+    by_type: dict[str, list[dict[str, Any]]] = {}
+    for index, resource in kept:
+        label = f"resources[{index}] ({resource['id']!r})"
+        if "type" not in resource:
+            check.notes.append(f"{label} has no type, so the page does not show it")
+        elif resource["type"] not in types:
+            check.notes.append(
+                f"{label}: the policy has no request type {resource['type']!r}"
+                f"{_hint(resource['type'], types)}, so the page does not show it"
+            )
+        else:
+            by_type.setdefault(resource["type"], []).append(resource)
+    if check.problems:
+        raise IntakeGuidanceError(source, check.problems)
+    return {
+        **form,
+        "guidance": {"name": name, "types": {key: by_type[key] for key in types if key in by_type}},
+        "notes": [*form["notes"], *check.notes],
+    }
+
+
 # --- The rules the page script also implements --------------------------------------
 
 
@@ -832,14 +1068,27 @@ def _condition_words(form_type: dict[str, Any], fields: list[dict[str, Any]], co
     return f'Shown when "{_md_line(controller["label"])}" is {" or ".join(_md_line(x) for x in labels)}.'
 
 
-def render_intake_markdown(form: dict[str, Any]) -> str:
-    """The question sheet: what the page asks, for legal ops to review."""
+def _guidance_line(item: dict[str, Any]) -> str:
+    review = item["approval"]
+    return (
+        f"- **{_md_line(item['title'])}** (`{_md_line(item['id'])}`): {_md_line(item['passage'])} "
+        f"Source: {_md_line(item['source_ref'])}. Prepared by {_md_line(item['prepared_by'])}; "
+        f"reviewed for requesters by {_md_line(review['by'])} on {review['on']} "
+        f"(text_sha256 `{review['text_sha256']}`)."
+    )
 
+
+def render_intake_markdown(form: dict[str, Any]) -> str:
+    """The question sheet: what the page asks, and the guidance it shows, for legal ops
+    to review."""
+
+    guidance = form.get("guidance") or {"name": "", "types": {}}
+    named = f" Guidance: {_md_line(guidance['name'])}." if guidance["name"] else ""
     lines = [
         "# Intake questions",
         "",
         f"Questions: {_md_line(form['questions'])}. Value bands and request types follow the "
-        f"policy: {_md_line(form['policy'])}.",
+        f"policy: {_md_line(form['policy'])}.{named}",
         "",
         "The intake page saves a legal-request.v1 file on the requester's device. It sends "
         f"nothing and decides nothing. Every file gets the reference {form['draft_id']}; legal "
@@ -861,6 +1110,11 @@ def render_intake_markdown(form: dict[str, Any]) -> str:
             names = {f["name"]: f["label"] for f in form["fields"]}
             also = ", ".join(_md_line(names[n]) for n in form_type["also_required"])
             lines += [f"Also required for this type: {also}.", ""]
+        shown = guidance["types"].get(form_type["key"], [])
+        if shown:
+            lines += ["Guidance shown above these questions:", ""]
+            lines += [_guidance_line(item) for item in shown]
+            lines.append("")
         if not form_type["questions"]:
             lines.append("No further questions.")
         for number, question in enumerate(form_type["questions"], 1):
@@ -927,7 +1181,30 @@ def _field_html(item: dict[str, Any]) -> str:
     return _control_html(item, mark)
 
 
-def _type_html(form_type: dict[str, Any]) -> str:
+def _guidance_html(form_type: dict[str, Any], items: list[dict[str, Any]]) -> str:
+    """Legal's guidance for a type, as static text with no link or control, or nothing.
+    Every word around the team's own text says what it is, and none says it was approved."""
+
+    if not items:
+        return ""
+    heading = f'{form_type["id"]}-guidance-h'
+    texts = "".join(
+        f'<h4>{_esc(item["title"])}</h4><p class="passage">{_esc(item["passage"])}</p>'
+        f'<p class="source">Source: {_esc(item["source_ref"])}. '
+        f"Legal's guidance file records that {_esc(item['approval']['by'])} reviewed this text "
+        f"for requesters on {_esc(item['approval']['on'])}.</p>"
+        for item in items
+    )
+    return (
+        f'<div class="guidance" role="note" aria-labelledby="{heading}">'
+        f'<h3 id="{heading}">Guidance from legal for this kind of request</h3>'
+        "<p>General information, not legal advice about your request. Reading it is optional: you can "
+        "still answer the questions and save a request file for legal.</p>"
+        f"{texts}</div>"
+    )
+
+
+def _type_html(form_type: dict[str, Any], guidance: list[dict[str, Any]]) -> str:
     questions = "".join(
         _control_html(q, "" if q["required"] else ' <span class="optional">(optional)</span>', "show_if" in q)
         for q in form_type["questions"]
@@ -936,16 +1213,17 @@ def _type_html(form_type: dict[str, Any]) -> str:
     return (
         f'<section class="type" id="{form_type["id"]}" aria-labelledby="{form_type["id"]}-h" hidden>'
         f'<h2 id="{form_type["id"]}-h">{_esc(form_type["label"])}: a few more questions</h2>'
-        f"{hint}{questions}</section>"
+        f"{_guidance_html(form_type, guidance)}{hint}{questions}</section>"
     )
 
 
 def _spec_json(form: dict[str, Any]) -> str:
     """The form as a JSON data block that cannot end its own script element. The notes
     stay out: the script never reads them, and they quote question-file keys that are
-    not used, which no check reads for links."""
+    not used, which no check reads for links. The guidance stays out too, so the data,
+    and so the checks, the review and the saved file, are the same with and without it."""
 
-    page_form = {key: value for key, value in form.items() if key != "notes"}
+    page_form = {key: value for key, value in form.items() if key not in ("notes", "guidance")}
     text = json.dumps(page_form, ensure_ascii=True, separators=(",", ":"))
     return text.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
@@ -972,6 +1250,7 @@ def render_intake_html(form: dict[str, Any]) -> str:
     """The self-contained intake page. Its CSP allows only its own script and style."""
 
     script, style = page_script(), page_style()
+    guidance = form.get("guidance") or {"name": "", "types": {}}
     csp = (
         f"default-src 'none'; script-src '{_sha256(script)}'; style-src '{_sha256(style)}'; "
         "img-src 'none'; connect-src 'none'; form-action 'none'; base-uri 'none'"
@@ -980,10 +1259,11 @@ def render_intake_html(form: dict[str, Any]) -> str:
         "CSP": csp,
         "STYLE": style,
         "FIELDS": "".join(_field_html(item) for item in form["fields"]),
-        "TYPES": "".join(_type_html(t) for t in form["types"]),
+        "TYPES": "".join(_type_html(t, guidance["types"].get(t["key"], [])) for t in form["types"]),
         "DRAFT": _esc(form["draft_id"]),
         "POLICY": _esc(form["policy"]),
         "QUESTIONS": _esc(form["questions"]),
+        "GUIDANCE": f" Guidance: {_esc(guidance['name'])}." if guidance["name"] else "",
         "SPEC": _spec_json(form),
         "SCRIPT": script,
     }
@@ -1046,6 +1326,12 @@ pre.file { margin:0; padding:12px; background:var(--panel); border:1px solid var
 .status { margin:16px 0; font-weight:700; overflow-wrap:anywhere; }
 .visually-hidden { position:absolute !important; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0; }
 footer { margin-top:28px; font-size:14px; }
+.guidance { margin:0 0 22px; padding:14px 16px; background:var(--panel); border-left:4px solid var(--accent); border-radius:6px; overflow-wrap:anywhere; }
+.guidance h3 { margin:0 0 4px; }
+.guidance h4 { margin:14px 0 2px; font-size:16px; }
+.guidance p { margin:4px 0; }
+.guidance .passage { white-space:pre-line; }
+.guidance .source { color:var(--muted); font-size:14px; }
 @media (max-width:640px) {
   main { padding:28px 16px 48px; }
   h1 { font-size:26px; }
@@ -1091,7 +1377,7 @@ __TYPES__
 </section>
 <p class="status" id="status" role="status"></p>
 <p class="visually-hidden" id="type-status" role="status"></p>
-<footer class="muted">Value bands and request types follow the policy: __POLICY__. Questions: __QUESTIONS__.</footer>
+<footer class="muted">Value bands and request types follow the policy: __POLICY__. Questions: __QUESTIONS__.__GUIDANCE__</footer>
 <script type="application/json" id="intake-spec">__SPEC__</script>
 <script>__SCRIPT__</script>
 </main>
