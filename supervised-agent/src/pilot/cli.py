@@ -27,7 +27,7 @@ from src.pilot.scenario_runner import (
     seed_actors,
     segments,
 )
-from src.pilot.service import PilotService
+from src.pilot.service import InvalidCommandError, PilotService
 from src.pilot.store import PilotStore
 
 DEFAULT_DB = Path(".pilot") / "pilot.sqlite3"
@@ -46,7 +46,13 @@ def _write_json(path: Path, payload: Any) -> None:
 
 
 def cmd_seed(args: argparse.Namespace) -> int:
-    seed_actors(_service(args.db))
+    """Register the synthetic actors; an actor already registered must be unchanged."""
+
+    try:
+        seed_actors(_service(args.db))
+    except InvalidCommandError as error:
+        print(f"refusing to seed {args.db}: {error}", file=sys.stderr)
+        return 2
     print(f"seeded synthetic actors in {args.db}")
     return 0
 

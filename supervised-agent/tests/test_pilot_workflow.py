@@ -9,10 +9,13 @@ import pytest
 
 from src.docx_redline import index_docx, list_tracked_changes, read_paragraph_texts
 from src.export_gate import ExportBlockedError
+from src.pilot import cli as pilot_cli
 from src.pilot import deliverable
 from src.pilot.design_tokens import PRINT_CSS, TOKENS_CSS
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.models import Actor
+from src.pilot.onboarding import SYNTHETIC_ACTORS
+from src.pilot.scenario_runner import all_task_ids, seed_actors
 from src.pilot.service import (
     InvalidCommandError,
     NotFoundError,
@@ -226,17 +229,23 @@ def test_final_approval_refuses_tier_requester_or_change_decider(
     tmp_path, approver: str, promote: bool, refusal: str
 ) -> None:
     # The separation rules compare actor ids. Giving the requester or the specialist the
-    # approver role and the General Counsel tier (as the silent re-registration allows) does
-    # not let either approve; nor does the Legal Ops Lead, whose tier is too low.
+    # approver role and the General Counsel tier does not let either approve; nor does the
+    # Legal Ops Lead, whose tier is too low.
     service = make_service(tmp_path)
     matter_id = run_until(service, "specialist-revision", "B41")
     if promote:
+        # No command can change a registered actor (register_actor refuses it), so the
+        # promotion is written straight into the store (the direct database access of
+        # control 10), as the matter-owner test below writes its assignment.
         current = next(actor for actor in service.list_actors() if actor.actor_id == approver)
-        service.register_actor(
-            current.model_copy(
-                update={"role": "final_approver", "approval_tier": "General Counsel"}
-            )
+        promoted = current.model_copy(
+            update={"role": "final_approver", "approval_tier": "General Counsel"}
         )
+        with service.store.transaction() as connection:
+            connection.execute(
+                "UPDATE actors SET body = ? WHERE actor_id = ?",
+                (promoted.model_dump_json(), approver),
+            )
     service.assign(
         OWNER,
         matter_id,
@@ -289,6 +298,136 @@ def test_the_assigned_general_counsel_approves_where_the_others_were_refused(tmp
     matter_id = run_until(service, "specialist-revision", "B41")
     service.approve(APPROVER_GC, matter_id, revision(service, matter_id), note=FINAL_APPROVAL)
     assert state(service, matter_id) == "approved"
+
+
+# -- registered actors ------------------------------------------------------------------
+
+# Every field of an actor that registration could change, and a different value for it.
+# onboarded changes only through complete_onboarding; actor_id names the actor; synthetic is
+# always true.
+ACTOR_CHANGES: dict[str, Any] = {
+    "display_name": "Synthetic Approver E (Legal Ops Lead)",
+    "role": "matter_owner",
+    "specialty": "Privacy Counsel",
+    "approval_tier": "Legal Ops Lead",
+    "available": False,
+}
+
+
+def _actor_rows(service: PilotService) -> list[tuple[str, str]]:
+    with service.store.reading() as connection:
+        rows = connection.execute("SELECT actor_id, body FROM actors ORDER BY actor_id")
+        return [(row["actor_id"], row["body"]) for row in rows]
+
+
+def test_the_refusal_covers_every_field_of_an_actor() -> None:
+    assert set(ACTOR_CHANGES) == set(Actor.model_fields) - {"actor_id", "onboarded", "synthetic"}
+
+
+def test_registering_an_actor_again_changes_nothing_and_keeps_its_onboarding(tmp_path) -> None:
+    service = make_service(tmp_path, onboard_specialist=True)
+    before = _actor_rows(service)
+    # The seed list registers everyone as not onboarded; the store says they all are.
+    for actor in SYNTHETIC_ACTORS:
+        assert not actor.onboarded
+        assert service.register_actor(actor).onboarded
+    seed_actors(service)  # what `pilot seed` runs on an existing store
+    assert _actor_rows(service) == before
+    assert all(actor.onboarded for actor in service.list_actors())
+
+    # Nor does registering again onboard anyone: that is complete_onboarding's job.
+    fresh = make_service(tmp_path / "fresh")
+    specialist = next(actor for actor in SYNTHETIC_ACTORS if actor.actor_id == SPECIALIST)
+    assert not fresh.register_actor(specialist.model_copy(update={"onboarded": True})).onboarded
+    assert not next(a for a in fresh.list_actors() if a.actor_id == SPECIALIST).onboarded
+
+
+@pytest.mark.parametrize(
+    ("update", "named"),
+    [
+        *(({field: value}, field) for field, value in ACTOR_CHANGES.items()),
+        ({"role": "matter_owner", "approval_tier": None}, "approval_tier, role"),
+    ],
+    ids=[*ACTOR_CHANGES, "two fields"],
+)
+def test_a_registered_actor_cannot_be_changed(tmp_path, update: dict[str, Any], named: str) -> None:
+    service = make_service(tmp_path)
+    before = _actor_rows(service)
+    stored = next(actor for actor in service.list_actors() if actor.actor_id == APPROVER_GC)
+    with pytest.raises(InvalidCommandError) as refused:
+        service.register_actor(stored.model_copy(update=update))
+    assert str(refused.value) == (
+        f"{APPROVER_GC} is already registered; its {named} cannot change. "
+        "Register a new synthetic actor ID instead"
+    )
+    assert _actor_rows(service) == before
+
+
+def test_pilot_seed_keeps_onboarding_and_reports_an_actor_it_cannot_change(
+    tmp_path, capsys
+) -> None:
+    db = tmp_path / "pilot.sqlite3"
+    assert pilot_cli.main(["seed", "--db", str(db)]) == 0
+    service = PilotService(PilotStore(db))
+    service.complete_onboarding(SPECIALIST, all_task_ids("specialist_reviewer"))
+    before = _actor_rows(service)
+    assert pilot_cli.main(["seed", "--db", str(db)]) == 0  # seeding again resets nothing
+    assert _actor_rows(service) == before
+
+    # A store whose approver differs from the seed list (written directly, control 10).
+    stored = next(actor for actor in service.list_actors() if actor.actor_id == APPROVER_GC)
+    with service.store.transaction() as connection:
+        connection.execute(
+            "UPDATE actors SET body = ? WHERE actor_id = ?",
+            (
+                stored.model_copy(update={"approval_tier": "Legal Ops Lead"}).model_dump_json(),
+                APPROVER_GC,
+            ),
+        )
+    changed = _actor_rows(service)
+    capsys.readouterr()
+    assert pilot_cli.main(["seed", "--db", str(db)]) == 2
+    assert capsys.readouterr().err == (
+        f"refusing to seed {db}: {APPROVER_GC} is already registered; its approval_tier "
+        "cannot change. Register a new synthetic actor ID instead\n"
+    )
+    assert _actor_rows(service) == changed
+
+
+def test_a_recorded_approval_keeps_counting_because_its_approver_cannot_change(
+    tmp_path,
+) -> None:
+    # The export gate reads each decision's author as stored now. Re-registering the General
+    # Counsel with a lower tier used to make this approval stop counting, with no event.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "specialist-revision", "B41")
+    service.approve(APPROVER_GC, matter_id, revision(service, matter_id), note=FINAL_APPROVAL)
+    before = service.export_eligibility(OWNER, matter_id, "delivery_package")
+    events = event_types(service, matter_id)
+    stored = next(actor for actor in service.list_actors() if actor.actor_id == APPROVER_GC)
+    with pytest.raises(InvalidCommandError, match="its approval_tier cannot change"):
+        service.register_actor(stored.model_copy(update={"approval_tier": "Legal Ops Lead"}))
+    assert service.export_eligibility(OWNER, matter_id, "delivery_package") == before
+    assert before.eligible and event_types(service, matter_id) == events
+
+
+@pytest.mark.parametrize("blank", ["\u200b", "\u2060", "\u034f", "\u3164"])
+def test_a_clarification_question_counts_only_what_the_requester_sees(tmp_path, blank) -> None:
+    # The requester is told "Answer the open question below.", so a question that reads
+    # empty would ask nothing.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "routine", "A06")
+    loaded = revision(service, matter_id)
+    target = change_id(service, matter_id, "audit-right")
+    ask = {"change_id": target, "outcome": "clarification_requested"}
+    with pytest.raises(InvalidCommandError, match="question must be at least 10 visible"):
+        service.decide_change(OWNER, matter_id, loaded, reason=blank * 10, **ask)
+    with pytest.raises(InvalidCommandError, match="question must be at least 10 visible"):
+        service.decide_change(OWNER, matter_id, loaded, reason="Which?" + blank * 10, **ask)
+    assert revision(service, matter_id) == loaded
+    service.decide_change(OWNER, matter_id, loaded, reason="Which plan?" + blank, **ask)
+    change = next(c for c in service.view_matter(OWNER, matter_id)["changes"] if c["id"] == target)
+    assert change["decision"] == "clarification_requested"
 
 
 # -- stale submissions and conflicting edits -----------------------------------------
@@ -730,8 +869,10 @@ def test_no_actor_and_no_command_moves_the_blocked_matter(tmp_path) -> None:
         "submit_revision": {"note": "Revised as requested by review."},
         "approve": {"note": APPROVAL},
         "accept_delivery": {"note": "Accepting the package as delivered."},
+        "answer_snooze": {"answer": "Answering a question nobody asked."},
     }
-    skipped = {"amend_matter", "restore_version", "withdraw"}  # legitimate ways to fix or close it
+    # Legitimate ways to fix, pause or close it, each tested on this matter elsewhere.
+    skipped = {"amend_matter", "restore_version", "withdraw", "decline", "mark_duplicate", "snooze"}
     actors = [a.actor_id for a in service.list_actors()]
     attempts = 0
     for command in service.COMMANDS:
@@ -751,7 +892,7 @@ def test_no_actor_and_no_command_moves_the_blocked_matter(tmp_path) -> None:
                     actor, matter_id, command, revision(service, matter_id), arguments.get(command)
                 )
             attempts += 1
-    assert attempts == 17 * len(actors)
+    assert attempts == 19 * len(actors)  # 17, and answering or ending a snooze that is not there
     assert state(service, matter_id) == "triage"
     with service.store.reading() as connection:
         for table in ("deliverable_manifests", "decisions"):

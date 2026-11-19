@@ -47,6 +47,8 @@ Each participant selects their synthetic role, completes onboarding ([ONBOARDING
 | --- | --- | --- | --- | --- |
 | intake | triage | submit_intake | business_requester | intake_complete |
 | triage | assignment | complete_triage | matter_owner | assessment_current, sources_usable, pilot_scope_met, decision_authority_agreed |
+| triage | declined | decline | matter_owner | closure_reason_recorded |
+| triage | duplicate | mark_duplicate | matter_owner | duplicate_original_visible, closure_reason_recorded |
 | assignment | review | start_review | matter_owner | reviewers_available |
 | review | revision_requested | request_revision | matter_owner, specialist_reviewer, final_approver | revision_reason_recorded |
 | review | approved | approve | final_approver | assessment_current, sources_usable, changes_decided, no_open_blockers, specialist_signoffs_current, approver_authorised |
@@ -57,7 +59,9 @@ Each participant selects their synthetic role, completes onboarding ([ONBOARDING
 | ready_for_delivery | revision_requested | request_revision | matter_owner, specialist_reviewer, final_approver | revision_reason_recorded |
 | ready_for_delivery | closed | accept_delivery | business_requester | delivery_manifest_current, acceptance_recorded |
 
-Two commands sit outside the table. `amend_matter` changes the document, a fact, the instructions, a routing input, the decision authority or the playbook. If the change is substantive after triage, the matter moves to `revised` from any later state. `withdraw` closes an open matter without delivery and needs a reason.
+`declined` and `duplicate` are final, like `closed`: no command is accepted afterwards. The three triage verbs, `complete_triage`, `decline` and `mark_duplicate`, and `snooze` below, are open to an onboarded matter owner who is not yet on the matter, and each claims it, so the owner can close a matter that cannot leave triage. A decline or a duplicate is also kept in the decision record, bound to the version it closed. The requester sees the reason as the owner wrote it, and the original's matter ID only when they asked for that matter too. The software never proposes a decline, a duplicate or a reason.
+
+Five commands sit outside the table. `amend_matter` changes the document, a fact, the instructions, a routing input, the decision authority or the playbook. If the change is substantive after triage, the matter moves to `revised` from any later state. `withdraw` closes an open matter without delivery and needs a reason; after triage it is the only way to close a matter without delivery. `snooze` pauses a matter in triage: the matter owner gives a reason of at least 20 visible characters and either a time (with a time zone, later than now and at most 30 days ahead) or a question of at least 10 visible characters for the requester. The matter stays in triage and a snooze is not a state. The requester sees the reason, and answers the question with `answer_snooze`, in at least 10 visible characters. For these minimums, and for the reason `decline` and `mark_duplicate` need, a run of whitespace counts as one character and invisible characters (format characters such as a zero-width space, and the other default-ignorable code points) are not counted; the text is kept as typed, with runs of whitespace collapsed. A clarification question to the requester follows the same rule. The owning matter owner may end a snooze early with `end_snooze`. A triage verb, the answer, `end_snooze` or a withdrawal ends it, and so does its time passing, which writes no event: every reader works it out from the events on the matter's clock. While a snooze runs, the clocks count the time as waiting on the requester. The decision is recorded in the parent repository as `docs/adr/0010-triage-verbs.md`.
 
 | Evidence | Meaning |
 | --- | --- |
@@ -77,6 +81,8 @@ Two commands sit outside the table. `amend_matter` changes the document, a fact,
 | `delivery_manifest_current` | A delivery manifest exists for the current version and reviewed state. |
 | `acceptance_recorded` | The requester recorded an acceptance note. |
 | `withdrawal_reason_recorded` | A reason for closing without delivery is recorded. |
+| `closure_reason_recorded` | A reason of at least 20 visible characters is recorded. The requester sees it. |
+| `duplicate_original_visible` | The original is another matter the matter owner can see, and is not itself a duplicate. |
 
 A refused command changes nothing in the matter. It is written to the matter's event chain as `command_refused` with the actor and the reason.
 
@@ -135,7 +141,7 @@ Each change is a Word tracked change (`w:ins` or `w:del`, deleted text as `w:del
 | --- | --- |
 | The server or the machine stops mid-session | Restart `serve`. Every saved action is in the store; an action in progress was either committed or not written at all. |
 | "stale submission" | Reload, read the current state, decide again. |
-| A matter will not leave triage | Read the evidence list on the transition. Correct the cause with `amend_matter`, or withdraw the matter. |
+| A matter will not leave triage | Read the evidence list on the transition. Correct the cause with `amend_matter`. If it cannot be corrected, the matter owner may decline it with a reason, or the requester may withdraw it. |
 | Approval refused after a change | The matter is on a new version. Resume review, obtain the specialist sign-off again, then approve. |
 | `prepare_delivery` refused | Open "Export eligibility" in the review room; each failing check names its cause. |
 | Event chain fails verification | Stop condition. Preserve the store file, do not continue, inform the pilot lead. |

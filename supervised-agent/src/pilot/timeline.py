@@ -31,7 +31,7 @@ LEGEND = (
         "decision",
         "Decision",
         "A decision bound to this version: a change decision, sign-off, revision request, "
-        "approval or acceptance. Each is also kept in the decision record.",
+        "approval, acceptance, decline or duplicate. Each is also kept in the decision record.",
     ),
     ("export", "Export", "Files written to the local export folder. Nothing was sent."),
 )
@@ -51,12 +51,17 @@ EVENT_CLASSES = {
     "revision_submitted": "command",
     "review_resumed": "command",
     "matter_withdrawn": "command",
+    "matter_snoozed": "command",
+    "snooze_answered": "command",
+    "snooze_ended": "command",
     "command_refused": "refusal",
     "change_decided": "decision",
     "specialist_signed_off": "decision",
     "revision_requested": "decision",
     "approved": "decision",
     "delivery_accepted": "decision",
+    "matter_declined": "decision",
+    "matter_marked_duplicate": "decision",
     "internal_review_exported": "export",
     "delivery_package_prepared": "export",
 }

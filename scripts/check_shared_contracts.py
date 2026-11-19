@@ -33,6 +33,8 @@ PILOT_STATE_MAP = {
     "approved": "approved",
     "ready_for_delivery": "approved",
     "closed": "approved",
+    "declined": "rejected",
+    "duplicate": "rejected",
 }
 
 

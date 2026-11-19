@@ -17,6 +17,8 @@ from typing import Any
 from src.pilot.ledger import matter_ledger
 from src.pilot.parent_bridge import CONTRACT_REVIEW_STATE, parent_module, parent_request
 from src.pilot.service import StoredChange, VersionBody
+from src.pilot.snooze import parse_time, snooze_windows
+from src.pilot.state_machine import TERMINAL_STATES
 from src.pilot.store import PilotStore
 from src.pilot.timeline import payload_object
 
@@ -34,6 +36,8 @@ _STATE_AFTER = {
     "delivery_package_prepared": "ready_for_delivery",
     "delivery_accepted": "closed",
     "matter_withdrawn": "closed",
+    "matter_declined": "declined",
+    "matter_marked_duplicate": "duplicate",
 }
 _WAITING_ON = {
     "business_requester": "requester_or_missing_facts",
@@ -94,6 +98,23 @@ def _load(store: PilotStore) -> list[dict[str, Any]]:
     return matters
 
 
+def _snoozed_minutes(start: str, end: str, windows: list[dict[str, Any]]) -> float:
+    """Minutes of the gap from ``start`` to ``end`` that fall inside a snooze."""
+
+    begin, finish = parse_time(start), parse_time(end)
+    if begin is None or finish is None:
+        return 0.0
+    total = 0.0
+    for window in windows:
+        since = parse_time(window["since"])
+        ended = parse_time(window["ended_at"]) if window["ended_at"] else finish
+        if since is None or ended is None:
+            continue
+        overlap = (min(finish, ended) - max(begin, since)).total_seconds() / 60
+        total += max(0.0, overlap)
+    return round(total, 1)
+
+
 def _first(events: list[dict[str, Any]], event_type: str, key: str) -> str | None:
     return next((e[key] for e in events if e["event_type"] == event_type and e[key]), None)
 
@@ -112,16 +133,24 @@ def _matter_metrics(matter: dict[str, Any], key: str) -> dict[str, Any]:
     effort = {"intake": 0, "review": 0, "correction": 0}
     state = "intake"
     reviewed = False
+    # A snooze is time waiting on the requester, whoever acts next (ADR 0010).
+    snoozes = snooze_windows(done, key)
     for index, event in enumerate(done):
         if index:
             gap = _minutes(done[index - 1][key], event[key]) or 0.0
+            paused = (
+                min(gap, _snoozed_minutes(done[index - 1][key], event[key], snoozes))
+                if snoozes
+                else 0.0
+            )
             # The gap before an event is time spent waiting for whoever acted next.
             cause = (
                 "requester_acceptance"
                 if event["event_type"] == "delivery_accepted"
                 else _WAITING_ON.get(event["role"], "matter_owner_availability")
             )
-            waiting[cause] += gap
+            waiting[cause] += gap - paused
+            waiting["requester_or_missing_facts"] += paused
         minutes = event["effort_minutes"] or 0
         comment_id = event["payload"].get("comment_id", "")
         if event["event_type"] == "comment_reopened":
@@ -195,7 +224,7 @@ def _override_records(matters: list[dict[str, Any]], key: str) -> list[dict[str,
 
     records = []
     for matter in matters:
-        if matter["row"]["state"] != "closed":
+        if matter["row"]["state"] not in TERMINAL_STATES:
             continue
         for change in matter["changes"]:
             if change.decision not in _OVERRIDES:
@@ -457,7 +486,10 @@ def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str,
         if not events:
             continue
         requests.append(parent_request(matter_id, matter["body"].intake))
-        ledger_events.extend(matter_ledger(matter_id, events))
+        # The scripted clock's "now" is the matter's latest scripted step, refusals included.
+        scripted = [(parse_time(e["fixture_at"]), e["fixture_at"]) for e in matter["events"]]
+        now = max(((m, t) for m, t in scripted if m is not None), default=(None, None))[1]
+        ledger_events.extend(matter_ledger(matter_id, events, as_of=now))
     latest = max((e["occurred_at_utc"] for e in ledger_events), default=None)
     as_of = (
         (_parse(latest) + timedelta(hours=1)).isoformat().replace("+00:00", "Z") if latest else ""
@@ -487,9 +519,14 @@ def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict
     held = bool(version["scope_exclusions"]) or any(
         s["status"] == "blocker" for s in view["assessment"]["source_verifications"]
     )
+    review_state = CONTRACT_REVIEW_STATE[view["matter"]["state"]]
+    # A matter legal declined or closed as a duplicate is rejected, even when a charter
+    # exclusion held it: nothing about it is pending any more.
+    if held and review_state != "rejected":
+        review_state = "blocked"
     return {
         "schema": "legal-workflow-controls.v1",
-        "review_state": "blocked" if held else CONTRACT_REVIEW_STATE[view["matter"]["state"]],
+        "review_state": review_state,
         "approval_gate": {
             "human_review_required": True,
             "export_allowed": bool(eligibility["eligible"]),

@@ -82,7 +82,7 @@ Sources: <https://help.lawvu.com/en/articles/6824391-conditional-intake-forms>,
   | --- | --- | --- |
   | Adopt | Forward-only conditions, if branching is added | Built as F9: `show_if` in `src/legal_function_os/data/intake_questions.json`, checked by `intake_page.py` |
   | Adapt | A requester list of own matters with plain stages | `src/pilot/requester_status.py`, built |
-  | Reject | An MCP write surface | Rule 4 |
+  | Reject | An MCP write surface | The MCP tools stay read-only and take data, never file paths ([ADR 0007](../adr/0007-mcp-local-stdio-only.md)) |
 
 ### 4. Ironclad
 
@@ -162,7 +162,7 @@ Sources:
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | Triage verbs as new pilot commands, each a hash-chained event; Duplicate and Snooze need new states | `state_machine.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (F10, from H3; specced, Effort L) |
+  | Adapt | Triage verbs as new pilot commands, each a hash-chained event. Built (ADR 0010): decline and duplicate are new final states; a snooze is a recorded pause, not a state | `state_machine.py`, `snooze.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (F10, from H3; built, Effort L) |
   | Reject | Snooze that silently pauses an SLA | Pause needs a typed reason |
 
 ### 8. Wordsmith and Flank (channel intake)
@@ -183,7 +183,7 @@ All Claimed.
   | Verdict | Pattern | Where |
   | --- | --- | --- |
   | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Built as F11: `message_drafts.py` and the `message-drafts` command ([ADR 0009](../adr/0009-message-drafts.md)) |
-  | Reject | Posting back to the channel; invisible completion | Rule 4 and rule 1 |
+  | Reject | Posting back to the channel; invisible completion | "Do not add external delivery, publication, filing or outreach actions", and "Every consequential decision requires human review" |
 
 ## Design donors read in source (Observed)
 
@@ -276,7 +276,7 @@ a verdict, and the file the verdict would change.
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
 | Requester saw the raw state name (`triage`) | Observed | `baseline/room-requester-1280.png` | Adopt, built: six plain stages, a next step and a withheld line (`src/pilot/requester_status.py`) |
-| German labels exist only in the core shared space | Observed (`shared_space.py`) | — | Specced: align both |
+| German labels exist only in the core shared space | Observed (`shared_space.py`) | — | Decided in ADR 0011: no German stage labels; the core keeps its two German sentences, pinned by `tests/test_requester_vocabulary.py` |
 
 ### Cross-artifact
 

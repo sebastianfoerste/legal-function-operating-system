@@ -120,8 +120,16 @@ def test_every_event_type_the_service_writes_is_classified_on_purpose() -> None:
         "revision_requested": "decision",
         "approved": "decision",
         "delivery_accepted": "decision",
+        "matter_declined": "decision",
+        "matter_marked_duplicate": "decision",
         "internal_review_exported": "export",
         "delivery_package_prepared": "export",
+    }
+    # A snooze and each way a person ends it are commands: none is a decision on the matter.
+    assert {t: EVENT_CLASSES[t] for t in ("matter_snoozed", "snooze_answered", "snooze_ended")} == {
+        "matter_snoozed": "command",
+        "snooze_answered": "command",
+        "snooze_ended": "command",
     }
     assert set(EVENT_CLASSES.values()) == {key for key, _, _ in LEGEND}
     assert event_class("not_a_known_type") == "command"  # a tampered type still renders

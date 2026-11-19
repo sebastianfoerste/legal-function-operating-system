@@ -94,6 +94,7 @@ def test_loopback_hosts_are_served(server):
     ):
         status, payload = _request(server, "GET", "/health", host=host)
         assert (status, payload["status"]) == (200, "ok"), host
+        assert payload["external_processing"] == "none", host
 
 
 def test_foreign_or_missing_host_is_refused(server):

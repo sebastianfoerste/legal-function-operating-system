@@ -313,6 +313,82 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
+TRIAGE_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, blocked, open, OWNER, REQUESTER, REASON, PAUSE, QUESTION, ANSWER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function room(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    return page;
+  }
+  const section = (page, id) => page.locator("section", { has: page.locator("#" + id) }).innerText();
+
+  // The owner declines the matter that cannot leave triage, with a reason the requester sees.
+  let page = await room(OWNER, blocked);
+  await page.getByRole("button", { name: "mark duplicate → duplicate" }).click();
+  out.duplicateLabels = await page.locator("form.inline label").allInnerTexts();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: "decline → declined" }).click();
+  out.declineHint = await page.locator("form.inline .hint").first().innerText();
+  out.declineEmpty = await page.locator("form.inline textarea").inputValue();
+  await page.getByRole("button", { name: "Decline", exact: true }).click();
+  out.declineSummary = await page.locator(".error-summary").innerText();
+  await page.locator("form.inline textarea").fill(REASON);
+  await page.getByRole("button", { name: "Decline", exact: true }).click();
+  await page.waitForTimeout(500);
+  out.declineFlash = await page.locator("#flash").innerText();
+  out.declinedNext = await section(page, "next-h");
+  out.declinedTiming = await section(page, "timing-h");
+  page = await room(REQUESTER, blocked);
+  out.requesterDeclined = await section(page, "status-h");
+
+  // The owner snoozes the open matter until the requester answers a question.
+  page = await room(OWNER, open);
+  await page.getByRole("button", { name: "snooze", exact: true }).click();
+  out.untilShown = await page.getByLabel("Until (date, time and time zone)").isVisible();
+  out.untilHint = await page.locator("[data-field='until'] .hint").innerText();
+  await page.getByLabel("Snooze until").selectOption("question");
+  out.untilAfter = await page.getByLabel("Until (date, time and time zone)").isVisible();
+  await page.getByLabel("Reason", { exact: true }).fill(PAUSE);
+  await page.getByLabel("Question for the requester").fill(QUESTION);
+  await page.getByRole("button", { name: "Snooze", exact: true }).click();
+  await page.waitForTimeout(500);
+  out.snoozedNext = await section(page, "next-h");
+  out.endButtons = await page.getByRole("button", { name: "end snooze" }).count();
+
+  // The requester sees the pause and answers its question in the room.
+  page = await room(REQUESTER, open);
+  out.requesterPaused = await section(page, "status-h");
+  out.requesterQuestions = await section(page, "q-h");
+  await page.getByRole("button", { name: "Answer", exact: true }).click();
+  await page.getByLabel("Your answer").fill(ANSWER);
+  await page.getByRole("button", { name: "Send the answer" }).click();
+  await page.waitForTimeout(500);
+  out.answerFlash = await page.locator("#flash").innerText();
+  out.requesterAfter = await section(page, "status-h");
+  page = await room(OWNER, open);
+  out.ownerAfter = await section(page, "next-h");
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
 FRAMING_SCRIPT = r"""
 let chromium;
 try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
@@ -599,3 +675,49 @@ def test_room_shows_its_package_but_cannot_be_framed_by_another_page(tmp_path, m
     assert "/pilot" in out["requested"]
     assert out["framedTitle"] != "Pilot review room" and out["framedControls"] == 0
     assert "/pilot/api/actors" not in out["requested"]
+
+
+def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:
+    clock = _SetClock("2026-11-02T08:00:00Z")
+    service = PilotService(
+        PilotStore(tmp_path / "pilot.sqlite3"), export_root=tmp_path / "exports", clock=clock
+    )
+    seed_actors(service)
+    blocked = run_until(service, "blocked", "C02")  # in triage; it can never leave it
+    made = PilotApi(service).handle(
+        "POST",
+        "/pilot/api/matters",
+        {"X-Pilot-Actor": REQUESTER},
+        {"scenario_id": "routine", "matter_id": "PM-OP-1"},
+    )
+    assert made[0] == 201, made
+    service.submit_intake(REQUESTER, "PM-OP-1", made[1]["matter"]["revision"])
+    reason = "Outside the pilot charter: uncapped liability was requested."
+    pause = "Waiting for the signed order form from the sales team."
+    question = "Which order form does this draft belong to?"
+    answer = "Order form OF-2026-118, signed on 1 November."
+    out = _run_node(
+        tmp_path, monkeypatch, service, TRIAGE_SCRIPT, blocked, "PM-OP-1", OWNER, REQUESTER,
+        reason, pause, question, answer,
+    )  # fmt: skip
+
+    assert out["errors"] == []
+    assert out["duplicateLabels"][0] == "Matter this request duplicates"
+    # Nothing is proposed: the reason starts empty and must be typed.
+    assert out["declineEmpty"] == "" and "The requester sees this reason." in out["declineHint"]
+    assert "There is a problem" in out["declineSummary"] and "Enter reason" in out["declineSummary"]
+    assert "decline saved." in out["declineFlash"]
+    assert "declined" in out["declinedNext"] and "decline → declined" not in out["declinedNext"]
+    assert "not applicable, declined" in out["declinedTiming"]
+    assert "Status: Closed: declined by legal" in out["requesterDeclined"]
+    assert reason in out["requesterDeclined"]
+    assert (out["untilShown"], out["untilAfter"]) == (True, False)
+    assert "2026-11-02T08:00:00Z" in out["untilHint"] and "2026-12-02T08:00:00Z" in out["untilHint"]
+    assert "Snoozed since" in out["snoozedNext"] and question in out["snoozedNext"]
+    assert out["endButtons"] == 1
+    assert "Paused by legal" in out["requesterPaused"] and pause in out["requesterPaused"]
+    assert question in out["requesterQuestions"]
+    assert "answer snooze saved." in out["answerFlash"]
+    assert "Paused by legal" not in out["requesterAfter"]
+    assert "Last snooze" in out["ownerAfter"] and "the requester answered" in out["ownerAfter"]
+    assert answer in out["ownerAfter"]

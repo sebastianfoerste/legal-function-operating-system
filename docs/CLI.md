@@ -29,7 +29,7 @@ Without `--input`, the bundled synthetic requests are used.
 | `triage` | Risk, priority, queue, SLA, approval chain and external counsel per request, with the reasons | `--id ID` (repeatable) shows only those requests |
 | `board-pack` | Roll the decisions up into a board operations pack | `--period LABEL`, `--out DIR`, `--fail-on-breach` |
 | `validate` | Check requests against the request contract without deciding anything | none |
-| `intake-page` | Write a page that helps a requester prepare a request file and saves it on their device; it sends and decides nothing ([ADR 0006](adr/0006-intake-question-files.md)) | `--questions PATH` (default: the bundled questions), `--out DIR` (writes `intake-page.html`); no `--input`. Without `--out` it prints the question sheet, or the resolved form with `--format json` |
+| `intake-page` | Write a page that helps a requester prepare a request file and saves it on their device; it sends and decides nothing ([ADR 0006](adr/0006-intake-question-files.md)) | `--questions PATH` (default: the bundled questions), `--guidance PATH` (a team's guidance per request type, each text with a review record; default: none, none is bundled; [ADR 0012](adr/0012-intake-guidance.md)), `--out DIR` (writes `intake-page.html`); no `--input`. Without `--out` it prints the question sheet, or the resolved form with `--format json` |
 | `message-drafts` | Turn a synthetic message export into request drafts for legal to complete. Values are copied only from labelled lines such as `Value band: <50k`, and every decision field a message does not state is left blank. `validate` and `triage` refuse a draft with any blank but `type` until legal fills it; a blank `type` is only a warning, and `triage` then decides the draft without the type's own rules, so legal fills it before triage. It sends and decides nothing, and it is not an MCP tool ([ADR 0009](adr/0009-message-drafts.md)) | `--input` takes a message export (JSON lines, every sender a `syn-` handle; [format](INPUT_FORMAT.md#from-a-message-export-drafts)), not requests, and not standard input; `--policy` only changes which copied values the drafts' check flags; `--out DIR` writes `message-drafts.json` and `message-drafts.md`. Without `--out` it prints the Markdown, or the drafts array with `--format json` |
 | `dpa-review` | Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses | `--out DIR`; `--input` takes agreements, not requests; no `--policy` |
 | `capacity` | Compare capacity scenarios and name the binding constraint | `--scenarios PATH` (required with `--input`), `--out DIR` |
@@ -46,6 +46,7 @@ legal-function-os board-pack --input requests.json --out reports --fail-on-breac
 legal-function-os init --defaults --out policy.json
 legal-function-os approval-matrix --policy policy.json --out reports
 legal-function-os intake-page --policy policy.json --questions questions.json --out reports
+legal-function-os intake-page --policy policy.json --guidance guidance.json  # the question sheet with the guidance
 legal-function-os message-drafts --input export.jsonl --out drafts
 legal-function-os validate --input drafts/message-drafts.json  # names every blank until legal fills it
 legal-function-os triage --policy policy.json --input requests.csv --id REQ-1001

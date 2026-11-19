@@ -17,6 +17,7 @@ import unittest
 from pathlib import Path
 
 from legal_function_os.intake_page import (
+    add_guidance,
     check_answers,
     download_name,
     render_download,
@@ -24,6 +25,7 @@ from legal_function_os.intake_page import (
     review_rows,
     write_intake_page,
 )
+from tests.test_intake_guidance import guidance, resource
 from tests.test_intake_page import custom_policy, form_for
 
 UNAVAILABLE = 3
@@ -281,16 +283,87 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
-def run_page(path: Path, elsewhere: Path, other: Path) -> dict | None:
-    """The browser run's results, or None when no browser is available."""
+# The same answers on a page without guidance and on one with it (ADR 0012).
+GUIDED_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const fs = require("fs");
+  const out = {};
+  for (const [name, path] of [["plain", process.argv[2]], ["guided", process.argv[3]]]) {
+    const page = await (await browser.newContext({ viewport: { width: 390, height: 900 }, acceptDownloads: true })).newPage();
+    const errors = [], requests = [];
+    page.on("pageerror", (e) => errors.push("pageerror: " + e.message));
+    page.on("console", (m) => { if (m.type() === "error" || m.type() === "warning") errors.push("console: " + m.text()); });
+    page.on("request", (r) => requests.push(r.url()));
+    await page.addInitScript(() => document.addEventListener("securitypolicyviolation", (e) => console.error("csp " + e.violatedDirective)));
+    await page.goto("file://" + path);
+    const group = (label) => page.getByRole("group", { name: label });
+    const notes = () => page.getByRole("note").evaluateAll((all) => all.map((n) => n.closest("section").id));
+    const r = {};
+    r.notesAtStart = await notes();
+    await page.locator("#f-title").fill("DPA with Example Hosting GmbH (synthetic)");
+    await group("What do you need help with?").getByLabel("Data processing agreement (DPA)").check();
+    r.notesForDpa = await notes();
+    // The guidance sits between the questions about the request and the type's own, and
+    // takes no focus: Tab goes from the last of those to the first of these.
+    await page.locator("#f-deadline").focus();
+    await page.keyboard.press("Tab");
+    r.focusAfterLastField = await page.evaluate(() => document.activeElement.id);
+    r.namedNote = await page.getByRole("note", { name: "Guidance from legal for this kind of request" }).count();
+    r.noteText = await page.locator("#type-2 .guidance").evaluateAll((all) => all.map((n) => n.innerText));
+    r.reachable = await page.locator(".guidance a, .guidance button, .guidance input, .guidance textarea, .guidance select, .guidance [tabindex]").count();
+    await group("What do you need help with?").getByLabel("Checking a new supplier").check();
+    r.notesForVendor = await notes();
+    await group("What do you need help with?").getByLabel("Something else, or not sure").check();
+    r.notesForNotSure = await notes();
+    await group("What do you need help with?").getByLabel("Data processing agreement (DPA)").check();
+    await page.getByLabel(/^Other party/).fill("Example Hosting GmbH");
+    await group("Value of the contract or claim").getByLabel("Under EUR 50,000").check();
+    await group("Does it involve personal data?").getByLabel("Yes").check();
+    await group(/outside the EEA/).getByLabel("Yes").check();
+    await group(/unlimited liability/).getByLabel("No").check();
+    await group("How soon do you need an answer?").getByLabel("Within a few days").check();
+    await page.getByLabel("What do you need from legal?").fill("Please review the DPA.\nIt covers support tickets.");
+    await group("Who decides what the data is used for?").getByLabel("Not sure").check();
+    await page.getByLabel("What is the data used for?").fill("Support tickets.");
+    await page.getByLabel("Which countries outside the EEA?").fill("United States");
+    await group("Will sub-processors be involved?").getByLabel("Yes").check();
+    await page.getByLabel(/^Which sub-processors\?/).fill("Example Mail Inc.");
+    await page.getByRole("button", { name: "Check your answers" }).click();
+    r.review = await page.locator("#review-list .review-row").evaluateAll((rows) => rows.map((row) => [row.children[0].textContent, row.children[1].textContent]));
+    r.file = await page.locator("#file").textContent();
+    const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Save request file" }).click()]);
+    r.saved = fs.readFileSync(await download.path(), "utf8");
+    r.savedName = download.suggestedFilename();
+    r.status = await page.locator("#status").textContent();
+    r.footer = await page.locator("footer").textContent();
+    // Long unbroken words in the guidance wrap on a narrow phone.
+    await page.setViewportSize({ width: 320, height: 900 });
+    r.overflowAt320 = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    r.guidanceFits = await page.locator("#type-2 .guidance").evaluateAll((all) => all.every((n) => n.scrollWidth <= n.clientWidth));
+    r.errors = errors;
+    r.requests = requests;
+    out[name] = r;
+  }
+  await browser.close();
+  console.log(JSON.stringify(out));
+})();
+"""
+
+
+def run_node(script_text: str, *args: Path) -> dict | None:
+    """A browser script's results, or None when no browser is available."""
 
     if shutil.which("node") is None:
         return None
     with tempfile.TemporaryDirectory() as tmp:
         script = Path(tmp) / "intake.cjs"
-        script.write_text(SCRIPT, encoding="utf-8")
+        script.write_text(script_text, encoding="utf-8")
         result = subprocess.run(
-            ["node", str(script), str(path), str(elsewhere), str(other)],
+            ["node", str(script), *map(str, args)],
             capture_output=True, text=True, timeout=180, env=os.environ.copy(),
         )
     if result.returncode == UNAVAILABLE:
@@ -298,6 +371,36 @@ def run_page(path: Path, elsewhere: Path, other: Path) -> dict | None:
     if result.returncode != 0:
         raise AssertionError(f"browser script failed: {result.stderr}")
     return json.loads(result.stdout.split("\n")[0])
+
+
+def run_page(path: Path, elsewhere: Path, other: Path) -> dict | None:
+    """The browser run's results, or None when no browser is available."""
+
+    return run_node(SCRIPT, path, elsewhere, other)
+
+
+def dpa_answers(urgency: str = "1", sub_processors: str = "0") -> dict:
+    """The answers both browser scripts give for the DPA request, as the page reads them."""
+
+    fields = {
+        "title": "DPA with Example Hosting GmbH (synthetic)",
+        "type": "2",
+        "counterparty": "Example Hosting GmbH",
+        "value_band": "1",
+        "personal_data": "0",
+        "non_eea_transfer": "0",
+        "uncapped_liability": "1",
+        "urgency": urgency,
+        "description": "Please review the DPA.\nIt covers support tickets.",
+    }
+    questions = {
+        "processing_role": "3",
+        "processing_purpose": "Support tickets.",
+        "transfer_countries": "United States",
+        "sub_processors": sub_processors,
+        "sub_processor_list": "Example Mail Inc.",
+    }
+    return {"fields": fields, "questions": questions}
 
 
 class IntakePageBrowserTests(unittest.TestCase):
@@ -322,25 +425,7 @@ class IntakePageBrowserTests(unittest.TestCase):
         cls.tmp.cleanup()
 
     def answers(self, urgency: str = "1", sub_processors: str = "0") -> dict:
-        fields = {
-            "title": "DPA with Example Hosting GmbH (synthetic)",
-            "type": "2",
-            "counterparty": "Example Hosting GmbH",
-            "value_band": "1",
-            "personal_data": "0",
-            "non_eea_transfer": "0",
-            "uncapped_liability": "1",
-            "urgency": urgency,
-            "description": "Please review the DPA.\nIt covers support tickets.",
-        }
-        questions = {
-            "processing_role": "3",
-            "processing_purpose": "Support tickets.",
-            "transfer_countries": "United States",
-            "sub_processors": sub_processors,
-            "sub_processor_list": "Example Mail Inc.",
-        }
-        return {"fields": fields, "questions": questions}
+        return dpa_answers(urgency, sub_processors)
 
     def test_the_page_makes_no_request_and_raises_no_error(self) -> None:
         # The only loads are the page itself and the page the test visits before going back.
@@ -489,6 +574,81 @@ class IntakePageBrowserTests(unittest.TestCase):
         self.assertEqual(self.out["typeStatusAfterBack"], "")
         request = request_from_answers(self.form, self.answers(urgency="2", sub_processors="1"))
         self.assertEqual(self.out["fileAfterBack"], render_download(request))
+
+
+# Long enough not to fit 320px in one line, with no place to break.
+LONG = "Unbroken" * 40
+
+
+class GuidedPageBrowserTests(unittest.TestCase):
+    """Guidance is shown and saves nothing: the same answers save the same file (ADR 0012)."""
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.form = form_for()
+        cls.tmp = tempfile.TemporaryDirectory()
+        plain = write_intake_page(cls.form, Path(cls.tmp.name) / "plain")["html"]
+        cls.texts = guidance(
+            resource(),
+            resource(id="long", title=LONG, passage=f"See {LONG} first.", source_ref=LONG,
+                     approval={"by": LONG, "on": "2026-11-19"}),
+            resource(id="vendor", type="vendor_review", title="Supplier checklist"),
+        )
+        guided = write_intake_page(add_guidance(cls.form, cls.texts, "browser test"), Path(cls.tmp.name) / "guided")["html"]
+        cls.out = run_node(GUIDED_SCRIPT, plain, guided)
+        if cls.out is None:
+            if os.environ.get(REQUIRE_BROWSER_TESTS) == "1":
+                raise AssertionError("REQUIRE_BROWSER_TESTS=1 but Node, Playwright or Chromium is missing")
+            raise unittest.SkipTest("Node, Playwright or Chromium is not installed")
+        cls.plain, cls.guided = plain, guided
+
+    @classmethod
+    def tearDownClass(cls) -> None:
+        cls.tmp.cleanup()
+
+    def test_both_pages_save_the_same_file(self) -> None:
+        plain, guided = self.out["plain"], self.out["guided"]
+        request = request_from_answers(self.form, dpa_answers())
+        self.assertEqual(plain["saved"], render_download(request))
+        self.assertEqual(guided["saved"].encode("utf-8"), plain["saved"].encode("utf-8"))
+        self.assertEqual(guided["file"], plain["file"])
+        self.assertEqual(guided["savedName"], plain["savedName"])
+        self.assertEqual(guided["review"], plain["review"])
+        self.assertEqual(guided["review"], [[r["label"], r["answer"]] for r in review_rows(self.form, dpa_answers())])
+        self.assertEqual(guided["status"], plain["status"])
+        self.assertEqual(guided["footer"], plain["footer"] + " Guidance: Synthetic guidance for tests.")
+
+    def test_guidance_shows_with_its_type_only(self) -> None:
+        plain, guided = self.out["plain"], self.out["guided"]
+        for key in ("notesAtStart", "notesForDpa", "notesForVendor", "notesForNotSure", "namedNote", "noteText"):
+            self.assertFalse(plain[key], key)
+        self.assertEqual(guided["notesAtStart"], [])
+        self.assertEqual(guided["notesForDpa"], ["type-2"])
+        self.assertEqual(guided["namedNote"], 1)
+        self.assertEqual(guided["notesForVendor"], ["type-1"])
+        self.assertEqual(guided["notesForNotSure"], [])
+        text = " ".join(guided["noteText"][0].split())
+        self.assertTrue(text.startswith(
+            "Guidance from legal for this kind of request General information, not legal advice about your "
+            "request. Reading it is optional: you can still answer the questions and save a request file for "
+            "legal. Start from the DPA template"
+        ), text)
+        self.assertIn(
+            "Source: Synthetic contracts playbook, section 4. Legal's guidance file records that Sam Example "
+            "reviewed this text for requesters on 2026-11-19.",
+            text,
+        )
+
+    def test_guidance_takes_no_focus_fits_a_phone_and_loads_nothing(self) -> None:
+        for name, path in (("plain", self.plain), ("guided", self.guided)):
+            with self.subTest(page=name):
+                result = self.out[name]
+                self.assertEqual(result["reachable"], 0)
+                self.assertEqual(result["focusAfterLastField"], "q2-processing_role-0")
+                self.assertEqual(result["overflowAt320"], 0)
+                self.assertEqual(result["errors"], [])
+                self.assertEqual(result["requests"], [path.as_uri()])
+        self.assertTrue(self.out["guided"]["guidanceFits"])
 
 
 if __name__ == "__main__":

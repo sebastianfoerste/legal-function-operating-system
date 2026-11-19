@@ -122,7 +122,7 @@ def run_tool(name: str, arguments: dict[str, Any] | None = None) -> dict[str, An
                 "privileged advice",
                 "confidential commercial material",
             ],
-            "external_processing": "disabled by default",
+            "external_processing": "none",
         }
 
     if name == "legal.sources.verify":

@@ -87,7 +87,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | **Built** |
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | **Built** |
 | F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | **Built** |
-| F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | Specced |
+| F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | **Built** |
 | F11 | Local inbound message adapter, from a synthetic export to `legal-request.v1` drafts | 3 | Claimed: Wordsmith, Checkbox | M | pass (inbound only) | 3 | table stakes | **Built** |
 
 ### Design upgrades
@@ -213,8 +213,11 @@ playbook position next to each change, and the evidence next to each resolution.
   - A closed matter never reports "waiting on you".
 - **Files.** `src/pilot/requester_status.py`, `src/pilot/service.py`,
   `src/pilot/review_room.py`.
-- **Tests.** In `test_pilot_intake_ux.py`.
-- **Risk.** Low. German labels are not yet aligned with `shared_space.py`; see below.
+- **Tests.** In `test_pilot_intake_ux.py`. `tests/test_requester_vocabulary.py` pins the
+  six stage ids, the stage of every pilot state and the core's words (ADR 0011).
+- **Risk.** Low. The core shared space keeps its own v1 words, including two German
+  next-step sentences; [ADR 0011](../adr/0011-requester-vocabulary.md) records why, and
+  no German stage labels are added.
 
 ### D1. Inline forms and ARIA (built)
 
@@ -301,7 +304,8 @@ playbook position next to each change, and the evidence next to each resolution.
   - Never shown to requesters.
   - The text always includes "simulated local role".
   - Absent after the window passes.
-- **Risk.** It looks like identity. The label rule (rule 5) is the mitigation.
+- **Risk.** It looks like identity. The mitigation is the rule "Selecting an actor is not
+  authentication": the line says "simulated local role, not authentication".
 - **Built** (ADR 0005, owner decision 7 answered: in memory only).
   - `src/pilot/presence.py`: a lock-guarded board, 120-second window, injectable clock.
   - Views and command responses note the reviewer; an open room checks in every 30
@@ -508,10 +512,11 @@ playbook position next to each change, and the evidence next to each resolution.
 - **Done differently.**
   - One question file keyed by type, not one file per type (type keys are free text).
   - The page numbers nothing: every file is `REQ-DRAFT` and legal renumbers.
-  - No deflection yet; it is specced as F9a.
+  - No deflection in F9; it came later as F9a, from a team's own guidance file
+    ([ADR 0012](../adr/0012-intake-guidance.md)).
   - No submit and no legacy all-in-one flag: the page does not read requests.
 
-### F9a. Deflection by type (specced)
+### F9a. Deflection by type (built)
 
 - **Plan.** Offer approved guidance for the chosen request type before the requester
   saves a file, for example a template or an answered question.
@@ -524,8 +529,46 @@ playbook position next to each change, and the evidence next to each resolution.
     there are none, and never blocks, replaces or delays the download.
 - **Risk.** Deflection text without an approval record would be advice the page gives on
   its own; the portal's rule (cite an approved resource or abstain) applies.
+- **Built** ([ADR 0012](../adr/0012-intake-guidance.md)).
+  - `legal-function-os intake-page --guidance PATH` reads a team's own guidance file,
+    `legal-function-os.intake-guidance.v1`. A resource has the four `portal.share.v1`
+    keys, an optional `type`, `prepared_by` and a review record, `approval`: who reviewed
+    the text for requesters (`by`), when (`on`) and `text_sha256`, the SHA-256 of the
+    type, title, passage and source as the file gives them. A text changed after its
+    review no longer matches, and the message names the digest it has now.
+  - Every problem is reported at once with its place, and nothing is written: a missing
+    or stale record, a text that reads empty on the page (blank, or only invisible
+    characters), a review recorded by the person who prepared the text (compared
+    after folding case, spacing and invisible characters), a date that is not one, a
+    link or unpaired surrogate, a passage over 800 characters, more than three resources
+    for a type, a repeated id, look-alike titles in a type, or an unknown key. A resource
+    with no type, or a type the policy lacks, is a note. A portal document is refused.
+  - The page shows the chosen type's guidance as static text at the top of its section,
+    under "Guidance from legal for this kind of request" and a line saying it is general
+    information, not legal advice, and optional. Each text shows its source and "Legal's
+    guidance file records that NAME reviewed this text for requesters on DATE." It has
+    no link or control and never blocks, replaces or delays the download, and no word
+    the page adds says approved.
+  - Guidance stays out of the page script and its data block, so the checks, the review
+    and the saved file are the same with and without it. A browser test saves the same
+    answers from both pages and compares the files byte for byte.
+    `examples/intake-page.html` changed only in its style block and style hash.
+  - Tests: `tests/test_intake_guidance.py`, and `GuidedPageBrowserTests` in
+    `tests/test_intake_page_browser.py`.
+- **Done differently.**
+  - Nothing is bundled, so the default page, `make demo` and the Pages copy show no
+    guidance: a bundled synthetic review record would be an approval nobody gave.
+  - The record names who reviewed which text and when, bound to the text by its digest,
+    instead of the portal's `approved` flag. `portal.share.v1` is unchanged, and its
+    resources cannot be used as guidance.
+  - The page never matches a requester's words against guidance; the type the
+    requester chooses is the only key.
+  - A review record is not authentication: anyone who can edit the file can type a name
+    and copy a digest. The core reads no clock, so old guidance is not refused by age.
+  - Left to the owner, not blocking: whether a clearly labelled example should ever
+    appear on Pages (recommended: no), and who in a real team may record a review.
 
-### F10. Triage verbs (specced)
+### F10. Triage verbs (built)
 
 - **Plan.**
   - New pilot commands `decline` (reason of at least 20 characters), `mark_duplicate`
@@ -535,6 +578,39 @@ playbook position next to each change, and the evidence next to each resolution.
     requester, with a reason.
   - Needs new states. Update `parent_bridge.CONTRACT_REVIEW_STATE` and
     `scripts/check_shared_contracts.py`.
+- **Built** ([ADR 0010](../adr/0010-triage-verbs.md)).
+  - `decline` and `mark_duplicate` move a matter from `triage` to two new final states,
+    `declined` and `duplicate`, which accept no further command. Both need a reason of at
+    least 20 visible characters. A duplicate names an original the owner can see that is
+    not itself a duplicate; an unknown and a hidden matter get the same refusal. Each is
+    also kept in the decision record, bound to the version it closed.
+  - A snooze is not a state. `snooze` records a reason of at least 20 visible
+    characters and either a time with a time zone, at most 30 days ahead, or a question
+    for the requester. The requester's answer (`answer_snooze`), the owner's
+    `end_snooze`, a triage verb or a withdrawal ends it, and so does its time passing,
+    which writes no event: `src/pilot/snooze.py` works it out from the events on the
+    matter's clock for every reader.
+  - All three run only in triage, for an onboarded matter owner, and claim the matter as
+    `complete_triage` does. So a matter owner can now close a matter that cannot leave
+    triage; before, only the requester could withdraw it.
+  - A person types every reason the requester sees; the room proposes none. The requester
+    sees "Closed: declined by legal" or "Closed: duplicate of another matter" with the
+    reason, and the original only if they asked for it too. During a snooze the stage stays
+    "Received by legal", with the reason, and with a question the room offers an Answer
+    form.
+  - Shared contract: both new states map to `rejected`, which takes precedence over
+    `blocked`. Clocks: a snooze is a wait on the business in the parent ledger and in the
+    pilot metrics; on a request legal has not acknowledged it is legal's first response.
+    A decline or duplicate has no resolution target, as for a withdrawal.
+  - Tests: `supervised-agent/tests/test_pilot_triage_verbs.py`, and the triage step in
+    `supervised-agent/tests/test_review_room_browser.py`. The blocked-matter test now
+    tries 19 commands as each actor.
+- **Done differently.**
+  - Only decline and duplicate are states. A `snoozed` state would need a timer to leave
+    it, which would act on the matter without a person.
+  - No `accept` verb: `complete_triage` is accept.
+- **Known, out of scope.** A withdrawn matter is still reported `approved` in the shared
+  contract, and parent tower rows for matters closed without delivery stay open.
 
 ### F11. Local inbound adapter (built; the Slack, Teams and email decision)
 
@@ -608,9 +684,9 @@ playbook position next to each change, and the evidence next to each resolution.
 
 | Hypothesis | Verdict | Evidence |
 | --- | --- | --- |
-| H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file; deflection is specced as F9a | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
-| H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu, Legisway (Claimed); Plane (Observed) |
-| H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
+| H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file. Deflection is built as F9a from a team's own guidance file, each text with a review record, and none is bundled (ADR 0012) | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
+| H2. Requester status tracker | **Confirmed, built** in the pilot room. The core shared space keeps its own v1 words (ADR 0011): its `in_review` is the pilot's stage, `blocked` stays a core flag, and no German labels are added | LawVu, Legisway (Claimed); Plane (Observed) |
+| H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is built (ADR 0010): decline and duplicate are final states, and a snooze is a recorded pause with a typed reason, not a state | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces first (D2) and to the other five in D4, built | GOV.UK, Evidence (Observed) |
 | H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; built as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
@@ -640,12 +716,12 @@ playbook position next to each change, and the evidence next to each resolution.
 ### ADR needed (not decided here)
 
 - ~~Where presence data lives, and whether a view counts as an audit event (F4).~~ Decided in ADR 0005.
-- New pilot states for decline, duplicate and snooze, and their mapping in the shared
-  contract (F10).
+- ~~New pilot states for decline, duplicate and snooze, and their mapping in the shared
+  contract (F10).~~ Decided in ADR 0010.
 - ~~Per-`type` question files: format, location, and how they relate to `request_schema()`
   (F9).~~ Decided in ADR 0006.
-- Requester-stage vocabulary shared between the pilot and the core `shared_space.py`,
-  including German labels (F3).
+- ~~Requester-stage vocabulary shared between the pilot and the core `shared_space.py`,
+  including German labels (F3).~~ Decided in ADR 0011.
 
 ## Needs owner decision
 
@@ -664,6 +740,8 @@ playbook position next to each change, and the evidence next to each resolution.
    assignment directly into the store. These rules compare actor IDs, not people. A
    per-start secret was considered and not built: anyone at the machine could still read
    it, and it would look like a sign-in. Selecting a role is still not authentication.
+   Since 2026-11-19 no command can change a registered actor either, which narrows control
+   3 ([follow-up 2](#follow-ups-after-the-owner-decisions-2026-11-19)).
 2. **`supervised-agent/.github/workflows/`** (`ci.yml`, `pre-commit.yml`,
    `release-gates.yml`). **Decided on 2026-11-18: deleted.** GitHub runs workflows only
    from the root `.github/workflows`, so these never ran here. The root CI's `agent` job
@@ -808,3 +886,39 @@ playbook position next to each change, and the evidence next to each resolution.
         so EUR 250,000 is `250k-1m` (`>1m` means over EUR 1 million);
       - the pilot's label reads "Changes the other party asked for".
     - What remains a lawyer's call in a given case is listed at the end of that memo.
+
+## Follow-ups after the owner decisions (2026-11-19)
+
+Five small corrections made after the decisions above. None needed the owner.
+
+1. **The agent's word filter is removed.** `supervised-agent/src/intelligence_core.py`
+   replaced words such as "leverage" and "delve" in any text it was given. Its only
+   caller was the Gemini client removed under decision 3. Applied to a contract it would
+   have rewritten defined terms ("Leverage Ratio" became "use Ratio"), so it and its test
+   were removed rather than wired in elsewhere.
+2. **A registered pilot actor cannot be changed.** `register_actor` used to replace an
+   actor without writing an event, and the export gate reads the author of each recorded
+   decision as stored now: re-registering the General Counsel approver with a lower tier
+   made a recorded approval stop counting. It now refuses a change to an actor's display
+   name, role, specialty, approval tier or availability. Registering the same actor again
+   keeps its onboarding, so `pilot seed` no longer resets it. The approval-refusal tests
+   write their promotions directly into the store. Control 3 in `IDENTITY_CONTROLS.md` is
+   narrower but stays open ([ADR 0008](../adr/0008-pilot-local-hardening.md), amended).
+3. **The research documents quote rules in their own words.** The design teardown and this
+   plan named rules by numbers that no rule list uses. The landscape's counts now follow
+   the matrix: in 15 rows every capability cell is unknown, so 52 rows hold capability
+   data. Flank, Josef, Eudia and GC AI are listed as adjacent products, as the matrix has
+   them. `tests/test_research_docs.py` recomputes the counts and rings from the matrix.
+4. **CI rejects a dirty tree after the agent gate.** The CI agent job ends with a step that
+   fails if the agent gate or the browser tests changed a tracked file or left an untracked
+   one; `tests/test_agent_gate.py` keeps it the last step.
+5. **Stale statements are corrected.** The agent reports `"external_processing": "none"`,
+   because no setting can turn external processing on. The agent README counts nine
+   MCP-style tools and says that `supervised-agent/mcp.json` starts the runtime canary, an
+   HTTP server on a loopback address, not an MCP stdio server; whether to keep, remove or
+   replace that file is the owner's call, and a stdio server would add the `mcp` SDK to the
+   agent as a new dependency. The agent's contributing guide names `make check`,
+   `scenario-docs` and `python -m src.pilot.evidence.example`, which rewrites the
+   synthetic worked example a test requires to be current, instead of a `make demo` it
+   does not have. The Round 3 research note has a dated update saying its parked patterns
+   are built, and the root `.gitignore` no longer excepts the removed `.env.example`.

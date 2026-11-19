@@ -303,7 +303,7 @@ function renderRequester(view, root) {
   }}, "Submit to legal");
   root.append(h("section", {"aria-labelledby": "status-h"}, h("h2", {id: "status-h"}, "Status: " + status.label),
     h("ol", {class: "stages", "aria-label": "Stages"}, status.stages.map((s) => h("li", {"aria-current": s.current ? "step" : null}, s.label, s.current ? h("span", {class: "visually-hidden"}, " (current stage)") : null))),
-    h("p", null, status.explanation), h("p", null, h("strong", null, "Your next step: "), status.your_action),
+    h("p", null, status.explanation), legalReason(status), h("p", null, h("strong", null, "Your next step: "), status.your_action),
     h("p", {class: "muted"}, "Version " + view.matter.current_version + ". " + status.withheld)));
   const factsHost = h("div");
   const keys = view.required_facts.map((f) => [f.key, f.label]).concat([["__other", "Another fact"]]);
@@ -320,15 +320,33 @@ function renderRequester(view, root) {
       onsubmit: (v) => command("amend_matter", {reason: v.reason, facts: {[v.key === "__other" ? v.other : v.key]: v.value}})}),
     factsHost));
   if (view.matter.state === "intake") root.append(h("section", null, h("h2", null, "Submit"), submitHost, submit));
-  root.append(h("section", {"aria-labelledby": "q-h"}, h("h2", {id: "q-h"}, "Questions for you"),
+  // A snooze waiting on the requester's answer asks its question here, in legal's words.
+  const asked = status.snooze && status.snooze.question ? h("div", null, h("p", null, h("span", {class: "pill"}, "open"), status.snooze.question),
+    formButton("Answer", {title: "Answer legal's question", submit: "Send the answer", context: h("p", {class: "context"}, status.snooze.question),
+      fields: [{name: "answer", label: "Your answer", kind: "textarea", min: 10, hint: "At least 10 visible characters. Your answer ends the pause."}],
+      onsubmit: (v) => command("answer_snooze", {answer: v.answer})}, {primary: true})) : null;
+  root.append(h("section", {"aria-labelledby": "q-h"}, h("h2", {id: "q-h"}, "Questions for you"), asked,
     view.clarifications.length ? view.clarifications.map((c) => h("div", null, h("p", null, h("span", {class: "pill"}, c.state), c.body),
       c.responses.map((r) => h("p", {class: "muted"}, words(r.author_role) + ": " + r.body)),
       c.state === "open" ? formButton("Answer", {title: "Answer the question", submit: "Send the answer", context: h("p", {class: "context"}, c.body),
         fields: [{name: "body", label: "Your answer", kind: "textarea", min: 10, hint: "At least 10 characters."}, refsField],
-        onsubmit: (v) => command("respond_comment", {comment_id: c.comment_id, body: v.body, evidence_refs: splitRefs(v.evidence)})}, {primary: true}) : null)) : h("p", {class: "muted"}, "None.")));
+        onsubmit: (v) => command("respond_comment", {comment_id: c.comment_id, body: v.body, evidence_refs: splitRefs(v.evidence)})}, {primary: true}) : null)) : asked ? null : h("p", {class: "muted"}, "None.")));
   root.append(h("section", {"aria-labelledby": "d-h"}, h("h2", {id: "d-h"}, "Delivery package"),
     view.delivery.length ? h("a", {href: "/pilot/api/matters/" + encodeURIComponent(view.matter.matter_id) + "/package?actor=1", onclick: openPackage}, "Open the approved customer package") : h("p", {class: "muted"}, "No approved package yet."),
     view.matter.state === "ready_for_delivery" ? h("div", null, formButton("Accept delivery", {title: "Accept delivery", submit: "Accept delivery", fields: [note("Acceptance note", 20)], onsubmit: (v) => command("accept_delivery", {note: v.note})}, {primary: true})) : null));
+}
+// What a person in legal wrote for the requester: a pause's reason, or why the request was
+// closed in triage. Shown as written; the page adds no reason of its own.
+function legalReason(status) {
+  if (status.snooze) {
+    return h("div", {class: "context"}, h("p", null, h("strong", null, "Paused by legal"), " since " + status.snooze.since + (status.snooze.until ? ", until " + status.snooze.until : ", until you answer") + "."),
+      h("p", null, h("strong", null, "Reason from legal: "), status.snooze.reason));
+  }
+  if (status.closure) {
+    return h("div", {class: "context"}, h("p", null, h("strong", null, "Reason from legal: "), status.closure.reason),
+      status.closure.original_matter_id ? h("p", null, h("strong", null, "The other matter: "), status.closure.original_matter_id) : null);
+  }
+  return null;
 }
 async function openPackage(event) {
   event.preventDefault();
@@ -341,6 +359,33 @@ async function openPackage(event) {
 }
 // ------------------------------------------------------------------- review
 const CONFIRM = "I checked that the cited source supports this wording for this matter";
+const closureReason = () => ({name: "reason", label: "Reason", kind: "textarea", min: 20, hint: "At least 20 visible characters. The requester sees this reason."});
+// ------------------------------------------------------------------ snooze
+// A recorded pause on a matter in triage, not a state. Nothing happens when its time passes:
+// the server works out from the events whether it still runs, on the matter's own clock.
+const SNOOZE_ENDS = {time_passed: "its time passed", snooze_answered: "the requester answered", snooze_ended: "the matter owner ended it",
+  triage_completed: "triage was completed", matter_declined: "the request was declined", matter_marked_duplicate: "the request was closed as a duplicate",
+  matter_withdrawn: "the request was withdrawn", matter_snoozed: "a later snooze was recorded"};
+function snoozeBlock(view, role) {
+  const s = view.snooze, triage = view.matter.state === "triage";
+  if (!s && !triage) return null;
+  const limits = view.snooze_limits, choice = (form) => form.querySelector("[name='kind']").value;
+  const status = !s ? h("p", {class: "muted"}, "Not snoozed.") : [
+    h("p", null, h("strong", null, s.active ? "Snoozed" : "Last snooze"), " since " + s.since + " by " + s.by + ", " + (s.until ? "until " + s.until : "until the requester answers: " + s.question) + "."),
+    h("p", null, h("strong", null, "Reason: "), s.reason),
+    s.active ? h("p", {class: "muted"}, "Counted as waiting on the requester while it runs.") : h("p", {class: "muted"}, "Ended " + s.ended_at + ": " + (SNOOZE_ENDS[s.ended_by] || words(s.ended_by)) + "." + (s.answer ? " Answer: " + s.answer : ""))];
+  const control = !triage || role !== "matter_owner" ? null : s && s.active
+    ? h("button", {class: "act secondary", type: "button", onclick: () => command("end_snooze")}, "end snooze")
+    : formButton("snooze", {title: "Snooze the request", submit: "Snooze",
+        context: h("p", {class: "muted"}, "The matter stays in triage and the requester sees the reason. Nothing happens when the time passes; the pause just ends. While it runs, the time counts as waiting on the requester."),
+        fields: [{name: "reason", label: "Reason", kind: "textarea", min: 20, hint: "At least 20 visible characters. The requester sees this reason."},
+          {name: "kind", label: "Snooze until", kind: "select", value: "until", options: [["until", "A date and time"], ["question", "The requester answers a question"]]},
+          {name: "until", label: "Until (date, time and time zone)", kind: "text", hidden: (form) => choice(form) !== "until",
+            hint: "Written with a time zone, as in 2026-11-20T09:00:00+01:00. After " + limits.server_now + " and no later than " + limits.latest_until + " on the server's clock (at most " + limits.max_days + " days)."},
+          {name: "question", label: "Question for the requester", kind: "textarea", min: 10, hidden: (form) => choice(form) !== "question", hint: "At least 10 visible characters. The requester sees this question; their answer ends the snooze."}],
+        onsubmit: (v) => command("snooze", v.kind === "until" ? {reason: v.reason, until: v.until} : {reason: v.reason, question: v.question})});
+  return h("div", {class: "context"}, h("h3", null, "Snooze"), status, control);
+}
 const NOTE_COMMANDS = {approve: ["Approval note", 30], submit_revision: ["Revision note", 20], accept_delivery: ["Acceptance note", 20]};
 function transitionControl(item, role) {
   const allowed = item.roles.includes(role), label = words(item.command) + " → " + words(item.target);
@@ -354,6 +399,17 @@ function transitionControl(item, role) {
     return formButton(label, {title: "Request a revision", submit: "Request the revision", fields: [
       {name: "comment_ids", label: "Open comments this revision concerns", kind: "checks", options: open.map((c) => [c.comment_id, c.comment_id + ": " + c.body.slice(0, 80)])},
       note("Reason for the revision", 20)], onsubmit: (v) => command("request_revision", {comment_ids: v.comment_ids, note: v.note})}, {primary: true});
+  }
+  // Closing in triage: the reason is typed by the matter owner and shown to the requester as
+  // written. The page proposes no reason and no original.
+  if (item.command === "decline") {
+    return formButton(label, {title: "Decline the request", submit: "Decline", fields: [closureReason()],
+      onsubmit: (v) => command("decline", {reason: v.reason})});
+  }
+  if (item.command === "mark_duplicate") {
+    return formButton(label, {title: "Close as a duplicate", submit: "Close as a duplicate", fields: [
+      {name: "original", label: "Matter this request duplicates", kind: "text", hint: "Its matter ID, as the list of matters shows it. It must be a matter you can see, and not itself a duplicate."}, closureReason()],
+      onsubmit: (v) => command("mark_duplicate", {original_matter_id: v.original, reason: v.reason})});
   }
   const needs = NOTE_COMMANDS[item.command];
   if (!needs) return h("button", {class: "act", onclick: () => command(item.command)}, label);
@@ -370,7 +426,7 @@ function changeControls(change, host) {
     formButton("amend", {title: "Amend the wording of " + change.id, submit: "Save the amendment", context: quote, fields: [
       {name: "text", label: "Amended wording", kind: "textarea", value: change.proposed_text}, note("Reason for the amended wording", 20), {name: "confirmed", label: CONFIRM, kind: "checkbox"}],
       onsubmit: (v) => command("decide_change", {change_id: change.id, outcome: "amended", amended_text: v.text, reason: v.note, source_support_confirmed: true})}, {host}),
-    formButton("ask requester", {title: "Ask the requester about " + change.id, submit: "Send the question", fields: [{name: "question", label: "Question for the requester", kind: "textarea", min: 10, hint: "At least 10 characters. The requester sees only this question."}],
+    formButton("ask requester", {title: "Ask the requester about " + change.id, submit: "Send the question", fields: [{name: "question", label: "Question for the requester", kind: "textarea", min: 10, hint: "At least 10 visible characters. The requester sees only this question."}],
       onsubmit: (v) => command("decide_change", {change_id: change.id, outcome: "clarification_requested", reason: v.question})}, {host}));
 }
 function playbookCell(position) {
@@ -405,10 +461,11 @@ function renderReview(view, root) {
       h("span", {class: "pill"}, "risk " + version.routing.risk), h("span", {class: "pill"}, "queue " + version.routing.queue), h("span", {class: "pill"}, "approval tier " + version.required_final_tier)),
     version.scope_exclusions.length ? h("p", {class: "bad"}, "Outside the pilot charter: " + version.scope_exclusions.join("; ")) : null,
     view.allowed.length ? view.allowed.map((item) => h("div", null, transitionControl(item, role), item.evidence.length ? evidenceList(item.evidence) : null)) : h("p", {class: "muted"}, "No transition is available from this state."),
+    snoozeBlock(view, role),
     h("button", {class: "act secondary", onclick: () => command("export_internal_review")}, "write internal review draft"),
     formButton("withdraw matter", {title: "Withdraw the matter", submit: "Withdraw", fields: [note("Reason for closing without delivery", 20)], onsubmit: (v) => command("withdraw", {note: v.note})}),
     view.manifests.some((m) => m.kind === "delivery_package") ? h("a", {href: "#", onclick: openPackage}, "Open the approved customer package") : null));
-  root.append(timingSection(view.timing, view.audit_chain.verified));
+  root.append(timingSection(view.timing, view.audit_chain.verified, view.matter.state));
   root.append(h("section", {"aria-labelledby": "ready-h"}, h("h2", {id: "ready-h"}, "Readiness check"), evidenceList(view.readiness),
     h("h3", null, "Required facts"), factList(view.required_facts),
     h("h3", null, "Assignments"), h("p", null, Object.entries(view.assignments).map(([r, ids]) => words(r) + ": " + ids.join(", ")).join(" | ")),
@@ -450,7 +507,9 @@ const RESOLUTION_WORDS = {...SLA_WORDS, overdue: "✗ past target, still open"};
 const SLA_CLASS = {met: "ok", breached: "bad", overdue: "bad"};
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const hours = (value) => value.toFixed(1) + " h";
-function timingSection(t, verified) {
+// Why no resolution target applies: the matter closed without delivery.
+const CLOSED_AS = {declined: "declined", duplicate: "closed as a duplicate"};
+function timingSection(t, verified, state) {
   const section = h("section", {"aria-labelledby": "timing-h"}, h("h2", {id: "timing-h"}, "Time on this matter"));
   if (!t.available) { section.append(h("p", {class: "muted"}, "Time on this matter cannot be measured: " + t.reason + ".")); return section; }
   const cal = t.calendar, sla = (status) => ({class: "kpi-note " + (SLA_CLASS[status] || "")});
@@ -458,7 +517,7 @@ function timingSection(t, verified) {
     ["Elapsed", hours(t.elapsed_hours), h("span", {class: "kpi-note"}, "Calendar time since the request was submitted to legal")],
     ["Business time", hours(t.business_hours), h("span", {class: "kpi-note"}, hours(t.legal_controlled_hours) + " with legal, " + hours(t.business_wait_hours) + " waiting on the business")],
     ["First response", t.first_response_business_hours == null ? "none yet" : hours(t.first_response_business_hours), h("span", sla(t.response_sla), "Target " + hours(t.response_target_business_hours) + ": " + RESPONSE_WORDS[t.response_sla])],
-    ["Resolution", hours(t.legal_controlled_hours), h("span", sla(t.resolution_sla), "With legal, of a " + hours(t.resolution_target_business_hours) + " target: " + RESOLUTION_WORDS[t.resolution_sla])],
+    ["Resolution", hours(t.legal_controlled_hours), h("span", sla(t.resolution_sla), "With legal, of a " + hours(t.resolution_target_business_hours) + " target: " + (t.resolution_sla === "not_applicable" && CLOSED_AS[state] ? "not applicable, " + CLOSED_AS[state] : RESOLUTION_WORDS[t.resolution_sla]))],
   ];
   const clock = t.clock === "scripted" ? "Scripted rehearsal time" : "Time recorded by this server";
   const upTo = !t.open ? "up to the closing event" : t.clock === "scripted" ? "up to the latest scripted step" : "up to when this page was loaded";

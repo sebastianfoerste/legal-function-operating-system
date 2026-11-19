@@ -31,6 +31,8 @@ CONTRACT_REVIEW_STATE = {
     "approved": "approved",
     "ready_for_delivery": "approved",
     "closed": "approved",
+    "declined": "rejected",
+    "duplicate": "rejected",
 }
 
 
