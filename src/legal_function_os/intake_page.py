@@ -86,6 +86,14 @@ WHITESPACE = (
 )
 _SURROGATE = re.compile("[\ud800-\udfff]")
 _SPACES = re.compile("[" + re.escape(WHITESPACE) + "]+")
+# Default-ignorable code points outside general category Cf: a combining grapheme joiner,
+# Hangul fillers, Khmer and Mongolian inherent vowels and selectors, variation selectors
+# and the reserved ones. None is drawn, or each draws a blank. A fixed list, so what reads
+# the same does not depend on the Unicode tables of the Python version.
+_IGNORABLE = re.compile(
+    "[\u034f\u115f\u1160\u17b4\u17b5\u180b-\u180f\u2065\u3164\ufe00-\ufe0f\uffa0"
+    "\ufff0-\ufff8\U000e0000-\U000e0fff]"
+)
 _SLUG = re.compile("[^A-Za-z0-9]+")
 
 GUIDANCE_SCHEMA = "legal-function-os.intake-guidance.v1"
@@ -125,9 +133,10 @@ class IntakeQuestionsError(ValueError):
 
 def _looks(text: str) -> str:
     """Text as it reads on the page: runs of whitespace are one space, and invisible
-    format characters (a zero-width space, a byte order mark) are gone."""
+    characters are gone: format characters (a zero-width space, a byte order mark) and
+    the other default-ignorable ones (``_IGNORABLE``)."""
 
-    visible = "".join(c for c in text if unicodedata.category(c) != "Cf")
+    visible = _IGNORABLE.sub("", "".join(c for c in text if unicodedata.category(c) != "Cf"))
     return _SPACES.sub(" ", visible).strip(" ")
 
 
@@ -217,9 +226,10 @@ class _Check:
         return data
 
     def plain(self, value: Any, place: str) -> str:
-        """Text the page shows: not blank, no unpaired surrogate, no link."""
+        """Text the page shows: not blank, no unpaired surrogate, no link. Text that
+        reads empty on the page (``_looks``), such as a lone zero-width space, is blank."""
 
-        if not isinstance(value, str) or not clean_text(value):
+        if not isinstance(value, str) or not _looks(clean_text(value)):
             self.problem(place, f"expected non-empty text, got {_kind(value)}")
             return ""
         if _SURROGATE.search(value):
@@ -503,12 +513,13 @@ def _question(
         listed = entry.get("options")
         # Each answer as it reads once its own problem is fixed: a padded or repeated answer
         # still has one reading, so a typo in a condition below is still reported. An answer
-        # that is not text, is blank or holds an unpaired surrogate has none, and neither has
-        # a wrong kind or number of answers: then the set is None, and a condition naming
-        # the question adds no second problem; the build fails at the question itself.
+        # that is not text, is blank (reads empty on the page) or holds an unpaired surrogate
+        # has none, and neither has a wrong kind or number of answers: then the set is None,
+        # and a condition naming the question adds no second problem; the build fails at the
+        # question itself.
         if kind == "choice" and isinstance(listed, list) and 2 <= len(listed) <= MAX_OPTIONS:
             cleaned = [clean_text(o) if isinstance(o, str) and not _SURROGATE.search(o) else "" for o in listed]
-            domains[key] = list(dict.fromkeys(cleaned)) if all(cleaned) else None
+            domains[key] = list(dict.fromkeys(cleaned)) if all(_looks(c) for c in cleaned) else None
         else:
             domains[key] = [o["value"] for o in options] if kind == "yes_no" else None
     cond = None

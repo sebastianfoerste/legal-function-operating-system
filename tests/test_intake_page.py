@@ -513,6 +513,10 @@ class QuestionFileTests(unittest.TestCase):
                 lambda qs: qs[0].update(options=["A", " ", "B"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
                 f"{where}[0].options[1]: expected non-empty text, got text",
             ),
+            "a controller with an option that reads empty": (
+                lambda qs: qs[0].update(options=["A", "\u200b", "B"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
+                f"{where}[0].options[1]: expected non-empty text, got text",
+            ),
             "a controller with an unpaired surrogate": (
                 lambda qs: qs[0].update(options=["A", "B\ud800", "C"]) or qs[1].update(show_if={"field": "processing_role", "in": ["Nope"]}),
                 f"{where}[0].options[1]: contains an unpaired surrogate; the page could not save it",
@@ -631,6 +635,11 @@ class QuestionFileTests(unittest.TestCase):
             "20 options": ({"options": [f"Answer {n}" for n in range(20)]}, (), []),
             "a blank option": ({"options": ["A", " "]}, (), [f"{where}.options[1]: expected non-empty text, got text"]),
             "a label that is only a byte order mark": ({"label": "\ufeff"}, (), [f"{where}.label: expected non-empty text, got text"]),
+            "a label that is only a zero-width space": ({"label": "\u200b"}, (), [f"{where}.label: expected non-empty text, got text"]),
+            "a hint that is only a Hangul filler": ({"hint": " \u3164 "}, (), [f"{where}.hint: expected non-empty text, got text"]),
+            "an option that is only a combining grapheme joiner": (
+                {"options": ["A", "\u034f"]}, (), [f"{where}.options[1]: expected non-empty text, got text"],
+            ),
             "an option with spaces": ({"options": ["A", " B"]}, (), [f"{where}.options[1]: has spaces at the start or end"]),
             "an option twice": ({"options": ["A", "A"]}, (), [f"{where}.options[1]: 'A' is listed twice"]),
             "two options that read the same": (
@@ -640,6 +649,10 @@ class QuestionFileTests(unittest.TestCase):
             "an option with an invisible character": (
                 {"options": ["We decide", "We\u200b decide"]}, (),
                 [f"{where}.options[1]: 'We\\u200b decide' reads the same as 'We decide' on the page; give each answer its own wording"],
+            ),
+            "an option with a combining grapheme joiner": (
+                {"options": ["We decide", "We de\u034fcide"]}, (),
+                [f"{where}.options[1]: " + repr("We de\u034fcide") + " reads the same as 'We decide' on the page; give each answer its own wording"],
             ),
             "an option ending in U+FEFF": ({"options": ["A", "B\ufeff"]}, (), [f"{where}.options[1]: has spaces at the start or end"]),
             "an option with a link": (
@@ -754,6 +767,10 @@ class QuestionFileTests(unittest.TestCase):
             ),
             "two bands whose labels differ only in invisible characters": (
                 lambda f: f["value_band"]["options"].update({"250k-1m": "Over EUR\ufeff 1\u200b million"}),
+                ["fields.value_band: 'Over EUR 1 million' labels both '250k-1m' and '>1m'; give each answer its own label"],
+            ),
+            "two bands whose labels differ only in a variation selector and a Hangul filler": (
+                lambda f: f["value_band"]["options"].update({"250k-1m": "Over EUR 1\ufe0f million\u3164"}),
                 ["fields.value_band: 'Over EUR 1 million' labels both '250k-1m' and '>1m'; give each answer its own label"],
             ),
             "a label for a band the policy does not have": (lambda f: f["value_band"]["options"].update(huge=None), []),

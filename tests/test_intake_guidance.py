@@ -190,6 +190,15 @@ class GuidanceFileTests(unittest.TestCase):
             "Alex​ Example",
             "﻿Alex Example",
             "Ａlex Example",  # a fullwidth A
+            # Default-ignorable characters outside the format category draw nothing either.
+            "Alex Exam\u034fple",  # a combining grapheme joiner
+            "Alex Exam\ufe0fple",  # a variation selector
+            "Alex Exam\U000e0100ple",  # a supplementary variation selector
+            "Alex Example\u3164",  # a Hangul filler
+            "Alex Exam\uffa0ple",  # a halfwidth Hangul filler, U+3164 after NFKC
+            "Alex Exam\u115f\u1160ple",  # Hangul choseong and jungseong fillers
+            "Alex Exam\u17b4\u17b5ple",  # Khmer inherent vowels
+            "Alex Exam\u180bple",  # a Mongolian variation selector
         ):
             with self.subTest(by=by):
                 item = resource()
@@ -241,6 +250,21 @@ class GuidanceFileTests(unittest.TestCase):
             self.assertEqual(problems(guidance(item)), [f"resources[0].approval.by: {message}"])
             self.assertEqual(problems(guidance(name=value)), [f"name: {message}"])
 
+    def test_a_text_that_reads_empty_is_blank(self) -> None:
+        # Spaces, format characters and the other characters that draw nothing: the page
+        # would show an empty heading or "records that  reviewed this text".
+        blank = "expected non-empty text, got text"
+        for value in (" ", "​", "⁠", "­", "‎", "﻿​", "ㅤ", "͏", " ᅟ️ "):
+            for key in ("id", "type", "title", "passage", "source_ref", "prepared_by"):
+                with self.subTest(key=key, value=value):
+                    self.assertEqual(problems(guidance(resource(**{key: value}))), [f"resources[0].{key}: {blank}"])
+            with self.subTest(key="approval.by", value=value):
+                item = resource()
+                item["approval"]["by"] = value
+                self.assertEqual(problems(guidance(item)), [f"resources[0].approval.by: {blank}"])
+            with self.subTest(key="name", value=value):
+                self.assertEqual(problems(guidance(name=value)), [f"name: {blank}"])
+
     def test_passages_and_resources_per_type_are_limited(self) -> None:
         self.assertEqual(problems(guidance(resource(passage="p" * MAX_GUIDANCE_PASSAGE))), [])
         self.assertEqual(
@@ -268,7 +292,13 @@ class GuidanceFileTests(unittest.TestCase):
             problems(guidance(resource(), resource(type="ip", title="Brand checklist"))),
             ["resources[1].id: 'dpa-template' is used twice (also resources[0])"],
         )
-        for twin in ("Start from the DPA template", "start from the dpa template", "Start  from the DPA​ template "):
+        for twin in (
+            "Start from the DPA template",
+            "start from the dpa template",
+            "Start  from the DPA​ template ",
+            "Start from the DPA te\u034fmplate",
+            "Start from the DPA\ufe0f template\u3164",
+        ):
             with self.subTest(twin=twin):
                 self.assertEqual(
                     problems(guidance(resource(), resource(id="second", title=twin))),
