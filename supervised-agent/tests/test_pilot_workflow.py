@@ -730,8 +730,10 @@ def test_no_actor_and_no_command_moves_the_blocked_matter(tmp_path) -> None:
         "submit_revision": {"note": "Revised as requested by review."},
         "approve": {"note": APPROVAL},
         "accept_delivery": {"note": "Accepting the package as delivered."},
+        "answer_snooze": {"answer": "Answering a question nobody asked."},
     }
-    skipped = {"amend_matter", "restore_version", "withdraw"}  # legitimate ways to fix or close it
+    # Legitimate ways to fix, pause or close it, each tested on this matter elsewhere.
+    skipped = {"amend_matter", "restore_version", "withdraw", "decline", "mark_duplicate", "snooze"}
     actors = [a.actor_id for a in service.list_actors()]
     attempts = 0
     for command in service.COMMANDS:
@@ -751,7 +753,7 @@ def test_no_actor_and_no_command_moves_the_blocked_matter(tmp_path) -> None:
                     actor, matter_id, command, revision(service, matter_id), arguments.get(command)
                 )
             attempts += 1
-    assert attempts == 17 * len(actors)
+    assert attempts == 19 * len(actors)  # 17, and answering or ending a snooze that is not there
     assert state(service, matter_id) == "triage"
     with service.store.reading() as connection:
         for table in ("deliverable_manifests", "decisions"):

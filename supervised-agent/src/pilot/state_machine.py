@@ -18,7 +18,11 @@ STATES: tuple[State, ...] = (
     "approved",
     "ready_for_delivery",
     "closed",
+    "declined",
+    "duplicate",
 )
+# A matter in one of these states accepts no further command.
+TERMINAL_STATES: frozenset[State] = frozenset({"closed", "declined", "duplicate"})
 
 EVIDENCE: dict[str, str] = {
     "intake_complete": "Every required fact, the instructions and a readable source document are present.",
@@ -37,6 +41,8 @@ EVIDENCE: dict[str, str] = {
     "delivery_manifest_current": "A delivery manifest exists for the current version and reviewed state.",
     "acceptance_recorded": "The requester recorded an acceptance note.",
     "withdrawal_reason_recorded": "A reason for closing without delivery is recorded.",
+    "closure_reason_recorded": "A reason of at least 20 characters is recorded. The requester sees it.",
+    "duplicate_original_visible": "The original is another matter the matter owner can see, and is not itself a duplicate.",
 }
 
 
@@ -59,6 +65,14 @@ TRANSITIONS: tuple[Transition, ...] = (
         "complete_triage",
         ("matter_owner",),
         ("assessment_current", "sources_usable", "pilot_scope_met", "decision_authority_agreed"),
+    ),
+    Transition("triage", "declined", "decline", ("matter_owner",), ("closure_reason_recorded",)),
+    Transition(
+        "triage",
+        "duplicate",
+        "mark_duplicate",
+        ("matter_owner",),
+        ("duplicate_original_visible", "closure_reason_recorded"),
     ),
     Transition("assignment", "review", "start_review", ("matter_owner",), ("reviewers_available",)),
     Transition(
@@ -126,6 +140,10 @@ REASSESSMENT_SOURCES: frozenset[State] = frozenset(
     {"assignment", "review", "revision_requested", "revised", "approved", "ready_for_delivery"}
 )
 WITHDRAWAL_ROLES: tuple[Role, ...] = ("matter_owner", "business_requester")
+# The triage verbs. Each is open to an onboarded matter owner who is not yet on the matter,
+# and each claims it, so an owner can close a matter that cannot leave triage. A snooze is
+# a recorded pause, not a state (ADR 0010).
+TRIAGE_CLAIM_COMMANDS = frozenset({"complete_triage", "decline", "mark_duplicate", "snooze"})
 
 
 def find_transition(source: str, command: str) -> Transition | None:
@@ -168,4 +186,27 @@ def describe_transitions() -> list[dict[str, object]]:
             "evidence": ["withdrawal_reason_recorded"],
         }
     )
+    rows += [
+        {
+            "from": "triage",
+            "to": "triage (snoozed)",
+            "command": "snooze",
+            "roles": ["matter_owner"],
+            "evidence": ["a reason, and a time at most 30 days ahead or a question"],
+        },
+        {
+            "from": "triage (snoozed)",
+            "to": "triage",
+            "command": "answer_snooze",
+            "roles": ["business_requester"],
+            "evidence": ["an answer to the snooze question"],
+        },
+        {
+            "from": "triage (snoozed)",
+            "to": "triage",
+            "command": "end_snooze",
+            "roles": ["matter_owner"],
+            "evidence": [],
+        },
+    ]
     return rows

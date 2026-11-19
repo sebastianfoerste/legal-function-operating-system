@@ -87,7 +87,7 @@ The build cap is three features and two design upgrades, in rank order.
 | F7 | KPI tiles with target, delta and as-of; wall-clock timers in the live room (H6) | 3 | Observed: Evidence BigValue | M | pass | 4.5 | table stakes | **Built** |
 | F8 | Approval-matrix view from `rules.py` and policy (H8, part) | 3 | Claimed: SpotDraft ladder | M | pass | 3 | differentiator | **Built** |
 | F9 | Static core intake page with per-`type` question files (H1 stretch) | 4 | Observed: docassemble, SurveyJS | L | pass (download only) | 3 | table stakes | **Built** |
-| F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | Specced |
+| F10 | Triage verbs: accept, decline with reason, duplicate, snooze (H3) | 4 | Observed: Plane | L | pass | 3 | table stakes | **Built** |
 | F11 | Local inbound message adapter, from a synthetic export to `legal-request.v1` drafts | 3 | Claimed: Wordsmith, Checkbox | M | pass (inbound only) | 3 | table stakes | **Built** |
 
 ### Design upgrades
@@ -525,7 +525,7 @@ playbook position next to each change, and the evidence next to each resolution.
 - **Risk.** Deflection text without an approval record would be advice the page gives on
   its own; the portal's rule (cite an approved resource or abstain) applies.
 
-### F10. Triage verbs (specced)
+### F10. Triage verbs (built)
 
 - **Plan.**
   - New pilot commands `decline` (reason of at least 20 characters), `mark_duplicate`
@@ -535,6 +535,39 @@ playbook position next to each change, and the evidence next to each resolution.
     requester, with a reason.
   - Needs new states. Update `parent_bridge.CONTRACT_REVIEW_STATE` and
     `scripts/check_shared_contracts.py`.
+- **Built** ([ADR 0010](../adr/0010-triage-verbs.md)).
+  - `decline` and `mark_duplicate` move a matter from `triage` to two new final states,
+    `declined` and `duplicate`, which accept no further command. Both need a reason of at
+    least 20 characters. A duplicate names an original the owner can see that is not
+    itself a duplicate; an unknown and a hidden matter get the same refusal. Each is also
+    kept in the decision record, bound to the version it closed.
+  - A snooze is not a state. `snooze` records a reason of at least 20 characters and
+    either a time with a time zone, at most 30 days ahead, or a question for the
+    requester. The requester's answer (`answer_snooze`), the owner's `end_snooze`, a
+    triage verb or a withdrawal ends it, and so does its time passing, which writes no
+    event: `src/pilot/snooze.py` works it out from the events on the matter's clock for
+    every reader.
+  - All three run only in triage, for an onboarded matter owner, and claim the matter as
+    `complete_triage` does. So a matter owner can now close a matter that cannot leave
+    triage; before, only the requester could withdraw it.
+  - A person types every reason the requester sees; the room proposes none. The requester
+    sees "Closed: declined by legal" or "Closed: duplicate of another matter" with the
+    reason, and the original only if they asked for it too. During a snooze the stage stays
+    "Received by legal", with the reason, and with a question the room offers an Answer
+    form.
+  - Shared contract: both new states map to `rejected`, which takes precedence over
+    `blocked`. Clocks: a snooze is a wait on the business in the parent ledger and in the
+    pilot metrics; on a request legal has not acknowledged it is legal's first response.
+    A decline or duplicate has no resolution target, as for a withdrawal.
+  - Tests: `supervised-agent/tests/test_pilot_triage_verbs.py`, and the triage step in
+    `supervised-agent/tests/test_review_room_browser.py`. The blocked-matter test now
+    tries 19 commands as each actor.
+- **Done differently.**
+  - Only decline and duplicate are states. A `snoozed` state would need a timer to leave
+    it, which would act on the matter without a person.
+  - No `accept` verb: `complete_triage` is accept.
+- **Known, out of scope.** A withdrawn matter is still reported `approved` in the shared
+  contract, and parent tower rows for matters closed without delivery stay open.
 
 ### F11. Local inbound adapter (built; the Slack, Teams and email decision)
 
@@ -610,7 +643,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | --- | --- | --- |
 | H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file; deflection is specced as F9a | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
 | H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu, Legisway (Claimed); Plane (Observed) |
-| H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is specced | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
+| H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is built (ADR 0010): decline and duplicate are final states, and a snooze is a recorded pause with a typed reason, not a state | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces first (D2) and to the other five in D4, built | GOV.UK, Evidence (Observed) |
 | H6. KPI dashboard with wall-clock timers | **Modified.** Tile anatomy plus live-room timers, with no new clock; built as F7 | Evidence (Observed); LawVu (Claimed). Brightflag was not found in any search, so it is not cited |
@@ -640,8 +673,8 @@ playbook position next to each change, and the evidence next to each resolution.
 ### ADR needed (not decided here)
 
 - ~~Where presence data lives, and whether a view counts as an audit event (F4).~~ Decided in ADR 0005.
-- New pilot states for decline, duplicate and snooze, and their mapping in the shared
-  contract (F10).
+- ~~New pilot states for decline, duplicate and snooze, and their mapping in the shared
+  contract (F10).~~ Decided in ADR 0010.
 - ~~Per-`type` question files: format, location, and how they relate to `request_schema()`
   (F9).~~ Decided in ADR 0006.
 - Requester-stage vocabulary shared between the pilot and the core `shared_space.py`,

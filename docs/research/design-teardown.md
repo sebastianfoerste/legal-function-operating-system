@@ -162,7 +162,7 @@ Sources:
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | Triage verbs as new pilot commands, each a hash-chained event; Duplicate and Snooze need new states | `state_machine.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (F10, from H3; specced, Effort L) |
+  | Adapt | Triage verbs as new pilot commands, each a hash-chained event. Built (ADR 0010): decline and duplicate are new final states; a snooze is a recorded pause, not a state | `state_machine.py`, `snooze.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (F10, from H3; built, Effort L) |
   | Reject | Snooze that silently pauses an SLA | Pause needs a typed reason |
 
 ### 8. Wordsmith and Flank (channel intake)

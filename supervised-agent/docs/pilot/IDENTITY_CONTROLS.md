@@ -10,6 +10,8 @@ The pilot models permissions explicitly and enforces them on every command, whet
 | Each actor holds one role; each command names the roles that may run it | `state_machine.TRANSITIONS`, `PilotService._require_access` |
 | A role grants nothing on its own; the actor must be assigned to that matter in that role | `PilotService._execute`, `_require_access` |
 | A matter is invisible to actors who are not assigned to it, apart from the unclaimed triage queue for onboarded matter owners | `PilotService._can_read` |
+| Only an onboarded matter owner may claim an unclaimed matter in triage, by triaging, declining, closing it as a duplicate or snoozing it; outside triage, an actor not on the matter is told only that | `PilotService._check_claim`, `_execute` |
+| A duplicate names an original the owner can see; an unknown matter and a hidden one get the same refusal, and the requester sees the original only if they asked for it too | `_ev_duplicate_original_visible`, `PilotService._closure` |
 | Specialist clauses are decided by that specialist, other clauses by the matter owner | `PilotService.decide_change` |
 | The final approver holds the tier the parent approval matrix requires and is neither requester nor matter owner, and decided no change | `_ev_approver_authorised` |
 | A critical comment is closed only by its author or the final approver | `PilotService.resolve_comment` |

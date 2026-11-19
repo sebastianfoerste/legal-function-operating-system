@@ -39,27 +39,36 @@ def matter_timing(
 ) -> dict[str, Any]:
     """Elapsed and business time for one matter, or why it cannot be measured.
 
-    ``events`` are the matter's event rows in seq order, with parsed payloads.
+    ``events`` are the matter's event rows in seq order, with parsed payloads. ``closed``
+    means the matter is in a final state; ``withdrawn`` that it closed without delivery
+    (withdrawn, declined or marked a duplicate), so no resolution target applies.
     """
 
     counted = [e for e in events if e["event_type"] != "command_refused"]
     scripted = bool(counted) and all(e["fixture_at"] for e in counted)
     clock = "fixture_at" if scripted else "occurred_at"
     base: dict[str, Any] = {"clock": "scripted" if scripted else "recorded"}
-    entries = matter_ledger(matter_id, counted, clock) if counted else []
-    if not entries:
-        return {**base, "available": False, "reason": "it has not been submitted to legal yet"}
-    tower = parent_module("outcome_control_tower")
     try:
         # A closed matter is measured to its closing event. The scripted clock has no
         # "now", so an open rehearsal matter is measured to its latest scripted step,
-        # refusals included.
-        if closed:
+        # refusals included. A snooze whose time has run out by then ends there.
+        if not counted:
+            as_of = None
+        elif closed:
             as_of = _utc(counted[-1][clock])
         elif scripted:
             as_of = _utc(max((e[clock] for e in events if e[clock]), key=_parse))
         else:
             as_of = _utc(now)
+        entries = matter_ledger(matter_id, counted, clock, as_of=as_of) if counted else []
+    except (ValueError, TypeError, KeyError, AttributeError, OverflowError) as error:
+        # A stored event the parent cannot read (or a tampered one) leaves timing out;
+        # it never stops the review room.
+        return {**base, "available": False, "reason": str(error)}
+    if not entries or as_of is None:
+        return {**base, "available": False, "reason": "it has not been submitted to legal yet"}
+    tower = parent_module("outcome_control_tower")
+    try:
         config = json.loads(
             parent_module("bundled").bundled_path("outcome_config.json").read_text("utf-8")
         )

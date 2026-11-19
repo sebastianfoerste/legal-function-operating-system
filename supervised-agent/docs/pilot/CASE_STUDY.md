@@ -29,7 +29,7 @@ The end-to-end rehearsal runs three scripted scenarios with synthetic participan
 | The workflow survives restarts | 68 scripted steps across eight scenario processes; 27 checks made by a further process after the last restart, all passed (`rehearsal-report.md`) |
 | A matter goes through a revision | Scenario 2: revision requested, addressed, an issue reopened and closed, three matter versions, final approval on version 3 |
 | A stale approval is refused | Scenario 2, steps B38 and B40; `test_fact_change_invalidates_signoff_and_blocks_stale_approval` |
-| The blocked matter stays blocked | Scenario 3 ends in triage with no export and no approval; `test_no_actor_and_no_command_moves_the_blocked_matter` tries 17 commands as each of six actors |
+| The blocked matter stays blocked | Scenario 3 ends in triage with no export and no approval; `test_no_actor_and_no_command_moves_the_blocked_matter` tries 19 commands as each of six actors. Only a new version, a withdrawal or a matter owner's triage verb (decline, duplicate, snooze), each with a typed reason, can change it |
 | Only the approved version is exported | Each delivery manifest matches a valid final approval on the same version and reviewed state; the specialist matter has a package for version 3 only |
 | The gate holds when the screen sequence is bypassed | Direct API, service and library calls in `tests/test_pilot_api.py`, `tests/test_pilot_workflow.py` and `tests/test_export_gate.py`; records altered directly in the database are detected |
 | The reviewed document is faithful to the source | Rejecting every tracked change reproduces the customer draft paragraph for paragraph; bytes outside edited paragraphs are unchanged (`tests/test_docx_redline.py`) |
