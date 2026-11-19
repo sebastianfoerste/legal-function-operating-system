@@ -323,7 +323,7 @@ function renderRequester(view, root) {
   // A snooze waiting on the requester's answer asks its question here, in legal's words.
   const asked = status.snooze && status.snooze.question ? h("div", null, h("p", null, h("span", {class: "pill"}, "open"), status.snooze.question),
     formButton("Answer", {title: "Answer legal's question", submit: "Send the answer", context: h("p", {class: "context"}, status.snooze.question),
-      fields: [{name: "answer", label: "Your answer", kind: "textarea", min: 10, hint: "At least 10 characters. Your answer ends the pause."}],
+      fields: [{name: "answer", label: "Your answer", kind: "textarea", min: 10, hint: "At least 10 visible characters. Your answer ends the pause."}],
       onsubmit: (v) => command("answer_snooze", {answer: v.answer})}, {primary: true})) : null;
   root.append(h("section", {"aria-labelledby": "q-h"}, h("h2", {id: "q-h"}, "Questions for you"), asked,
     view.clarifications.length ? view.clarifications.map((c) => h("div", null, h("p", null, h("span", {class: "pill"}, c.state), c.body),
@@ -359,7 +359,7 @@ async function openPackage(event) {
 }
 // ------------------------------------------------------------------- review
 const CONFIRM = "I checked that the cited source supports this wording for this matter";
-const closureReason = () => ({name: "reason", label: "Reason", kind: "textarea", min: 20, hint: "At least 20 characters. The requester sees this reason."});
+const closureReason = () => ({name: "reason", label: "Reason", kind: "textarea", min: 20, hint: "At least 20 visible characters. The requester sees this reason."});
 // ------------------------------------------------------------------ snooze
 // A recorded pause on a matter in triage, not a state. Nothing happens when its time passes:
 // the server works out from the events whether it still runs, on the matter's own clock.
@@ -378,11 +378,11 @@ function snoozeBlock(view, role) {
     ? h("button", {class: "act secondary", type: "button", onclick: () => command("end_snooze")}, "end snooze")
     : formButton("snooze", {title: "Snooze the request", submit: "Snooze",
         context: h("p", {class: "muted"}, "The matter stays in triage and the requester sees the reason. Nothing happens when the time passes; the pause just ends. While it runs, the time counts as waiting on the requester."),
-        fields: [{name: "reason", label: "Reason", kind: "textarea", min: 20, hint: "At least 20 characters. The requester sees this reason."},
+        fields: [{name: "reason", label: "Reason", kind: "textarea", min: 20, hint: "At least 20 visible characters. The requester sees this reason."},
           {name: "kind", label: "Snooze until", kind: "select", value: "until", options: [["until", "A date and time"], ["question", "The requester answers a question"]]},
           {name: "until", label: "Until (date, time and time zone)", kind: "text", hidden: (form) => choice(form) !== "until",
             hint: "Written with a time zone, as in 2026-11-20T09:00:00+01:00. After " + limits.server_now + " and no later than " + limits.latest_until + " on the server's clock (at most " + limits.max_days + " days)."},
-          {name: "question", label: "Question for the requester", kind: "textarea", min: 10, hidden: (form) => choice(form) !== "question", hint: "At least 10 characters. The requester sees this question; their answer ends the snooze."}],
+          {name: "question", label: "Question for the requester", kind: "textarea", min: 10, hidden: (form) => choice(form) !== "question", hint: "At least 10 visible characters. The requester sees this question; their answer ends the snooze."}],
         onsubmit: (v) => command("snooze", v.kind === "until" ? {reason: v.reason, until: v.until} : {reason: v.reason, question: v.question})});
   return h("div", {class: "context"}, h("h3", null, "Snooze"), status, control);
 }
@@ -426,7 +426,7 @@ function changeControls(change, host) {
     formButton("amend", {title: "Amend the wording of " + change.id, submit: "Save the amendment", context: quote, fields: [
       {name: "text", label: "Amended wording", kind: "textarea", value: change.proposed_text}, note("Reason for the amended wording", 20), {name: "confirmed", label: CONFIRM, kind: "checkbox"}],
       onsubmit: (v) => command("decide_change", {change_id: change.id, outcome: "amended", amended_text: v.text, reason: v.note, source_support_confirmed: true})}, {host}),
-    formButton("ask requester", {title: "Ask the requester about " + change.id, submit: "Send the question", fields: [{name: "question", label: "Question for the requester", kind: "textarea", min: 10, hint: "At least 10 characters. The requester sees only this question."}],
+    formButton("ask requester", {title: "Ask the requester about " + change.id, submit: "Send the question", fields: [{name: "question", label: "Question for the requester", kind: "textarea", min: 10, hint: "At least 10 visible characters. The requester sees only this question."}],
       onsubmit: (v) => command("decide_change", {change_id: change.id, outcome: "clarification_requested", reason: v.question})}, {host}));
 }
 function playbookCell(position) {

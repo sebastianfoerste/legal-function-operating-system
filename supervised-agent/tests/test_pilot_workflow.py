@@ -411,6 +411,25 @@ def test_a_recorded_approval_keeps_counting_because_its_approver_cannot_change(
     assert before.eligible and event_types(service, matter_id) == events
 
 
+@pytest.mark.parametrize("blank", ["\u200b", "\u2060", "\u034f", "\u3164"])
+def test_a_clarification_question_counts_only_what_the_requester_sees(tmp_path, blank) -> None:
+    # The requester is told "Answer the open question below.", so a question that reads
+    # empty would ask nothing.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "routine", "A06")
+    loaded = revision(service, matter_id)
+    target = change_id(service, matter_id, "audit-right")
+    ask = {"change_id": target, "outcome": "clarification_requested"}
+    with pytest.raises(InvalidCommandError, match="question must be at least 10 visible"):
+        service.decide_change(OWNER, matter_id, loaded, reason=blank * 10, **ask)
+    with pytest.raises(InvalidCommandError, match="question must be at least 10 visible"):
+        service.decide_change(OWNER, matter_id, loaded, reason="Which?" + blank * 10, **ask)
+    assert revision(service, matter_id) == loaded
+    service.decide_change(OWNER, matter_id, loaded, reason="Which plan?" + blank, **ask)
+    change = next(c for c in service.view_matter(OWNER, matter_id)["changes"] if c["id"] == target)
+    assert change["decision"] == "clarification_requested"
+
+
 # -- stale submissions and conflicting edits -----------------------------------------
 
 

@@ -1725,7 +1725,7 @@ class PilotService:
                     )
                 change.amended_text = wording
             elif outcome == "clarification_requested":
-                text = _require_text(reason, 10, "clarification question")
+                text = _require_visible_text(reason, 10, "clarification question")
             else:
                 raise InvalidCommandError(
                     "outcome must be accepted, rejected, amended or clarification_requested"

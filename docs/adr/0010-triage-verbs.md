@@ -49,10 +49,11 @@ Four constraints shape it here:
    command. The closing outcome is recorded as `declined_by_legal` or
    `duplicate_of_another_matter`.
 2. **Evidence.** Both need `closure_reason_recorded`: a reason of at least 20 visible
-   characters. A run of whitespace counts as one, and characters that draw nothing are
-   not counted: format characters (general category Cf, such as a zero-width space or a
+   characters. A run of whitespace counts as one, and invisible characters are not
+   counted: format characters (general category Cf, such as a zero-width space or a
    word joiner) and, from a fixed list, the other default-ignorable code points (such as
-   a combining grapheme joiner or a Hangul filler). The reason is kept as typed.
+   a combining grapheme joiner or a Hangul filler). The reason is kept as typed, with runs
+   of whitespace collapsed to one space.
    `mark_duplicate` also needs `duplicate_original_visible`: the original is another
    matter the owner can see (`_can_read`), and it is not itself a duplicate. An unknown
    ID and one the owner may not see get the same refusal, so the refusal says nothing
