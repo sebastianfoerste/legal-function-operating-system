@@ -256,13 +256,42 @@ class PilotService:
     # ------------------------------------------------------------------ actors
 
     def register_actor(self, actor: Actor) -> Actor:
+        """Register a synthetic actor once; refuse any later change to it.
+
+        Actors are not matter-scoped, so no event on a matter's hash chain could record a
+        change to one, and the export gate reads the author of each recorded decision as
+        stored now. Replacing an actor used to happen silently: re-registering the General
+        Counsel approver with a lower tier made a recorded approval stop counting, with no
+        event. So a registered actor's display name, role, specialty, approval tier and
+        availability stay as first registered, and a change is refused; a new synthetic
+        actor ID is the way to change any of them. No command writes ``available`` after
+        registration. Registering an identical actor again changes nothing and keeps its
+        stored onboarding, so ``pilot seed`` on an existing store does not reset it.
+        Onboarding changes only through ``complete_onboarding``.
+        """
+
         with self.store.transaction() as connection:
-            connection.execute(
-                "INSERT INTO actors (actor_id, body) VALUES (?, ?) "
-                "ON CONFLICT(actor_id) DO UPDATE SET body = excluded.body",
-                (actor.actor_id, actor.model_dump_json()),
+            row = connection.execute(
+                "SELECT body FROM actors WHERE actor_id = ?", (actor.actor_id,)
+            ).fetchone()
+            if row is None:
+                connection.execute(
+                    "INSERT INTO actors (actor_id, body) VALUES (?, ?)",
+                    (actor.actor_id, actor.model_dump_json()),
+                )
+                return actor
+            stored = Actor.model_validate_json(row["body"])
+            changed = sorted(
+                name
+                for name, value in actor.model_dump(exclude={"onboarded"}).items()
+                if getattr(stored, name) != value
             )
-        return actor
+            if changed:
+                raise InvalidCommandError(
+                    f"{actor.actor_id} is already registered; its {', '.join(changed)} "
+                    "cannot change. Register a new synthetic actor ID instead"
+                )
+            return stored
 
     def complete_onboarding(self, actor_id: str, completed_tasks: list[str]) -> Actor:
         """Mark an actor ready once every onboarding task of the role is acknowledged."""

@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-11-18
+- Amended: 2026-11-19: `register_actor` now refuses to change a registered actor, so no
+  command can promote the requester or the specialist to approver; see Consequences.
 - Answers owner decision 1 in `docs/research/adaptation-plan.md` (authentication and the
   11 controls in
   [`IDENTITY_CONTROLS.md`](../../supervised-agent/docs/pilot/IDENTITY_CONTROLS.md)).
@@ -90,7 +92,11 @@ repository, so it cannot be built or tested here.
   same user can still write the SQLite store (control 10). The requester and change-decider
   refusals are tested through `register_actor`, which replaces an actor without writing an
   event: a control 3 gap that these tests show but do not close. The matter-owner refusal
-  is tested through such a direct write to the store.
+  is tested through such a direct write to the store. Since 2026-11-19 `register_actor`
+  refuses any change to a registered actor (re-registering the approver with a lower tier
+  used to make a recorded approval stop counting, with no event), so the requester and
+  change-decider refusals are also tested through a direct write to the store; the gap is
+  narrower, and administered provisioning with a second approver stays control 3.
 - The `approver_authorised` requirement text now names all three rules, as the check
   already enforced, in `state_machine.py` and `RUNBOOK.md`.
 - Tests, all under `supervised-agent/tests/`: `test_runtime_agent.py` (listening address,
