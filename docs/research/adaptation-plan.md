@@ -213,8 +213,11 @@ playbook position next to each change, and the evidence next to each resolution.
   - A closed matter never reports "waiting on you".
 - **Files.** `src/pilot/requester_status.py`, `src/pilot/service.py`,
   `src/pilot/review_room.py`.
-- **Tests.** In `test_pilot_intake_ux.py`.
-- **Risk.** Low. German labels are not yet aligned with `shared_space.py`; see below.
+- **Tests.** In `test_pilot_intake_ux.py`. `tests/test_requester_vocabulary.py` pins the
+  six stage ids, the stage of every pilot state and the core's words (ADR 0011).
+- **Risk.** Low. The core shared space keeps its own v1 words, including two German
+  next-step sentences; [ADR 0011](../adr/0011-requester-vocabulary.md) records why, and
+  no German stage labels are added.
 
 ### D1. Inline forms and ARIA (built)
 
@@ -642,7 +645,7 @@ playbook position next to each change, and the evidence next to each resolution.
 | Hypothesis | Verdict | Evidence |
 | --- | --- | --- |
 | H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file; deflection is specced as F9a | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
-| H2. Requester status tracker | **Confirmed, built** in the pilot room. The `shared_space.py` alignment is parked | LawVu, Legisway (Claimed); Plane (Observed) |
+| H2. Requester status tracker | **Confirmed, built** in the pilot room. The core shared space keeps its own v1 words (ADR 0011): its `in_review` is the pilot's stage, `blocked` stays a core flag, and no German labels are added | LawVu, Legisway (Claimed); Plane (Observed) |
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is built (ADR 0010): decline and duplicate are final states, and a snooze is a recorded pause with a typed reason, not a state | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
 | H5. One shared design system | **Modified.** One token set, applied to two surfaces first (D2) and to the other five in D4, built | GOV.UK, Evidence (Observed) |
@@ -677,8 +680,8 @@ playbook position next to each change, and the evidence next to each resolution.
   contract (F10).~~ Decided in ADR 0010.
 - ~~Per-`type` question files: format, location, and how they relate to `request_schema()`
   (F9).~~ Decided in ADR 0006.
-- Requester-stage vocabulary shared between the pilot and the core `shared_space.py`,
-  including German labels (F3).
+- ~~Requester-stage vocabulary shared between the pilot and the core `shared_space.py`,
+  including German labels (F3).~~ Decided in ADR 0011.
 
 ## Needs owner decision
 

@@ -276,7 +276,7 @@ a verdict, and the file the verdict would change.
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
 | Requester saw the raw state name (`triage`) | Observed | `baseline/room-requester-1280.png` | Adopt, built: six plain stages, a next step and a withheld line (`src/pilot/requester_status.py`) |
-| German labels exist only in the core shared space | Observed (`shared_space.py`) | — | Specced: align both |
+| German labels exist only in the core shared space | Observed (`shared_space.py`) | — | Decided in ADR 0011: no German stage labels; the core keeps its two German sentences, pinned by `tests/test_requester_vocabulary.py` |
 
 ### Cross-artifact
 
