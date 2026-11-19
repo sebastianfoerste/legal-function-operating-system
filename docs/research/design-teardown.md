@@ -82,7 +82,7 @@ Sources: <https://help.lawvu.com/en/articles/6824391-conditional-intake-forms>,
   | --- | --- | --- |
   | Adopt | Forward-only conditions, if branching is added | Built as F9: `show_if` in `src/legal_function_os/data/intake_questions.json`, checked by `intake_page.py` |
   | Adapt | A requester list of own matters with plain stages | `src/pilot/requester_status.py`, built |
-  | Reject | An MCP write surface | Rule 4 |
+  | Reject | An MCP write surface | The MCP tools stay read-only and take data, never file paths ([ADR 0007](../adr/0007-mcp-local-stdio-only.md)) |
 
 ### 4. Ironclad
 
@@ -183,7 +183,7 @@ All Claimed.
   | Verdict | Pattern | Where |
   | --- | --- | --- |
   | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Built as F11: `message_drafts.py` and the `message-drafts` command ([ADR 0009](../adr/0009-message-drafts.md)) |
-  | Reject | Posting back to the channel; invisible completion | Rule 4 and rule 1 |
+  | Reject | Posting back to the channel; invisible completion | "Do not add external delivery, publication, filing or outreach actions", and "Every consequential decision requires human review" |
 
 ## Design donors read in source (Observed)
 

@@ -118,7 +118,8 @@ Repository discovery (Observed, 2026-10-20):
 ## Products
 
 67 products and projects are in the matrix: 20 direct, 32 adjacent and 15 pattern donors.
-Three rows hold no capability data and carry evidence `unknown`, so 64 rows hold data.
+In 15 rows every capability cell is `unknown`: three carry evidence `unknown`, and twelve
+hold Claimed product facts only. So 52 rows hold capability data.
 Brightflag and HighQ were not found in any search; Onit surfaced only in the German
 follow-up. GitHub pull request reviews was not researched this run, because no source for
 it was reachable.
@@ -148,19 +149,24 @@ These are the findings that matter for this repository.
   - The Escalation Router only drafts; a person sends.
   - The playbook monitor proposes a change after 5 deviations within 12 months and
     writes only after the lawyer accepts an exact diff.
-- **Flank** markets autonomous legal agents that work "embedded, invisible" in Slack,
-  Teams and email. That is the anti-pattern this repository is built against. Claimed:
-  <https://insightpartners.com/ideas/flank-raises-10m-to-scale-autonomous-legal-agents-embedded-invisible-and-built-for-the-enterprise>
 - **Wordsmith** takes requests in Slack, Teams, email and Salesforce, pulls context from
   CRM and CLM, and answers in the same channel. Claimed: <https://wordsmith.ai/integrations>
-- **Streamline AI, Xakia, Tonkean, Josef, Bryter (now presenting BEAMON AI), Mitratech,
-  ServiceNow Legal Service Delivery, Sandstone, Eudia, GC AI, DISCO Request, Bigle,
-  Autologyx and the Norton Rose Fulbright front door** cover parts of intake, routing and
-  reporting. Snippets show conditional forms, FAQ deflection and dashboards, but little
-  about how decisions are explained. Claimed; per-row sources are in the matrix.
+- **Streamline AI, Xakia, Tonkean, Bryter (now presenting BEAMON AI), Mitratech,
+  ServiceNow Legal Service Delivery, Sandstone, DISCO Request, Bigle, Autologyx and the
+  Norton Rose Fulbright front door** cover parts of intake, routing and reporting.
+  Snippets show conditional forms, FAQ deflection and dashboards, but little about how
+  decisions are explained. Claimed; per-row sources are in the matrix.
+- **Wolters Kluwer (Legisway), otris, DEPLAW and Onit** are in the
+  [German follow-up](#german-follow-up-2026-11-18) below.
 
 ### Adjacent products
 
+- **Flank** markets autonomous legal agents that work "embedded, invisible" in Slack,
+  Teams and email. That is the anti-pattern this repository is built against. Claimed:
+  <https://insightpartners.com/ideas/flank-raises-10m-to-scale-autonomous-legal-agents-embedded-invisible-and-built-for-the-enterprise>
+- **Josef** offers no-code legal automation for guidance, documents and emails, **Eudia**
+  governed AI agents for in-house legal, and **GC AI** an AI workspace for in-house
+  contracts and compliance. Claimed; per-row sources are in the matrix.
 - **Ironclad** gives each clause a preferred position, fallbacks and an approver. A
   deviation goes to a "Needs Review" section, and skipping a change can require an extra
   approver. Claimed:

@@ -304,7 +304,8 @@ playbook position next to each change, and the evidence next to each resolution.
   - Never shown to requesters.
   - The text always includes "simulated local role".
   - Absent after the window passes.
-- **Risk.** It looks like identity. The label rule (rule 5) is the mitigation.
+- **Risk.** It looks like identity. The mitigation is the rule "Selecting an actor is not
+  authentication": the line says "simulated local role, not authentication".
 - **Built** (ADR 0005, owner decision 7 answered: in memory only).
   - `src/pilot/presence.py`: a lock-guarded board, 120-second window, injectable clock.
   - Views and command responses note the reviewer; an open room checks in every 30
