@@ -11,6 +11,9 @@
   [Intake wording: legal and policy review](../research/2026-11-intake-legal-review.md).
 - Answers the "ADR needed" item for F9 in `docs/research/adaptation-plan.md`: the format
   and location of per-type question files, and how they relate to `request_schema()`.
+- Follow-up: [ADR 0012](0012-intake-guidance.md), 2026-11-19, builds the deflection named
+  under Consequences (F9a) from a team's own guidance file, each text with a review record;
+  nothing is bundled.
 
 ## Context
 

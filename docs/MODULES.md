@@ -39,7 +39,7 @@ three external-counsel referrals across eight synthetic requests.
 | Capacity simulation | Queue demand, binding constraints, minimum uplift, approval overflow, and scenario delta | `capacity_simulator.py` |
 | Outcome control tower | Business-time SLAs, wait-state reconciliation, effort calibration, stalled-work queue, and value proxies | `outcome_control_tower.py` |
 | Approval matrix view | The approval chain for every value band and risk level, unreachable combinations marked, each request in its cell | `approval_matrix.py` |
-| Request intake page | A static page that asks the request fields and per-type questions, checks the answers and saves a `legal-request.v1` file on the requester's device; it sends and decides nothing | `intake_page.py`, `data/intake_questions.json` |
+| Request intake page | A static page that asks the request fields and per-type questions, checks the answers and saves a `legal-request.v1` file on the requester's device; it sends and decides nothing. With `--guidance`, it shows a team's own guidance for the chosen type, each text with a review record (ADR 0012) | `intake_page.py`, `data/intake_questions.json` |
 | Message drafts | Request drafts from a synthetic message export, values copied only from labelled lines, every unstated decision field left blank for legal; it reads a file, sends nothing and decides nothing (ADR 0009) | `message_drafts.py`, `data/sample_messages.jsonl` |
 | Supervised agent runs | Step-by-step matter runs with evidence and a binding approval step | `agent_run.py` |
 | Requester shared space | Status sharing behind a documented approval gate | `shared_space.py` |

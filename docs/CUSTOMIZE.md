@@ -169,3 +169,64 @@ Every problem in the file is reported with its place, for example
 `types.dpa.questions[1].show_if.field: "sub_processors" is asked later (questions[3])`,
 and nothing is written. A type your policy does not have, or a policy type with no
 questions, is a note. Keys that start with `x_` are ignored.
+
+## Guidance from legal on the intake page
+
+The page can show short guidance from legal for a request type, such as where to find
+the template for that kind of request, above that type's questions. None is bundled,
+so without a guidance file the page shows none. Pass your own with `--guidance`:
+
+```bash
+legal-function-os intake-page --policy policy.json --guidance guidance.json --out reports
+```
+
+A guidance file looks like this (synthetic names; the digest is the one the check
+names, see below):
+
+```json
+{
+  "schema": "legal-function-os.intake-guidance.v1",
+  "name": "Contracts team guidance",
+  "resources": [
+    {
+      "id": "dpa-template",
+      "type": "dpa",
+      "title": "Start from the DPA template",
+      "passage": "Use the DPA template from the contracts page and mark every change you need.",
+      "source_ref": "Contracts playbook, section 4",
+      "prepared_by": "Alex Example",
+      "approval": {"by": "Sam Example", "on": "2026-11-19", "text_sha256": "<the digest>"}
+    }
+  ]
+}
+```
+
+- `type` is a request type of your policy. A resource without one, or with a type your
+  policy does not have, is a note and is not shown. A type takes at most three
+  resources, a passage is at most 800 characters, and no text may hold a link.
+- `prepared_by` names who wrote the text, and `approval` records who reviewed it for
+  requesters (`by`) and when (`on`, as `YYYY-MM-DD`). They must be different people;
+  the names are compared ignoring case, spacing and invisible characters.
+- `approval.text_sha256` ties the review to the text. Leave it out at first and run
+  `legal-function-os intake-page --guidance guidance.json`: the check names the digest
+  of the text as it stands (`resources[0].approval.text_sha256: missing; the text now
+  has the digest …`). The reviewer reads that text and records the digest. When the
+  `type`, `title`, `passage` or `source_ref` changes, the digest no longer matches, the
+  check names the new one, and nothing is written until a review of the new text is
+  recorded. `id`, `prepared_by` and keys starting with `x_` can change without one.
+
+A requester who chooses the type sees, at the top of its questions, "Guidance from
+legal for this kind of request", the line "General information, not legal advice about
+your request. Reading it is optional: you can still answer the questions and save a
+request file for legal.", and each text with "Source: … Legal's guidance file records
+that … reviewed this text for requesters on …". The guidance has no link or control.
+The page never matches it against the requester's answers, and the file the requester
+saves is the same with and without it. Without `--out`, the command prints the question
+sheet with each type's guidance under its questions, for review in one place.
+
+A review record is a line in a file, not authentication: anyone who can edit the file
+can type a name and copy a digest. Keep the file under version control and review each
+change, as you would a policy. The page shows the review date but does not judge its
+age, so decide when your team reviews its guidance again. The format and its rules are
+[ADR 0012](adr/0012-intake-guidance.md). Every problem is reported with its place, and
+nothing is written.

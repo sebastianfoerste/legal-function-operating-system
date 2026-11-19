@@ -16,3 +16,4 @@ Rejected. A Proposed record names a choice the maintainer still has to make.
 | [0009](0009-message-drafts.md) | Message drafts: a local, inbound-only adapter for channel intake | Accepted |
 | [0010](0010-triage-verbs.md) | Triage verbs: decline and duplicate are final states, a snooze is a recorded pause | Accepted |
 | [0011](0011-requester-vocabulary.md) | Requester stages: the pilot's six ids are the vocabulary; the core shared space keeps its v1 words; no German labels | Accepted |
+| [0012](0012-intake-guidance.md) | Intake guidance: a team's own texts, each with a review record bound to the text; nothing bundled | Accepted |

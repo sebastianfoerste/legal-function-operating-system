@@ -511,10 +511,11 @@ playbook position next to each change, and the evidence next to each resolution.
 - **Done differently.**
   - One question file keyed by type, not one file per type (type keys are free text).
   - The page numbers nothing: every file is `REQ-DRAFT` and legal renumbers.
-  - No deflection yet; it is specced as F9a.
+  - No deflection in F9; it came later as F9a, from a team's own guidance file
+    ([ADR 0012](../adr/0012-intake-guidance.md)).
   - No submit and no legacy all-in-one flag: the page does not read requests.
 
-### F9a. Deflection by type (specced)
+### F9a. Deflection by type (built)
 
 - **Plan.** Offer approved guidance for the chosen request type before the requester
   saves a file, for example a template or an answered question.
@@ -527,6 +528,43 @@ playbook position next to each change, and the evidence next to each resolution.
     there are none, and never blocks, replaces or delays the download.
 - **Risk.** Deflection text without an approval record would be advice the page gives on
   its own; the portal's rule (cite an approved resource or abstain) applies.
+- **Built** ([ADR 0012](../adr/0012-intake-guidance.md)).
+  - `legal-function-os intake-page --guidance PATH` reads a team's own guidance file,
+    `legal-function-os.intake-guidance.v1`. A resource has the four `portal.share.v1`
+    keys, an optional `type`, `prepared_by` and a review record, `approval`: who reviewed
+    the text for requesters (`by`), when (`on`) and `text_sha256`, the SHA-256 of the
+    type, title, passage and source as the file gives them. A text changed after its
+    review no longer matches, and the message names the digest it has now.
+  - Every problem is reported at once with its place, and nothing is written: a missing
+    or stale record, a review recorded by the person who prepared the text (compared
+    after folding case, spacing and invisible characters), a date that is not one, a
+    link or unpaired surrogate, a passage over 800 characters, more than three resources
+    for a type, a repeated id, look-alike titles in a type, or an unknown key. A resource
+    with no type, or a type the policy lacks, is a note. A portal document is refused.
+  - The page shows the chosen type's guidance as static text at the top of its section,
+    under "Guidance from legal for this kind of request" and a line saying it is general
+    information, not legal advice, and optional. Each text shows its source and "Legal's
+    guidance file records that NAME reviewed this text for requesters on DATE." It has
+    no link or control and never blocks, replaces or delays the download, and no word
+    the page adds says approved.
+  - Guidance stays out of the page script and its data block, so the checks, the review
+    and the saved file are the same with and without it. A browser test saves the same
+    answers from both pages and compares the files byte for byte.
+    `examples/intake-page.html` changed only in its style block and style hash.
+  - Tests: `tests/test_intake_guidance.py`, and `GuidedPageBrowserTests` in
+    `tests/test_intake_page_browser.py`.
+- **Done differently.**
+  - Nothing is bundled, so the default page, `make demo` and the Pages copy show no
+    guidance: a bundled synthetic review record would be an approval nobody gave.
+  - The record names who reviewed which text and when, bound to the text by its digest,
+    instead of the portal's `approved` flag. `portal.share.v1` is unchanged, and its
+    resources cannot be used as guidance.
+  - The page never matches a requester's words against guidance; the type the
+    requester chooses is the only key.
+  - A review record is not authentication: anyone who can edit the file can type a name
+    and copy a digest. The core reads no clock, so old guidance is not refused by age.
+  - Left to the owner, not blocking: whether a clearly labelled example should ever
+    appear on Pages (recommended: no), and who in a real team may record a review.
 
 ### F10. Triage verbs (built)
 
@@ -644,7 +682,7 @@ playbook position next to each change, and the evidence next to each resolution.
 
 | Hypothesis | Verdict | Evidence |
 | --- | --- | --- |
-| H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file; deflection is specced as F9a | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
+| H1. Required facts before submission | **Confirmed, built** in the pilot. The core stretch is **modified** and built as F9: a static intake page with per-type questions that saves a request file. Deflection is built as F9a from a team's own guidance file, each text with a review record, and none is bundled (ADR 0012) | docassemble, claude-for-legal (Observed); LawVu, Xakia (Claimed) |
 | H2. Requester status tracker | **Confirmed, built** in the pilot room. The core shared space keeps its own v1 words (ADR 0011): its `in_review` is the pilot's stage, `blocked` stays a core flag, and no German labels are added | LawVu, Legisway (Claimed); Plane (Observed) |
 | H3. Triage inbox with presence | **Modified.** Verbs and presence are split, F10 and F4. F4 is built (in memory only); F10 is built (ADR 0010): decline and duplicate are final states, and a snooze is a recorded pause with a typed reason, not a state | Plane, Chatwoot, Langfuse (Observed); Linear (Claimed) |
 | H4. Review-room forms and ARIA | **Confirmed, built** (D1) | GOV.UK (Observed); RETROSPECTIVE |
