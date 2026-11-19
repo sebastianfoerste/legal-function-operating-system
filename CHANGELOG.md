@@ -78,6 +78,7 @@ All notable changes to this project are recorded here. The format follows
 
 ### Removed
 
+- The supervised agent's word filter, `src/intelligence_core.py`, and its test. It replaced words such as "leverage", "delve" and "testament" in any text it was given, and its only caller was the Gemini client removed under owner decision 3, so nothing has used it since. Applied to a contract it would have rewritten defined terms ("Leverage Ratio" became "use Ratio"), so it is removed rather than wired in elsewhere.
 - The weekly repository-traffic snapshot workflow added in 0.3.0.
 - Internal material from `supervised-agent/docs/`: agent plans and the development checklist `tasks.md`.
 - `supervised-agent/.github/` (the `ci`, `pre-commit` and `release-gates` workflows, `dependabot.yml` and `CODEOWNERS`) and `supervised-agent/.pre-commit-config.yaml`. GitHub runs workflows only from the repository root, so they never ran; the pre-commit configuration was used only by that `pre-commit` workflow, or by someone running pre-commit inside `supervised-agent/`, which nothing documented. The root CI `agent` job runs the agent's gate with pinned tools and browser tests. `tests/test_agent_gate.py` keeps them out (owner decision 2).
