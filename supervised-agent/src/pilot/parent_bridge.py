@@ -34,8 +34,9 @@ CONTRACT_REVIEW_STATE = {
     "duplicate": "rejected",
 }
 # A closed matter is reported by how it closed. Only a matter whose approved package the
-# requester accepted is approved. A withdrawal cancels every sign-off and approval, so a
-# withdrawn matter is rejected whatever state it had reached.
+# requester accepted is approved. A withdrawal cancels every sign-off and approval, and
+# records a rejected review decision on the stored assessment (``PilotService.withdraw``),
+# so a withdrawn matter is rejected whatever state it had reached.
 CLOSED_OUTCOME_REVIEW_STATE = {
     "delivered_locally_and_accepted": "approved",
     "withdrawn_without_delivery": "rejected",

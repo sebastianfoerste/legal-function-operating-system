@@ -2123,6 +2123,19 @@ class PilotService:
             self._require_access(ctx, WITHDRAWAL_ROLES)
             text = _require_text(note, 20, "withdrawal reason")
             self._invalidate(ctx, ("specialist_signoff", "final_approval"), "matter withdrawn")
+            # A withdrawal also records a rejected review decision on the parent assessment,
+            # in the same step and whatever state the matter had reached, so the assessment
+            # is not left approved or exportable once its approval is cancelled. A review
+            # decision needs a note of 20 characters; the reason alone has that many.
+            ctx.body.assessment = apply_review_decision(
+                ctx.body.assessment,
+                ReviewDecision(
+                    reviewer=f"{ctx.actor.display_name} [{ctx.actor.actor_id}, simulated role]",
+                    state="rejected",
+                    note=f"Matter withdrawn without delivery: {text}",
+                ),
+            )
+            self._save_body(ctx)
             ctx.new_state, ctx.extra["closed_outcome"] = "closed", "withdrawn_without_delivery"
             self._event(ctx, "matter_withdrawn", text)
 

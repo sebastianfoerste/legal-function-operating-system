@@ -540,6 +540,8 @@ def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict
     review_note = view["assessment"].get("review_note")
     if matter["closed_outcome"] == "withdrawn_without_delivery":
         # The withdrawal cancelled any approval, so that approval's note no longer stands.
+        # The note is read from the withdrawal event, not from the stored assessment: a
+        # store written before 2026-11-20 still holds the approved assessment there.
         review_note = _withdrawal_note(events)
     return {
         "schema": "legal-workflow-controls.v1",
