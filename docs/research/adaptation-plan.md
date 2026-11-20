@@ -609,8 +609,13 @@ playbook position next to each change, and the evidence next to each resolution.
   - Only decline and duplicate are states. A `snoozed` state would need a timer to leave
     it, which would act on the matter without a person.
   - No `accept` verb: `complete_triage` is accept.
-- **Known, out of scope.** A withdrawn matter is still reported `approved` in the shared
-  contract, and parent tower rows for matters closed without delivery stay open.
+- **Fixed on 2026-11-20.** A withdrawn matter was reported `approved` in the shared
+  contract. It is now `rejected`, like a declined or duplicate one, and only a delivered
+  and accepted matter closes `approved`
+  ([owner choice 2](#owner-choices-after-the-plan-was-finished-2026-11-20)).
+- **Known limit.** Parent tower rows for matters closed without delivery stay open and
+  can be counted as stalled, because the parent ledger has no event for closing without
+  completion ([ADR 0010](../adr/0010-triage-verbs.md), Consequences).
 
 ### F11. Local inbound adapter (built; the Slack, Teams and email decision)
 
@@ -941,8 +946,22 @@ owner took the recommended option for each.
      reads it.
 
    Nothing changes in the code. The ADR carries the confirmation.
-2. **How a withdrawn matter is reported in the shared contract.** Recorded by its own
-   commit.
+2. **A withdrawn matter is reported `rejected` in the shared contract.** The pilot
+   reported every `closed` matter as `approved` in `legal-workflow-controls.v1`, so a
+   matter withdrawn before anyone approved it was reported approved. A closed matter is
+   now reported by how it closed: `approved` only when the requester accepted the delivery
+   of the approved package, and `rejected` when it was withdrawn, whatever state it had
+   reached. A withdrawal cancels every sign-off and approval, so this holds after a final
+   approval too, and the review note in the contract is then the withdrawal reason, not
+   the cancelled approval's note. `export_allowed` was already false for every closed
+   matter. The schema is unchanged and no value is added; `contracts/README.md` says what
+   `rejected` means in the pilot. `supervised-agent/tests/test_pilot_contract_closings.py`
+   withdraws a matter from each state it can reach with a reviewer on it, and
+   `make contract-check` fails if a closed matter is mapped by its state alone
+   (`tests/test_shared_contract_check.py`). One limit stays and is recorded in
+   [ADR 0010](../adr/0010-triage-verbs.md), amended: parent tower rows for matters closed
+   without delivery stay open, because the parent ledger has no event for closing without
+   completion, and a new event type there is its own decision.
 3. **No German requester labels.** [ADR 0011](../adr/0011-requester-vocabulary.md) stands.
    No German stage label is added in the pilot or in the core, the two German sentences in
    `legal-function-os.shared-space.v1` stay as they are, and German comes back only

@@ -20,7 +20,7 @@ from src.pilot.models import APPROVAL_TIERS, ParentRouting, PilotIntake
 PARENT_SRC = Path(__file__).resolve().parents[3] / "src"
 _URGENCY = {"low": "low", "medium": "standard", "high": "high"}
 
-# Pilot state -> shared contract review_state.
+# Pilot state -> shared contract review_state, for every state but ``closed``.
 CONTRACT_REVIEW_STATE = {
     "intake": "pending_review",
     "triage": "pending_review",
@@ -30,9 +30,15 @@ CONTRACT_REVIEW_STATE = {
     "revised": "pending_review",
     "approved": "approved",
     "ready_for_delivery": "approved",
-    "closed": "approved",
     "declined": "rejected",
     "duplicate": "rejected",
+}
+# A closed matter is reported by how it closed. Only a matter whose approved package the
+# requester accepted is approved. A withdrawal cancels every sign-off and approval, so a
+# withdrawn matter is rejected whatever state it had reached.
+CLOSED_OUTCOME_REVIEW_STATE = {
+    "delivered_locally_and_accepted": "approved",
+    "withdrawn_without_delivery": "rejected",
 }
 
 
@@ -52,6 +58,18 @@ def parent_module(name: str) -> ModuleType:
             ) from None
         sys.path.append(str(PARENT_SRC))
         return importlib.import_module(qualified)
+
+
+def contract_review_state(state: str, closed_outcome: str | None) -> str:
+    """The shared contract's ``review_state`` for a pilot matter.
+
+    A closed matter with no recorded outcome, or one this module does not know, is
+    rejected: nothing is reported approved unless its delivery was accepted.
+    """
+
+    if state == "closed":
+        return CLOSED_OUTCOME_REVIEW_STATE.get(closed_outcome or "", "rejected")
+    return CONTRACT_REVIEW_STATE[state]
 
 
 def parent_request(matter_id: str, intake: PilotIntake) -> dict[str, Any]:

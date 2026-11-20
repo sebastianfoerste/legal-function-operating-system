@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-11-19
+- Amended: 2026-11-20: a withdrawn matter is reported `rejected` in the shared contract,
+  not `approved` (owner choice of 2026-11-20); see Decision 9 and Consequences.
 - Answers the ADR-needed item in `docs/research/adaptation-plan.md` on new pilot states
   for decline, duplicate and snooze, and their mapping in the shared contract (F10, from
   H3).
@@ -107,6 +109,22 @@ Four constraints shape it here:
    exclusion held is no longer pending, so it is reported `rejected`.
    `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` and
    `contracts/README.md` list both.
+
+   Amended on 2026-11-20. A `closed` matter is reported by how it closed, not by its
+   state. Only a matter whose approved package the requester accepted
+   (`delivered_locally_and_accepted`) is `approved`. A withdrawn matter
+   (`withdrawn_without_delivery`) is `rejected`, whatever state it had reached, because a
+   withdrawal cancels every sign-off and approval on it. A closed matter with no recorded
+   outcome is `rejected` too, so nothing is reported approved unless its delivery was
+   accepted. As for a decline, `rejected` takes precedence over `blocked`. The review note
+   of a withdrawn matter is the withdrawal reason and the actor recorded for it, not the
+   note of an approval that no longer stands. `export_allowed` was already false for every
+   closed matter. In the pilot, `rejected` now means that a person closed the matter
+   without delivery and no approval stands. It does not say that a reviewer rejected a
+   draft. The schema is unchanged and no value is added.
+   `parent_bridge.contract_review_state` decides this in one place, and
+   `scripts/check_shared_contracts.py` fails if a closed matter is mapped by its state
+   alone.
 10. **Clocks.**
     - In the parent ledger, a running snooze is a wait on the business. It runs from the
       snooze to the earliest of the answer, `end_snooze`, a triage verb, a withdrawal or
@@ -136,11 +154,17 @@ Four constraints shape it here:
   `end_snooze` are refused like the rest, and the three triage verbs are tested apart, as
   legitimate ways to close or pause that matter.
 - Known and out of scope:
-  - A withdrawn matter is still reported `approved` in the shared contract, because
-    `closed` maps to `approved`. That predates this record and needs its own decision.
   - Parent tower rows for matters closed without delivery (withdrawn, declined or
-    duplicate) stay open, because the parent lifecycle has no event for closing without
-    completion. The room marks their resolution target not applicable.
+    duplicate) stay open, and the tower counts such a row as stalled once it has been
+    inactive for the configured time (16 business hours in the bundled outcome config).
+    The parent ledger, `legal-function-os.service-event-ledger.v1`, has no event for
+    closing without completion. Its only closing event, `completed`, counts the request
+    as completed work and measures it against the resolution target, and it cannot
+    follow `submitted`, `acknowledged` or `assigned`. Closing these rows needs a new event
+    type in that contract, which is its own decision. Until then the review room marks
+    their resolution target not applicable and measures them to their closing event, and
+    only the rehearsal's parent outcome view shows them open. No scenario script closes a
+    matter without delivery.
   - A snooze's `until` is checked on the clock of the command that sets it. A scripted
     matter that later gets a command from the room moves to the recorded clock, as
     before, and its scripted `until` is then read on that clock.
@@ -159,10 +183,20 @@ Nothing in the code changed.
   when the time passes. A timer would act on the matter without a person, and a third
   state would need its own contract mapping for something that is not a decision.
 - **Decline and duplicate as closing outcomes of `closed`.** No new state, but `closed`
-  maps to `approved`, so a declined request would be reported approved in the shared
-  contract.
+  mapped to `approved` whatever the outcome when this was decided, so a declined request
+  would have been reported approved in the shared contract. Since 2026-11-20 a closed
+  matter is reported by its outcome (Decision 9). The two states stay as built.
 - **A duplicate that is only a pointer**, as in Linear and Plane. Here the requester reads
   why their request was closed, so a person writes a reason.
 - **Letting any onboarded owner withdraw an unclaimed matter.** It would close the gap,
   but it would give withdrawal, which is also the requester's way out, a second claiming
   rule. The triage verbs share the one claim `complete_triage` already has.
+- **Reporting a withdrawn matter by the state it had reached** (2026-11-20).
+  `pending_review` or `revision_requested` on a closed matter reads as open work, and
+  `approved` would report an approval that the withdrawal cancelled.
+- **Reporting `approved` when a final approval was recorded before the withdrawal**
+  (2026-11-20). The approval does not stand after the withdrawal. `approved` would then
+  cover a delivered matter and one that was never delivered, with the same gate values,
+  and the rule would have to say which earlier approvals count.
+- **A new `withdrawn` value in the contract** (2026-11-20). It would change the v1 schema.
+  This change adds no value.

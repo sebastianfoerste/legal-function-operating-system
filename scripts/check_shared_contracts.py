@@ -32,10 +32,44 @@ PILOT_STATE_MAP = {
     "revised": "pending_review",
     "approved": "approved",
     "ready_for_delivery": "approved",
-    "closed": "approved",
     "declined": "rejected",
     "duplicate": "rejected",
 }
+
+# A closed pilot matter is reported by how it closed, never by its state alone: only a
+# delivered and accepted matter is approved.
+PILOT_CLOSED_OUTCOME_MAP = {
+    "delivered_locally_and_accepted": "approved",
+    "withdrawn_without_delivery": "rejected",
+}
+
+
+def check_pilot_mapping(*, bridge: str, machine: str, service: str, allowed: set[str]) -> None:
+    """Stop when the pilot's mapping onto the shared contract is missing or has changed.
+
+    The pilot maps its own state machine onto the shared contract in one place,
+    ``parent_bridge.py``. The arguments are the source text of that module, of the state
+    machine and of the service, and the contract's ``review_state`` values.
+    """
+
+    for pilot_state, shared_state in PILOT_STATE_MAP.items():
+        if f'"{pilot_state}": "{shared_state}"' not in bridge:
+            raise SystemExit(f"pilot state mapping is missing or changed: {pilot_state}")
+        if f'"{pilot_state}"' not in machine:
+            raise SystemExit(f"pilot state is missing from the state machine: {pilot_state}")
+    if not set(PILOT_STATE_MAP.values()) <= allowed:
+        raise SystemExit("pilot state mapping exceeds shared contract")
+    if '"closed"' not in machine:
+        raise SystemExit("pilot state is missing from the state machine: closed")
+    if '"closed": "' in bridge:
+        raise SystemExit("pilot maps a closed matter by its state alone, not by how it closed")
+    for outcome, shared_state in PILOT_CLOSED_OUTCOME_MAP.items():
+        if f'"{outcome}": "{shared_state}"' not in bridge:
+            raise SystemExit(f"pilot closing outcome mapping is missing or changed: {outcome}")
+        if f'"{outcome}"' not in service:
+            raise SystemExit(f"pilot closing outcome is missing from the service: {outcome}")
+    if not set(PILOT_CLOSED_OUTCOME_MAP.values()) <= allowed:
+        raise SystemExit("pilot closing outcome mapping exceeds shared contract")
 
 
 def main() -> int:
@@ -71,20 +105,13 @@ def main() -> int:
     if missing:
         raise SystemExit(f"supervised-agent control is missing: {', '.join(missing)}")
 
-    # The pilot maps its own state machine onto the shared contract in one place.
-    bridge = (ROOT / "supervised-agent" / "src" / "pilot" / "parent_bridge.py").read_text(
-        encoding="utf-8"
+    pilot = ROOT / "supervised-agent" / "src" / "pilot"
+    check_pilot_mapping(
+        bridge=(pilot / "parent_bridge.py").read_text(encoding="utf-8"),
+        machine=(pilot / "state_machine.py").read_text(encoding="utf-8"),
+        service=(pilot / "service.py").read_text(encoding="utf-8"),
+        allowed=allowed,
     )
-    machine = (ROOT / "supervised-agent" / "src" / "pilot" / "state_machine.py").read_text(
-        encoding="utf-8"
-    )
-    for pilot_state, shared_state in PILOT_STATE_MAP.items():
-        if f'"{pilot_state}": "{shared_state}"' not in bridge:
-            raise SystemExit(f"pilot state mapping is missing or changed: {pilot_state}")
-        if f'"{pilot_state}"' not in machine:
-            raise SystemExit(f"pilot state is missing from the state machine: {pilot_state}")
-    if not set(PILOT_STATE_MAP.values()) <= allowed:
-        raise SystemExit("pilot state mapping exceeds shared contract")
 
     print("shared legal workflow control contract passed")
     return 0
