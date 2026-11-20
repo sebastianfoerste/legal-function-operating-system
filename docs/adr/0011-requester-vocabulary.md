@@ -113,6 +113,9 @@ aligning the two, German labels included. Read side by side, they do not line up
   - Whether a future `shared-space.v2` should stop sending `owner_queue` and
     `sla_response_hours` to requesters, and what its `blocked` should mean.
 
+Confirmed: 2026-11-20, the owner confirmed that no German requester labels are added
+(Decision 3 and 4). Nothing in the code changed, and both owner questions above stay open.
+
 ## Alternatives rejected
 
 - **Full alignment:** one stage module shared by the pilot and the core, with German

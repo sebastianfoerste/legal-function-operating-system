@@ -1,4 +1,4 @@
-import json
+import os
 import re
 from pathlib import Path
 
@@ -23,12 +23,17 @@ def test_readme_uses_current_project_name():
     assert "LegalAgent" not in readme
 
 
-def test_readme_local_markdown_links_exist():
-    readme = README_PATH.read_text(encoding="utf-8")
-    markdown_links = re.findall(r"\[[^\]]+\]\(([^)]+\.md)\)", readme)
+def test_readme_local_links_exist():
+    # Every relative link, not only those to Markdown files: the README's file list links
+    # sources, directories and examples, and a removed file must not stay listed.
+    readme = (AGENT_ROOT / "README.md").read_text(encoding="utf-8")
+    targets = re.findall(r"\]\(([^)\s]+)\)", readme)
+    local = [target for target in targets if not re.match(r"[a-z][a-z0-9+.-]*:|#", target)]
 
-    for link in markdown_links:
-        assert Path(link).exists(), f"README link target does not exist: {link}"
+    assert len(local) > 40, local
+    for link in local:
+        target = AGENT_ROOT / link.split("#", 1)[0]
+        assert target.exists(), f"README link target does not exist: {link}"
 
 
 def test_readme_counts_and_lists_every_mcp_style_tool():
@@ -41,17 +46,60 @@ def test_readme_counts_and_lists_every_mcp_style_tool():
         assert f"- `{name}`: " in text, name
 
 
-def test_readme_says_what_mcp_json_starts():
-    # mcp.json starts the HTTP canary, not an MCP stdio server; the README must not call
-    # it an MCP server configuration.
+def _files_named(*names: str) -> list[str]:
+    """Files with one of these names anywhere in the agent, outside tool and cache directories."""
+
+    found: list[str] = []
+    for directory, subdirectories, files in os.walk(AGENT_ROOT):
+        subdirectories[:] = [
+            name
+            for name in subdirectories
+            if not name.startswith(".") and name not in {"__pycache__", "node_modules", "venv"}
+        ]
+        found += [
+            Path(directory, name).relative_to(AGENT_ROOT).as_posix()
+            for name in files
+            if name in names
+        ]
+    return sorted(found)
+
+
+def test_readme_says_how_the_tools_are_reached_and_that_no_mcp_client_can():
+    # The tools are served over HTTP by the runtime: the README names the command and the
+    # two endpoints (tests/test_runtime_agent.py requests them as the README gives them),
+    # and calls nothing here an MCP server or an MCP client configuration.
     text = " ".join((AGENT_ROOT / "README.md").read_text(encoding="utf-8").split())
-    [server] = json.loads((AGENT_ROOT / "mcp.json").read_text(encoding="utf-8"))[
-        "mcpServers"
-    ].values()
-    command = " ".join([server["command"], *server["args"]])
-    assert command == "python -m runtime_agent.app"
-    assert f"`{command}`: an HTTP server on a loopback address, not an MCP stdio server" in text
+    assert (
+        "`python -m runtime_agent.app`: an HTTP server on a loopback address, "
+        "not an MCP stdio server"
+    ) in text
+    assert (AGENT_ROOT / "runtime_agent" / "app.py").is_file()
+    assert "`GET /mcp/manifest`" in text and "`POST /tools/call`" in text
+    assert (
+        "The agent ships no MCP client configuration (no `mcp.json` or `.mcp.json`), "
+        "because it has no MCP stdio server for a client to start."
+    ) in text
     assert "MCP server configuration" not in text
+    assert "](mcp.json)" not in text
+
+
+def test_the_agent_ships_no_mcp_client_configuration():
+    # An MCP client reads such a file and starts the stdio server it names. The agent has
+    # none: the mcp.json it carried until 2026-11-20 started the HTTP runtime, which no MCP
+    # client can use. A file that comes back, anywhere in the agent, fails here.
+    assert _files_named("mcp.json", ".mcp.json") == []
+
+
+def test_features_lists_only_files_that_exist():
+    text = (AGENT_ROOT / "docs" / "FEATURES.md").read_text(encoding="utf-8")
+    listed = re.findall(r"^\d+\. `([^`]+)`$", text, re.M)
+    assert len(listed) > 15, listed
+    for name in listed:
+        assert (AGENT_ROOT / name).is_file(), f"FEATURES.md lists a missing file: {name}"
+    # The tool surface names the module that serves the tools, as the README does.
+    surface = text.split("## MCP-Style Tool Surface", 1)[1].split("\n## ", 1)[0]
+    assert "`runtime_agent/app.py`" in surface
+    assert "`GET /mcp/manifest`" in surface and "`POST /tools/call`" in surface
 
 
 def test_contributing_names_only_make_targets_that_exist():

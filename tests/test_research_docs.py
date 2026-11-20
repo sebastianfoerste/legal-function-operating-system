@@ -167,16 +167,74 @@ class ResearchRulesTest(unittest.TestCase):
                 self.assertIsNone(re.search(r"\b[Rr]ules? \d", text))
 
 
+FOLLOW_UPS = "Follow-ups after the owner decisions (2026-11-19)"
+OWNER_CHOICES = "Owner choices after the plan was finished (2026-11-20)"
+
+
+def _closing_sections() -> tuple[str, str]:
+    """The plan's last two sections: the follow-ups, then the owner's later choices."""
+
+    text = (RESEARCH / "adaptation-plan.md").read_text(encoding="utf-8")
+    follow_ups, choices = text.split(f"\n## {FOLLOW_UPS}\n", 1)[1].split(
+        f"\n## {OWNER_CHOICES}\n", 1
+    )
+    return follow_ups, choices
+
+
 class FollowUpsTest(unittest.TestCase):
-    def test_the_plan_ends_with_the_follow_ups_and_leaves_built_items_to_their_specs(self) -> None:
+    def test_the_plan_ends_with_the_follow_ups_and_then_the_owner_choices(self) -> None:
         text = (RESEARCH / "adaptation-plan.md").read_text(encoding="utf-8")
         headings = re.findall(r"^## (.+)$", text, re.M)
-        self.assertEqual(headings[-1], "Follow-ups after the owner decisions (2026-11-19)")
-        follow_ups = text.split("\n## Follow-ups after the owner decisions (2026-11-19)\n", 1)[1]
+        self.assertEqual(headings[-2:], [FOLLOW_UPS, OWNER_CHOICES])
+
+    def test_the_follow_ups_leave_built_items_to_their_specs(self) -> None:
+        follow_ups, _ = _closing_sections()
         self.assertEqual(re.findall(r"^(\d+)\. ", follow_ups, re.M), ["1", "2", "3", "4", "5"])
         # F3, F9a and F10 record their own follow-ups in their specs and ADRs.
         for name in ("F3", "F9a", "F10", "ADR 0010", "ADR 0011", "ADR 0012"):
             self.assertNotIn(name, follow_ups)
+
+
+class OwnerChoicesTest(unittest.TestCase):
+    """What the owner chose on 2026-11-20 is in the plan and in the records it confirms."""
+
+    def test_the_plan_lists_the_four_choices(self) -> None:
+        _, choices = _closing_sections()
+        self.assertEqual(re.findall(r"^(\d+)\. ", choices, re.M), ["1", "2", "3", "4"])
+        flat = " ".join(choices.split())
+        for words in (
+            "a snooze counts as legal's first response",
+            "a snooze lasts at most 30 days",
+            "a duplicate needs a reason",
+            "No German requester labels",
+            "`supervised-agent/mcp.json`: removed",
+        ):
+            with self.subTest(words):
+                self.assertIn(words, flat)
+        for record in ("../adr/0010-triage-verbs.md", "../adr/0011-requester-vocabulary.md"):
+            with self.subTest(record):
+                self.assertIn(f"]({record})", choices)
+
+    def test_each_confirmed_record_carries_its_confirmation(self) -> None:
+        adr = ROOT / "docs" / "adr"
+        for name, line in (
+            (
+                "0010-triage-verbs.md",
+                "Confirmed: 2026-11-20, the owner confirmed the three revisable defaults",
+            ),
+            ("0011-requester-vocabulary.md", "Confirmed: 2026-11-20, the owner confirmed"),
+        ):
+            with self.subTest(name):
+                text = (adr / name).read_text(encoding="utf-8")
+                self.assertEqual(len(re.findall(rf"^{re.escape(line)}", text, re.M)), 1)
+                self.assertIn("- Status: Accepted\n", text)
+
+    def test_the_removed_agent_configuration_stays_removed(self) -> None:
+        # The plan says the file is removed; the agent's own tests say why it stays out.
+        agent = ROOT / "supervised-agent"
+        for name in ("mcp.json", ".mcp.json"):
+            with self.subTest(name):
+                self.assertFalse((agent / name).exists())
 
 
 if __name__ == "__main__":

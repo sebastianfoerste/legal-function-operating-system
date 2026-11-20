@@ -149,6 +149,10 @@ Choices the owner can revisit without a new record: whether a snooze counts as l
 first response (chosen: yes), the 30-day cap, and whether a duplicate needs a reason
 (chosen: yes, because the requester reads it).
 
+Confirmed: 2026-11-20, the owner confirmed the three revisable defaults. A snooze counts
+as legal's first response, a snooze lasts at most 30 days, and a duplicate needs a reason.
+Nothing in the code changed.
+
 ## Alternatives rejected
 
 - **Three new states, including `snoozed`, with a scheduler** that moves the matter back

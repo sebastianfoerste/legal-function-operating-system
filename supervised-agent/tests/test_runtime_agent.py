@@ -9,15 +9,20 @@ from __future__ import annotations
 import http.client
 import ipaddress
 import json
+import re
 import socket
 import threading
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 
 import runtime_agent.app as app
 from runtime_agent.app import DEFAULT_ALLOWED_HOSTS, MAX_BODY_BYTES, SERVICE_NAME, allowed_hosts
+from src.mcp_tools import legal_ops_mcp_manifest, run_tool
 from tests.pilot_support import OWNER, REQUESTER, run_until
+
+AGENT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_runtime_service_name_is_legal_ops_scoped():
@@ -177,6 +182,57 @@ def test_pilot_and_tool_posts_still_work_over_loopback(server):
     assert status == 400 and "error" in payload
     status, payload = _request(server, "POST", "/tools/call", headers=JSON, body=b"not json")
     assert (status, payload) == (400, {"error": "invalid_json"})
+
+
+def test_the_tool_endpoints_answer_as_the_readme_says(server):
+    # README, "MCP surface": the tools are reached over this server, at GET /mcp/manifest
+    # and POST /tools/call. The README's own example call is sent here as it is written.
+    readme = (AGENT_ROOT / "README.md").read_text(encoding="utf-8")
+    surface = readme.split("\n## MCP surface\n", 1)[1].split("\n## ", 1)[0]
+    routes = re.findall(r"http://127\.0\.0\.1:18085(/[a-z/]+)", surface)
+    assert sorted(set(routes)) == ["/mcp/manifest", "/tools/call"]
+    [example] = re.findall(r"-d '(\{.+?\})' \\\n", surface)
+    call = json.loads(example)
+    assert call == {"name": "legal.sources.list", "arguments": {}}
+
+    status, headers, data = _raw(server, "GET", "/mcp/manifest")
+    assert status == 200 and headers["content-type"] == "application/json; charset=utf-8"
+    manifest = json.loads(data)
+    assert manifest == legal_ops_mcp_manifest()
+    assert call["name"] in [tool["name"] for tool in manifest["tools"]]
+
+    status, payload = _request(server, "POST", "/tools/call", headers=JSON, body=example.encode())
+    assert (status, payload) == (200, run_tool(call["name"], call["arguments"]))
+    assert payload["external_processing"] == "none"
+
+    # Each endpoint answers one method only.
+    status, payload = _request(server, "POST", "/mcp/manifest", headers=JSON, body=b"{}")
+    assert (status, payload) == (404, {"error": "not_found"})
+    status, payload = _request(server, "GET", "/tools/call")
+    assert (status, payload) == (404, {"error": "not_found"})
+
+
+def test_run_listens_where_the_readme_says_unless_host_or_port_say_otherwise(monkeypatch, capsys):
+    readme = (AGENT_ROOT / "README.md").read_text(encoding="utf-8")
+    surface = " ".join(readme.split("\n## MCP surface\n", 1)[1].split("\n## ", 1)[0].split())
+    assert "It listens on `127.0.0.1:18085` unless `HOST` or `PORT` say otherwise" in surface
+
+    class Listening:
+        def serve_forever(self):
+            return None
+
+    asked = []
+    monkeypatch.setattr(
+        app, "build_server", lambda host, port: asked.append((host, port)) or Listening()
+    )
+    monkeypatch.delenv("HOST", raising=False)
+    monkeypatch.delenv("PORT", raising=False)
+    app.run()
+    monkeypatch.setenv("HOST", "localhost")
+    monkeypatch.setenv("PORT", "18090")
+    app.run()
+    assert asked == [("127.0.0.1", 18085), ("localhost", 18090)]
+    assert "listening on 127.0.0.1:18085" in capsys.readouterr().out
 
 
 # -- listening address -------------------------------------------------------------

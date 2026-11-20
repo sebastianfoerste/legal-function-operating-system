@@ -757,7 +757,9 @@ playbook position next to each change, and the evidence next to each resolution.
    gone. `google-genai` and the unused `python-dotenv` left the runtime lockfile, which now
    pins pydantic and its four dependencies. A model call would be a new, reviewed change
    with its own controls, not a setting. `supervised-agent/tests/test_no_external_model.py`
-   checks the lockfile, the imports and `mcp.json`.
+   checks the lockfile and the imports, and that no file offers the switch. Until
+   2026-11-20 it read `mcp.json` for that; the file is removed
+   ([owner choice 4](#owner-choices-after-the-plan-was-finished-2026-11-20)).
 4. **Python-Redlines** (ADR 0004). **Decided on 2026-11-18:** not adopted. It would add a
    dependency and a 44 MB bundled .NET binary that runs as a subprocess. Word tracked
    changes stay in the stdlib writer, `supervised-agent/src/docx_redline.py`. That writer
@@ -914,11 +916,47 @@ Five small corrections made after the decisions above. None needed the owner.
    one; `tests/test_agent_gate.py` keeps it the last step.
 5. **Stale statements are corrected.** The agent reports `"external_processing": "none"`,
    because no setting can turn external processing on. The agent README counts nine
-   MCP-style tools and says that `supervised-agent/mcp.json` starts the runtime canary, an
-   HTTP server on a loopback address, not an MCP stdio server; whether to keep, remove or
-   replace that file is the owner's call, and a stdio server would add the `mcp` SDK to the
-   agent as a new dependency. The agent's contributing guide names `make check`,
-   `scenario-docs` and `python -m src.pilot.evidence.example`, which rewrites the
-   synthetic worked example a test requires to be current, instead of a `make demo` it
-   does not have. The Round 3 research note has a dated update saying its parked patterns
-   are built, and the root `.gitignore` no longer excepts the removed `.env.example`.
+   MCP-style tools and no longer calls `supervised-agent/mcp.json` an MCP server
+   configuration: the file started the runtime canary, an HTTP server on a loopback
+   address, not an MCP stdio server. Whether to keep, remove or replace the file was left
+   to the owner, who chose on 2026-11-20 to remove it
+   ([owner choice 4](#owner-choices-after-the-plan-was-finished-2026-11-20)). The agent's
+   contributing guide names `make check`, `scenario-docs` and
+   `python -m src.pilot.evidence.example`, which rewrites the synthetic worked example a
+   test requires to be current, instead of a `make demo` it does not have. The Round 3
+   research note has a dated update saying its parked patterns are built, and the root
+   `.gitignore` no longer excepts the removed `.env.example`.
+
+## Owner choices after the plan was finished (2026-11-20)
+
+Four choices were put to the owner after the plan was finished (PR #51). On 2026-11-20 the
+owner took the recommended option for each.
+
+1. **Triage defaults: confirmed as built.** [ADR 0010](../adr/0010-triage-verbs.md) named
+   three choices the owner could revisit without a new record. All three stay:
+   - a snooze counts as legal's first response, on a request legal has not yet
+     acknowledged;
+   - a snooze lasts at most 30 days;
+   - a duplicate needs a reason of at least 20 visible characters, because the requester
+     reads it.
+
+   Nothing changes in the code. The ADR carries the confirmation.
+2. **How a withdrawn matter is reported in the shared contract.** Recorded by its own
+   commit.
+3. **No German requester labels.** [ADR 0011](../adr/0011-requester-vocabulary.md) stands.
+   No German stage label is added in the pilot or in the core, the two German sentences in
+   `legal-function-os.shared-space.v1` stay as they are, and German comes back only
+   through a new ADR. Nothing changes in the code. The ADR carries the confirmation.
+4. **`supervised-agent/mcp.json`: removed.** The file declared an MCP server whose command,
+   `python -m runtime_agent.app`, starts the agent's HTTP server on a loopback address.
+   That is not an MCP stdio server. A client built on the `mcp` SDK 1.30.0 that started
+   the command read the server's start-up line where it expects a JSON-RPC message, and
+   got no answer to `initialize`. Nothing in the repository read the file except two
+   tests. A stdio server that works would need the `mcp` SDK in the agent, a new
+   dependency, so none is built, and the agent ships no MCP client configuration. Its
+   README says how the tools are reached instead: start the runtime and call
+   `GET /mcp/manifest` and `POST /tools/call`. In `supervised-agent/tests/`,
+   `test_docs.py` fails if an `mcp.json` or `.mcp.json` comes back, `test_runtime_agent.py`
+   sends the README's example call to both endpoints, and `test_no_external_model.py`
+   still checks that no external-model switch is offered: in the runtime modules, the
+   files at the agent's root and its guides.
