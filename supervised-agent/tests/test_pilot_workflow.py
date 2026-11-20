@@ -3,6 +3,7 @@ import json
 import re
 import threading
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -15,7 +16,7 @@ from src.pilot.design_tokens import PRINT_CSS, TOKENS_CSS
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.models import Actor
 from src.pilot.onboarding import SYNTHETIC_ACTORS
-from src.pilot.scenario_runner import all_task_ids, seed_actors
+from src.pilot.scenario_runner import ScenarioRunner, all_task_ids, seed_actors
 from src.pilot.service import (
     InvalidCommandError,
     NotFoundError,
@@ -39,6 +40,7 @@ from tests.pilot_support import (
     make_service,
     revision,
     run_until,
+    scenario,
     state,
 )
 
@@ -51,6 +53,19 @@ SPECIALIST_LABEL = (
 )
 PROPOSAL_LABEL = "Playbook proposal, no reviewer decision yet"
 DRAFT_PREFIX = "DRAFT, not approved. "
+RUNBOOK = Path(__file__).resolve().parents[1] / "docs" / "pilot" / "RUNBOOK.md"
+# What is written to a version after it exists (RUNBOOK section 5): a review decision on
+# its assessment and the decision on a proposed change. Nothing else of a version moves.
+REVIEW_DECISION_FIELDS = {"review_state", "review_note", "export_allowed", "audit_events"}
+CHANGE_DECISION_FIELDS = {
+    "decision",
+    "decision_reason",
+    "amended_text",
+    "decided_by",
+    "decided_at",
+    "source_support_confirmed_by",
+    "carried_from_version",
+}
 
 
 class FixedClock:
@@ -685,6 +700,112 @@ def test_restore_copies_an_earlier_version_forward(tmp_path) -> None:
     assert view["matter"]["current_version"] == 3 and len(view["versions"]) == 3
     assert view["version"]["content_hash"] == first
     assert view["versions"][1]["content_hash"] != first  # version 2 is still there
+
+
+def _versions_as_stored(service: PilotService, matter_id: str) -> dict[int, dict[str, Any]]:
+    """Every version of the matter as the store holds it, split into what a review decision
+    or a change decision may write and everything else."""
+
+    stored: dict[int, dict[str, Any]] = {}
+    with service.store.reading() as connection:
+        versions = connection.execute(
+            "SELECT * FROM matter_versions WHERE matter_id = ? ORDER BY version", (matter_id,)
+        ).fetchall()
+        for row in versions:
+            key = (matter_id, row["version"])
+            body = json.loads(row["body"])
+            assessment = body.pop("assessment")
+            changes = {
+                r["change_id"]: (r["position"], json.loads(r["body"]))
+                for r in connection.execute(
+                    "SELECT * FROM changes WHERE matter_id = ? AND version = ?", key
+                )
+            }
+            findings = connection.execute(
+                "SELECT finding_key, body FROM findings WHERE matter_id = ? AND version = ? "
+                "ORDER BY finding_key",
+                key,
+            ).fetchall()
+            stored[row["version"]] = {
+                "fixed": {
+                    # The content hash, the document name, digest and bytes, the time.
+                    "row": {name: row[name] for name in row.keys() if name != "body"},
+                    # The intake, the playbook, the routing decision and what follows from them.
+                    "body": body,
+                    "assessment": {
+                        k: v for k, v in assessment.items() if k not in REVIEW_DECISION_FIELDS
+                    },
+                    "findings": [tuple(finding) for finding in findings],
+                    "proposals": {
+                        change: (
+                            position,
+                            {k: v for k, v in data.items() if k not in CHANGE_DECISION_FIELDS},
+                        )
+                        for change, (position, data) in changes.items()
+                    },
+                },
+                "review_decision": {k: assessment[k] for k in REVIEW_DECISION_FIELDS},
+                "change_decisions": {
+                    change: {k: data[k] for k in CHANGE_DECISION_FIELDS}
+                    for change, (_, data) in changes.items()
+                },
+            }
+    return stored
+
+
+def test_a_version_takes_only_review_decisions_and_change_decisions_after_it_exists(
+    tmp_path,
+) -> None:
+    # Both delivered scenarios, step by step, and a withdrawal in place of the last step
+    # of each. The runbook names the commands found here.
+    service = make_service(tmp_path)
+    runner = ScenarioRunner(service)
+    wrote: dict[str, set[str]] = {"review_decision": set(), "change_decisions": set()}
+
+    def compare(before: dict[int, dict[str, Any]], matter_id: str, command: str) -> None:
+        current = max(before)  # the current version when the command arrived
+        after = _versions_as_stored(service, matter_id)
+        for version, was in before.items():
+            now = after[version]
+            assert now["fixed"] == was["fixed"], (command, version)
+            for part in wrote:
+                if now[part] != was[part]:
+                    # Only the current version is written, never one that was replaced.
+                    assert version == current, (command, version, part)
+                    wrote[part].add(command)
+
+    for scenario_id, last in (("routine", "A12"), ("specialist-revision", "B44")):
+        script = scenario(scenario_id)
+        matter_id = script["matter_id"]
+        before: dict[int, dict[str, Any]] = {}
+        for step in script["steps"]:
+            if step.get("restart"):
+                continue
+            record = runner.run_step(script, step)
+            assert record["passed"], record
+            if before:
+                compare(before, matter_id, record["command"])
+            before = _versions_as_stored(service, matter_id)
+            if step.get("id") == last:
+                break
+        service.withdraw(
+            OWNER, matter_id, revision(service, matter_id), note="Deal stopped before delivery."
+        )
+        compare(before, matter_id, "withdraw")
+        assert len(before) == {"routine": 1, "specialist-revision": 3}[scenario_id]
+
+    assert wrote == {
+        "review_decision": {"approve", "request_revision", "withdraw"},
+        "change_decisions": {"decide_change"},
+    }
+    [paragraph] = [
+        p
+        for p in RUNBOOK.read_text(encoding="utf-8").split("\n\n")
+        if p.startswith("A matter version holds")
+    ]
+    assert "immutable" not in paragraph
+    for command in sorted(wrote["review_decision"] | wrote["change_decisions"]):
+        assert f"`{command}`" in paragraph, command
 
 
 # -- tampering ---------------------------------------------------------------------

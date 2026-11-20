@@ -19,6 +19,7 @@ Recorded on 6 October 2026 for the supervised agent after the pilot workflow was
 | Versioning, reassessment and invalidation of approvals | `src/pilot/service.py` | `tests/test_pilot_workflow.py` |
 | Comments tied to a finding, source span, change or deliverable section, with resolution evidence | `src/pilot/service.py` | `tests/test_pilot_workflow.py` |
 | Internal review export and approved delivery package | `src/pilot/deliverable.py` | `tests/test_pilot_workflow.py` |
+| The approved package is opened only while its delivery stands (ready for delivery with `delivery_manifest_current` passing, or delivered and accepted). The service decides it once, for the package route and for the review room; a stored manifest alone opens nothing | `src/pilot/service.py`, `src/pilot/api.py`, `src/pilot/review_room.py` | `tests/test_pilot_package_standing.py`, `tests/test_review_room_browser.py` |
 | Measurement over the event log, on two separate clocks | `src/pilot/metrics.py` | `tests/test_pilot_rehearsal.py` |
 | Review room API and page that save through the application layer | `src/pilot/api.py`, `src/pilot/review_room.py`, `runtime_agent/app.py` | `tests/test_pilot_api.py`, live inspection |
 | Local network hardening of the runtime (not authentication) | `runtime_agent/app.py` | `tests/test_runtime_agent.py`, `tests/test_review_room_browser.py` |
@@ -35,7 +36,7 @@ Recorded on 6 October 2026 for the supervised agent after the pilot workflow was
 | `docs/demo.png` | A rendering of the actual output of the two README commands, each filtered through `jq`. Nothing regenerates it, so it can fall behind the CLI. |
 | `SharedReviewRoom` in `src/matter_workspace.py` | A description of intended permissions and audit events. Nothing in that module enforces it. The pilot service enforces the same three role names plus the final approver. |
 | `WorkflowAgentLibrary` in `src/matter_workspace.py` | A description of three workflow steps, not a runner. |
-| Customer package HTML | A rendered view of stored data. It has no controls. |
+| Customer package HTML | A rendered view of stored data. It has no controls. The file stays in the export folder after its delivery has ended; the review room and the package route then no longer open it. |
 
 ## Simulated controls
 

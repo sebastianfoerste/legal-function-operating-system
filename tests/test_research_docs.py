@@ -343,6 +343,8 @@ class OwnerChoicesTest(unittest.TestCase):
             "stored in the matter version, with the actor and the reason they typed, so that "
             "assessment is no longer approved or exportable",
             "It does this for every withdrawal, whatever the assessment said before.",
+            "A delivery package prepared before the withdrawal stays in the store and in "
+            "the export folder, but the review room and the package route no longer open it.",
             "The schema is unchanged and no value is added.",
         ):
             with self.subTest(words):

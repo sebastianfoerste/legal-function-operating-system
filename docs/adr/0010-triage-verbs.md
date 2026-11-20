@@ -119,10 +119,12 @@ Four constraints shape it here:
    rejected review decision on the assessment stored in the matter version, with the actor
    and the reason they typed, so that assessment is no longer approved or exportable and
    the pilot's own export gate fails its check of it. It does this for every withdrawal,
-   whatever the assessment said before. A store in which a matter was withdrawn before
-   this was built keeps the assessment as the approval left it. The contract takes
-   neither its state nor its note from that assessment, so such a matter is reported
-   `rejected` as well. A closed matter with no recorded
+   whatever the assessment said before. A delivery package prepared before the withdrawal
+   stays in the store and in the export folder, but the review room and the package route
+   no longer open it. A store in which a matter was withdrawn before this was built keeps
+   the assessment as the approval left it. The contract takes neither its state nor its
+   note from that assessment, so such a matter is reported `rejected` as well. A closed
+   matter with no recorded
    outcome is `rejected` too, so nothing is reported approved unless its delivery was
    accepted. As for a decline, `rejected` takes precedence over `blocked`. The review note
    of a withdrawn matter is the withdrawal reason and the actor recorded for it, not the
