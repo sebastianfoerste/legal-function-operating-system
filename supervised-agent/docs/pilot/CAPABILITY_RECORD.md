@@ -71,5 +71,5 @@ Before this work, `decide_change` set `DocumentChangeSet.export_allowed` once ev
 | Parent contract | Use in the pilot |
 | --- | --- |
 | `rules.decide`: risk, priority, queue, service levels, approval chain, external counsel | Triage, pilot scope, required approval tier |
-| `legal-function-os.service-event-ledger.v1` and `outcome_control_tower.build_outcome_control_tower` | The rehearsal exports its scripted events in the ledger schema and runs the parent tower over them. Revision loops have no counterpart in the parent lifecycle and are folded into the working state. |
+| `legal-function-os.service-event-ledger.v1` and `outcome_control_tower.build_outcome_control_tower` | The rehearsal exports its scripted events in the ledger schema and runs the parent tower over them. Revision loops have no counterpart in the parent lifecycle and are folded into the working state. A matter enters the ledger when it is submitted to legal, so a draft that was never submitted is not in the parent outcome view. |
 | `legal-workflow-controls.v1` | Each matter is exported in the shared contract and validated against the schema in `tests/test_pilot_rehearsal.py`. |
