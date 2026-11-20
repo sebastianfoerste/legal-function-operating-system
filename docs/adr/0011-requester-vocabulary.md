@@ -47,7 +47,9 @@ aligning the two, German labels included. Read side by side, they do not line up
   exclusion or a blocked source holds. `complete_triage` refuses such a matter, so a
   matter held when it reaches triage stays there. A matter that an amendment after triage
   brings under a charter exclusion moves to `revised`, cannot be exported, and stays
-  `blocked` in the contract until a new version removes the exclusion.
+  `blocked` in the contract until a new version removes the exclusion or the matter is
+  withdrawn. Since 2026-11-20 a withdrawn matter is reported `rejected`
+  ([ADR 0010](0010-triage-verbs.md), amended that day).
 - **Nothing in the repository reads the shared space** except its tests. No page renders
   it, no schema in `contracts/` describes it, no MCP tool returns it and `make demo` does
   not write it. It is JSON a team can use.

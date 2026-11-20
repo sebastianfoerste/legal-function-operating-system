@@ -46,20 +46,35 @@ def test_readme_counts_and_lists_every_mcp_style_tool():
         assert f"- `{name}`: " in text, name
 
 
-def _files_named(*names: str) -> list[str]:
-    """Files with one of these names anywhere in the agent, outside tool and cache directories."""
+# Directories a tool fills on the machine it runs on: version control data, virtual
+# environments, installed packages, tool caches and the local pilot store. Nothing in them
+# is written for the agent or committed. Every other directory is searched, hidden or not:
+# an MCP client reads its project configuration from one, such as .cursor or .vscode.
+# The parent repository's test of the same thing, tests/test_research_docs.py, has this list.
+MACHINE_LOCAL_DIRECTORIES = frozenset(
+    {
+        ".git",
+        ".venv",
+        "venv",
+        "node_modules",
+        "__pycache__",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".ruff_cache",
+        ".pilot",
+        ".playwright-mcp",
+    }
+)
+
+
+def _files_named(root: Path, *names: str) -> list[str]:
+    """Files with one of these names anywhere under ``root``, hidden directories included."""
 
     found: list[str] = []
-    for directory, subdirectories, files in os.walk(AGENT_ROOT):
-        subdirectories[:] = [
-            name
-            for name in subdirectories
-            if not name.startswith(".") and name not in {"__pycache__", "node_modules", "venv"}
-        ]
+    for directory, subdirectories, files in os.walk(root):
+        subdirectories[:] = [d for d in subdirectories if d not in MACHINE_LOCAL_DIRECTORIES]
         found += [
-            Path(directory, name).relative_to(AGENT_ROOT).as_posix()
-            for name in files
-            if name in names
+            Path(directory, name).relative_to(root).as_posix() for name in files if name in names
         ]
     return sorted(found)
 
@@ -86,8 +101,34 @@ def test_readme_says_how_the_tools_are_reached_and_that_no_mcp_client_can():
 def test_the_agent_ships_no_mcp_client_configuration():
     # An MCP client reads such a file and starts the stdio server it names. The agent has
     # none: the mcp.json it carried until 2026-11-20 started the HTTP runtime, which no MCP
-    # client can use. A file that comes back, anywhere in the agent, fails here.
-    assert _files_named("mcp.json", ".mcp.json") == []
+    # client can use. A file that comes back fails here, wherever it is in the agent, a
+    # hidden directory included. Only the machine-local directories above are not searched.
+    assert _files_named(AGENT_ROOT, "mcp.json", ".mcp.json") == []
+
+
+def test_the_search_for_a_client_configuration_reads_hidden_directories(tmp_path):
+    names = (
+        "mcp.json",
+        ".mcp.json",
+        ".cursor/mcp.json",
+        ".vscode/mcp.json",
+        "docs/.hidden/.mcp.json",
+        "docs/mcp.json.txt",
+        "docs/notes.md",
+        *(f"{skipped}/mcp.json" for skipped in sorted(MACHINE_LOCAL_DIRECTORIES)),
+        "src/__pycache__/.mcp.json",
+    )
+    for name in names:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+    assert _files_named(tmp_path, "mcp.json", ".mcp.json") == [
+        ".cursor/mcp.json",
+        ".mcp.json",
+        ".vscode/mcp.json",
+        "docs/.hidden/.mcp.json",
+        "mcp.json",
+    ]
 
 
 def test_features_lists_only_files_that_exist():

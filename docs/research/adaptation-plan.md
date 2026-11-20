@@ -956,8 +956,12 @@ owner took the recommended option for each.
    the cancelled approval's note. `export_allowed` was already false for every closed
    matter. The schema is unchanged and no value is added; `contracts/README.md` says what
    `rejected` means in the pilot. `supervised-agent/tests/test_pilot_contract_closings.py`
-   withdraws a matter from each state it can reach with a reviewer on it, and
-   `make contract-check` fails if a closed matter is mapped by its state alone
+   guards the behaviour: it asks `contract_review_state` about each closing outcome and
+   withdraws a matter from each state it can reach with a reviewer on it.
+   `make contract-check` reads the bridge's source text and runs none of it. It fails if
+   the state table has a `closed` entry, if a closing-outcome entry is missing or
+   changed, or if `contract_review_state` does not begin with the closed branch that
+   returns `CLOSED_OUTCOME_REVIEW_STATE.get(closed_outcome or "", "rejected")`
    (`tests/test_shared_contract_check.py`). One limit stays and is recorded in
    [ADR 0010](../adr/0010-triage-verbs.md), amended: parent tower rows for matters closed
    without delivery stay open, because the parent ledger has no event for closing without
@@ -969,13 +973,16 @@ owner took the recommended option for each.
 4. **`supervised-agent/mcp.json`: removed.** The file declared an MCP server whose command,
    `python -m runtime_agent.app`, starts the agent's HTTP server on a loopback address.
    That is not an MCP stdio server. A client built on the `mcp` SDK 1.30.0 that started
-   the command read the server's start-up line where it expects a JSON-RPC message, and
-   got no answer to `initialize`. Nothing in the repository read the file except two
-   tests. A stdio server that works would need the `mcp` SDK in the agent, a new
-   dependency, so none is built, and the agent ships no MCP client configuration. Its
+   the command got no answer to `initialize`. Nothing in the repository read the file
+   except two tests. A stdio server that works would need the `mcp` SDK in the agent, a
+   new dependency, so none is built, and the agent ships no MCP client configuration. Its
    README says how the tools are reached instead: start the runtime and call
    `GET /mcp/manifest` and `POST /tools/call`. In `supervised-agent/tests/`,
-   `test_docs.py` fails if an `mcp.json` or `.mcp.json` comes back, `test_runtime_agent.py`
-   sends the README's example call to both endpoints, and `test_no_external_model.py`
+   `test_docs.py` fails if an `mcp.json` or `.mcp.json` comes back anywhere in the agent,
+   in a hidden directory such as `.cursor` or `.vscode` too. It leaves out only the
+   directories a tool fills on the machine: version control data, virtual environments,
+   installed packages, tool caches and the local pilot store. `test_runtime_agent.py`
+   sends the README's two example requests with the headers and the body the README
+   gives, so an example without its `Content-Type` header fails. `test_no_external_model.py`
    still checks that no external-model switch is offered: in the runtime modules, the
    files at the agent's root and its guides.

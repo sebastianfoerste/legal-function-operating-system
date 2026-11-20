@@ -10,6 +10,7 @@ import http.client
 import ipaddress
 import json
 import re
+import shlex
 import socket
 import threading
 from http.server import ThreadingHTTPServer
@@ -184,24 +185,76 @@ def test_pilot_and_tool_posts_still_work_over_loopback(server):
     assert (status, payload) == (400, {"error": "invalid_json"})
 
 
+README_ADDRESS = "http://127.0.0.1:18085"
+
+
+def _curl_requests(text: str) -> list[dict]:
+    """The request each ``curl`` command in the bash blocks of ``text`` sends.
+
+    Only what the README's example uses is understood: ``-fsS`` (fail on an HTTP error,
+    quietly), ``-H`` for one header and ``-d`` for the body, which makes the request a
+    POST. Any other option fails here, so no part of an example is passed over.
+    """
+
+    requests = []
+    for block in re.findall(r"^```bash\n(.*?)^```$", text, re.M | re.S):
+        for line in block.replace("\\\n", " ").splitlines():
+            words = shlex.split(line)
+            if words[:1] != ["curl"]:
+                continue
+            headers: dict[str, str] = {}
+            bodies: list[str] = []
+            urls: list[str] = []
+            options = iter(words[1:])
+            for word in options:
+                if word == "-H":
+                    name, separator, value = next(options).partition(":")
+                    assert separator and name.lower() not in {held.lower() for held in headers}
+                    headers[name.strip()] = value.strip()
+                elif word == "-d":
+                    bodies.append(next(options))
+                elif word.startswith("-"):
+                    assert word == "-fsS", f"this test does not send the curl option {word}"
+                else:
+                    urls.append(word)
+            assert len(urls) == 1 and len(bodies) <= 1, line
+            assert urls[0].startswith(f"{README_ADDRESS}/"), line
+            requests.append(
+                {
+                    "method": "POST" if bodies else "GET",
+                    "path": urls[0].removeprefix(README_ADDRESS),
+                    "headers": headers,
+                    "body": bodies[0].encode() if bodies else None,
+                }
+            )
+    return requests
+
+
 def test_the_tool_endpoints_answer_as_the_readme_says(server):
     # README, "MCP surface": the tools are reached over this server, at GET /mcp/manifest
-    # and POST /tools/call. The README's own example call is sent here as it is written.
+    # and POST /tools/call. The README's two example requests are sent here as they are
+    # written: the method, the path, every -H header and the -d body of each curl command.
+    # Nothing is added, so an example that leaves out a header the runtime insists on
+    # fails here. Only the address differs: this server listens on a port the system chose.
     readme = (AGENT_ROOT / "README.md").read_text(encoding="utf-8")
     surface = readme.split("\n## MCP surface\n", 1)[1].split("\n## ", 1)[0]
     routes = re.findall(r"http://127\.0\.0\.1:18085(/[a-z/]+)", surface)
     assert sorted(set(routes)) == ["/mcp/manifest", "/tools/call"]
-    [example] = re.findall(r"-d '(\{.+?\})' \\\n", surface)
-    call = json.loads(example)
+    list_tools, call_tool = _curl_requests(surface)
+    assert (list_tools["method"], list_tools["path"]) == ("GET", "/mcp/manifest")
+    assert (call_tool["method"], call_tool["path"]) == ("POST", "/tools/call")
+    call = json.loads(call_tool["body"])
     assert call == {"name": "legal.sources.list", "arguments": {}}
 
-    status, headers, data = _raw(server, "GET", "/mcp/manifest")
+    status, headers, data = _raw(server, "GET", "/mcp/manifest", headers=list_tools["headers"])
     assert status == 200 and headers["content-type"] == "application/json; charset=utf-8"
     manifest = json.loads(data)
     assert manifest == legal_ops_mcp_manifest()
     assert call["name"] in [tool["name"] for tool in manifest["tools"]]
 
-    status, payload = _request(server, "POST", "/tools/call", headers=JSON, body=example.encode())
+    status, payload = _request(
+        server, "POST", "/tools/call", headers=call_tool["headers"], body=call_tool["body"]
+    )
     assert (status, payload) == (200, run_tool(call["name"], call["arguments"]))
     assert payload["external_processing"] == "none"
 

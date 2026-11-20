@@ -147,6 +147,33 @@ def test_a_withdrawn_matter_a_charter_exclusion_held_is_rejected_not_blocked(tmp
     assert contract["approval_gate"]["export_allowed"] is False
 
 
+def test_a_matter_an_amendment_brought_under_an_exclusion_is_blocked_until_withdrawn(
+    tmp_path,
+) -> None:
+    # ADR 0011: after triage such a matter stays blocked in the contract until a new version
+    # removes the exclusion or the matter is withdrawn, which reports it rejected.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "routine", "A06")
+    assert _contract(service, matter_id)[1]["review_state"] == "pending_review"
+    service.amend_matter(
+        OWNER,
+        matter_id,
+        revision(service, matter_id),
+        reason="The customer now asks for uncapped liability in the order form.",
+        routing_fields={"uncapped_liability": True},
+        stamp=Stamp(fixture_at="2026-09-07T09:40:00Z"),
+    )
+    view, contract = _contract(service, matter_id)
+    assert (view["matter"]["state"], contract["review_state"]) == ("revised", "blocked")
+    assert contract["approval_gate"]["export_allowed"] is False
+
+    _withdraw(service, matter_id, OWNER, "2026-09-07T09:50:00Z")
+    view, contract = _contract(service, matter_id)
+    assert view["version"]["scope_exclusions"]  # the exclusion is still on the version
+    assert contract["review_state"] == "rejected"
+    assert contract["approval_gate"]["export_allowed"] is False
+
+
 def test_approved_is_reported_only_while_a_final_approval_stands(tmp_path) -> None:
     """The rule itself: no matter is reported approved unless a final approver's approval stands."""
 

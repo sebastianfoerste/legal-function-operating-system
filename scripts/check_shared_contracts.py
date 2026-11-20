@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -43,6 +44,28 @@ PILOT_CLOSED_OUTCOME_MAP = {
     "withdrawn_without_delivery": "rejected",
 }
 
+# How ``contract_review_state`` in ``parent_bridge.py`` has to begin: a closed matter is
+# read from the outcome table, and an outcome the table does not hold is rejected.
+PILOT_CLOSED_BRANCH = [
+    'if state == "closed":',
+    'return CLOSED_OUTCOME_REVIEW_STATE.get(closed_outcome or "", "rejected")',
+]
+
+
+def function_code_lines(source: str, name: str) -> list[str]:
+    """The code lines of one top-level function in ``source``, after its ``def`` line.
+
+    Each line is stripped. The docstring, comments and blank lines are left out. The list
+    is empty when ``source`` has no such function.
+    """
+
+    found = re.search(rf"^def {re.escape(name)}\(.*?\n(.*?)(?=^\S|\Z)", source, re.M | re.S)
+    if found is None:
+        return []
+    body = re.sub(r'""".*?"""', "", found.group(1), flags=re.S)
+    lines = [line.strip() for line in body.splitlines()]
+    return [line for line in lines if line and not line.startswith("#")]
+
 
 def check_pilot_mapping(*, bridge: str, machine: str, service: str, allowed: set[str]) -> None:
     """Stop when the pilot's mapping onto the shared contract is missing or has changed.
@@ -50,6 +73,10 @@ def check_pilot_mapping(*, bridge: str, machine: str, service: str, allowed: set
     The pilot maps its own state machine onto the shared contract in one place,
     ``parent_bridge.py``. The arguments are the source text of that module, of the state
     machine and of the service, and the contract's ``review_state`` values.
+
+    Only text is read, and nothing of the agent is imported or run. What
+    ``contract_review_state`` returns is pinned by the agent's own tests, in
+    ``supervised-agent/tests/test_pilot_contract_closings.py``.
     """
 
     for pilot_state, shared_state in PILOT_STATE_MAP.items():
@@ -70,6 +97,13 @@ def check_pilot_mapping(*, bridge: str, machine: str, service: str, allowed: set
             raise SystemExit(f"pilot closing outcome is missing from the service: {outcome}")
     if not set(PILOT_CLOSED_OUTCOME_MAP.values()) <= allowed:
         raise SystemExit("pilot closing outcome mapping exceeds shared contract")
+    # The function's first statement has to be the closed branch, so nothing in it returns
+    # for a closed matter before the outcome table is read.
+    if function_code_lines(bridge, "contract_review_state")[:2] != PILOT_CLOSED_BRANCH:
+        raise SystemExit(
+            "pilot does not decide a closed matter from its closing outcome, rejected unless "
+            "mapped: contract_review_state"
+        )
 
 
 def main() -> int:

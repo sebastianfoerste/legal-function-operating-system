@@ -122,9 +122,12 @@ Four constraints shape it here:
    closed matter. In the pilot, `rejected` now means that a person closed the matter
    without delivery and no approval stands. It does not say that a reviewer rejected a
    draft. The schema is unchanged and no value is added.
-   `parent_bridge.contract_review_state` decides this in one place, and
-   `scripts/check_shared_contracts.py` fails if a closed matter is mapped by its state
-   alone.
+   `parent_bridge.contract_review_state` decides this in one place.
+   `supervised-agent/tests/test_pilot_contract_closings.py` guards what it returns.
+   `scripts/check_shared_contracts.py` reads the module's source text and runs none of
+   it. It fails if the state table has a `closed` entry, if a closing-outcome entry is
+   missing or changed, or if the function does not begin with the closed branch that
+   returns `CLOSED_OUTCOME_REVIEW_STATE.get(closed_outcome or "", "rejected")`.
 10. **Clocks.**
     - In the parent ledger, a running snooze is a wait on the business. It runs from the
       snooze to the earliest of the answer, `end_snooze`, a triage verb, a withdrawal or
