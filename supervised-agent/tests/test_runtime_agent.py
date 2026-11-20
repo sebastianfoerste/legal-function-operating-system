@@ -9,15 +9,21 @@ from __future__ import annotations
 import http.client
 import ipaddress
 import json
+import re
+import shlex
 import socket
 import threading
 from http.server import ThreadingHTTPServer
+from pathlib import Path
 
 import pytest
 
 import runtime_agent.app as app
 from runtime_agent.app import DEFAULT_ALLOWED_HOSTS, MAX_BODY_BYTES, SERVICE_NAME, allowed_hosts
+from src.mcp_tools import legal_ops_mcp_manifest, run_tool
 from tests.pilot_support import OWNER, REQUESTER, run_until
+
+AGENT_ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_runtime_service_name_is_legal_ops_scoped():
@@ -177,6 +183,109 @@ def test_pilot_and_tool_posts_still_work_over_loopback(server):
     assert status == 400 and "error" in payload
     status, payload = _request(server, "POST", "/tools/call", headers=JSON, body=b"not json")
     assert (status, payload) == (400, {"error": "invalid_json"})
+
+
+README_ADDRESS = "http://127.0.0.1:18085"
+
+
+def _curl_requests(text: str) -> list[dict]:
+    """The request each ``curl`` command in the bash blocks of ``text`` sends.
+
+    Only what the README's example uses is understood: ``-fsS`` (fail on an HTTP error,
+    quietly), ``-H`` for one header and ``-d`` for the body, which makes the request a
+    POST. Any other option fails here, so no part of an example is passed over.
+    """
+
+    requests = []
+    for block in re.findall(r"^```bash\n(.*?)^```$", text, re.M | re.S):
+        for line in block.replace("\\\n", " ").splitlines():
+            words = shlex.split(line)
+            if words[:1] != ["curl"]:
+                continue
+            headers: dict[str, str] = {}
+            bodies: list[str] = []
+            urls: list[str] = []
+            options = iter(words[1:])
+            for word in options:
+                if word == "-H":
+                    name, separator, value = next(options).partition(":")
+                    assert separator and name.lower() not in {held.lower() for held in headers}
+                    headers[name.strip()] = value.strip()
+                elif word == "-d":
+                    bodies.append(next(options))
+                elif word.startswith("-"):
+                    assert word == "-fsS", f"this test does not send the curl option {word}"
+                else:
+                    urls.append(word)
+            assert len(urls) == 1 and len(bodies) <= 1, line
+            assert urls[0].startswith(f"{README_ADDRESS}/"), line
+            requests.append(
+                {
+                    "method": "POST" if bodies else "GET",
+                    "path": urls[0].removeprefix(README_ADDRESS),
+                    "headers": headers,
+                    "body": bodies[0].encode() if bodies else None,
+                }
+            )
+    return requests
+
+
+def test_the_tool_endpoints_answer_as_the_readme_says(server):
+    # README, "MCP surface": the tools are reached over this server, at GET /mcp/manifest
+    # and POST /tools/call. The README's two example requests are sent here as they are
+    # written: the method, the path, every -H header and the -d body of each curl command.
+    # Nothing is added, so an example that leaves out a header the runtime insists on
+    # fails here. Only the address differs: this server listens on a port the system chose.
+    readme = (AGENT_ROOT / "README.md").read_text(encoding="utf-8")
+    surface = readme.split("\n## MCP surface\n", 1)[1].split("\n## ", 1)[0]
+    routes = re.findall(r"http://127\.0\.0\.1:18085(/[a-z/]+)", surface)
+    assert sorted(set(routes)) == ["/mcp/manifest", "/tools/call"]
+    list_tools, call_tool = _curl_requests(surface)
+    assert (list_tools["method"], list_tools["path"]) == ("GET", "/mcp/manifest")
+    assert (call_tool["method"], call_tool["path"]) == ("POST", "/tools/call")
+    call = json.loads(call_tool["body"])
+    assert call == {"name": "legal.sources.list", "arguments": {}}
+
+    status, headers, data = _raw(server, "GET", "/mcp/manifest", headers=list_tools["headers"])
+    assert status == 200 and headers["content-type"] == "application/json; charset=utf-8"
+    manifest = json.loads(data)
+    assert manifest == legal_ops_mcp_manifest()
+    assert call["name"] in [tool["name"] for tool in manifest["tools"]]
+
+    status, payload = _request(
+        server, "POST", "/tools/call", headers=call_tool["headers"], body=call_tool["body"]
+    )
+    assert (status, payload) == (200, run_tool(call["name"], call["arguments"]))
+    assert payload["external_processing"] == "none"
+
+    # Each endpoint answers one method only.
+    status, payload = _request(server, "POST", "/mcp/manifest", headers=JSON, body=b"{}")
+    assert (status, payload) == (404, {"error": "not_found"})
+    status, payload = _request(server, "GET", "/tools/call")
+    assert (status, payload) == (404, {"error": "not_found"})
+
+
+def test_run_listens_where_the_readme_says_unless_host_or_port_say_otherwise(monkeypatch, capsys):
+    readme = (AGENT_ROOT / "README.md").read_text(encoding="utf-8")
+    surface = " ".join(readme.split("\n## MCP surface\n", 1)[1].split("\n## ", 1)[0].split())
+    assert "It listens on `127.0.0.1:18085` unless `HOST` or `PORT` say otherwise" in surface
+
+    class Listening:
+        def serve_forever(self):
+            return None
+
+    asked = []
+    monkeypatch.setattr(
+        app, "build_server", lambda host, port: asked.append((host, port)) or Listening()
+    )
+    monkeypatch.delenv("HOST", raising=False)
+    monkeypatch.delenv("PORT", raising=False)
+    app.run()
+    monkeypatch.setenv("HOST", "localhost")
+    monkeypatch.setenv("PORT", "18090")
+    app.run()
+    assert asked == [("127.0.0.1", 18085), ("localhost", 18090)]
+    assert "listening on 127.0.0.1:18085" in capsys.readouterr().out
 
 
 # -- listening address -------------------------------------------------------------

@@ -5,7 +5,6 @@ separate, reviewed change with its own controls, never a setting.
 """
 
 import ast
-import json
 import re
 from pathlib import Path
 
@@ -20,6 +19,8 @@ RUNTIME_SOURCES = [
     *sorted((AGENT_ROOT / "scripts").rglob("*.py")),
 ]
 MODEL_SDKS = {"google-genai", "google-generativeai", "openai", "anthropic", "mistralai", "cohere"}
+# The environment variable that once turned the removed external model client on.
+EXTERNAL_MODEL_SWITCH = "LEGAL_AGENT_EXTERNAL_MODEL_ENABLED"
 NETWORK_MODULES = {
     "google",
     "openai",
@@ -89,12 +90,31 @@ def test_no_runtime_module_imports_a_model_or_network_client():
             ), f"{path.relative_to(AGENT_ROOT)} imports {module}"
 
 
+def _files_that_could_offer_a_setting() -> list[Path]:
+    """The runtime modules, the files at the agent's root and its guides.
+
+    The root holds what configures a run (the Makefile, the project and requirement
+    files) and is where a client configuration would sit. Hidden files are left out: the
+    only tracked one holds the ignore rules, and the rest is local to a machine.
+    """
+
+    root_files = [
+        path
+        for path in sorted(AGENT_ROOT.iterdir())
+        if path.is_file() and not path.name.startswith(".")
+    ]
+    guides = sorted((AGENT_ROOT / "docs").rglob("*.md"))
+    return sorted({*RUNTIME_SOURCES, *root_files, *guides})
+
+
 def test_no_external_model_switch_is_offered():
-    manifest = json.loads((AGENT_ROOT / "mcp.json").read_text(encoding="utf-8"))
-    for server in manifest["mcpServers"].values():
-        assert "LEGAL_AGENT_EXTERNAL_MODEL_ENABLED" not in server.get("env", {})
-    for path in RUNTIME_SOURCES:
-        assert "LEGAL_AGENT_EXTERNAL_MODEL_ENABLED" not in path.read_text(encoding="utf-8")
+    # The removed switch was an environment variable. No runtime module reads it, and no
+    # file that configures or documents a run sets or names it. The removed mcp.json was
+    # checked here for an "env" entry; a configuration at the root would be read again.
+    files = _files_that_could_offer_a_setting()
+    assert {AGENT_ROOT / "Makefile", AGENT_ROOT / "README.md"} <= set(files)
+    for path in files:
+        assert EXTERNAL_MODEL_SWITCH.encode() not in path.read_bytes(), path.relative_to(AGENT_ROOT)
 
 
 def test_the_source_boundary_says_nothing_is_processed_externally():

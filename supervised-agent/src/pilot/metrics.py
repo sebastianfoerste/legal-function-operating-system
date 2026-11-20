@@ -15,7 +15,7 @@ from pathlib import Path
 from typing import Any
 
 from src.pilot.ledger import matter_ledger
-from src.pilot.parent_bridge import CONTRACT_REVIEW_STATE, parent_module, parent_request
+from src.pilot.parent_bridge import contract_review_state, parent_module, parent_request
 from src.pilot.service import StoredChange, VersionBody
 from src.pilot.snooze import parse_time, snooze_windows
 from src.pilot.state_machine import TERMINAL_STATES
@@ -512,6 +512,18 @@ def build_parent_outcome_view(store: PilotStore) -> dict[str, Any]:
     return tower.build_outcome_control_tower(requests, ledger, config)
 
 
+def _withdrawal_note(events: list[dict[str, Any]]) -> str | None:
+    """Who withdrew the matter and the reason they typed, from the matter's events."""
+
+    event = next((e for e in reversed(events) if e["event_type"] == "matter_withdrawn"), None)
+    if event is None:
+        return None
+    return (
+        f"{event['actor_id']} [{event['role']}, simulated role] withdrew the matter: "
+        f"{event['note']}"
+    )
+
+
 def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     """One matter in the shared ``legal-workflow-controls.v1`` contract."""
 
@@ -519,11 +531,16 @@ def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict
     held = bool(version["scope_exclusions"]) or any(
         s["status"] == "blocker" for s in view["assessment"]["source_verifications"]
     )
-    review_state = CONTRACT_REVIEW_STATE[view["matter"]["state"]]
-    # A matter legal declined or closed as a duplicate is rejected, even when a charter
-    # exclusion held it: nothing about it is pending any more.
+    matter = view["matter"]
+    review_state = contract_review_state(matter["state"], matter["closed_outcome"])
+    # A matter closed without delivery (withdrawn, declined or a duplicate) is rejected,
+    # even when a charter exclusion held it: nothing about it is pending any more.
     if held and review_state != "rejected":
         review_state = "blocked"
+    review_note = view["assessment"].get("review_note")
+    if matter["closed_outcome"] == "withdrawn_without_delivery":
+        # The withdrawal cancelled any approval, so that approval's note no longer stands.
+        review_note = _withdrawal_note(events)
     return {
         "schema": "legal-workflow-controls.v1",
         "review_state": review_state,
@@ -535,7 +552,7 @@ def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict
                 *[f"specialist_reviewer:{s}" for s in version["required_specialties"]],
                 f"final_approver:{version['required_final_tier']}",
             ],
-            "review_note": view["assessment"].get("review_note"),
+            "review_note": review_note,
         },
         "source_boundary": {
             "mode": "synthetic_only",

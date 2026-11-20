@@ -283,7 +283,6 @@ is fabricated and labelled as such in its data.
 - [`examples/matters/`](examples/matters): Synthetic SaaS, DPA, AI-vendor, product and regulatory-monitoring fixtures.
 - [`examples/clauses/`](examples/clauses): Synthetic redacted clause fixtures.
 - [`runtime_agent/app.py`](runtime_agent/app.py): Small HTTP canary for health checks and local workflow calls.
-- [`mcp.json`](mcp.json): Starts the runtime canary (`python -m runtime_agent.app`), an HTTP server on a loopback address; it is not an MCP stdio server.
 - [`tests/`](tests): Unit tests for validation, risk logic, review gates, MCP manifest and runtime behavior.
 
 
@@ -315,9 +314,28 @@ The local Review-workspace layer adds a versioned matter playbook, review-gated 
 
 These tools are designed for local verification. They do not send client, candidate, matter or account data to an external system.
 
-`mcp.json` starts that canary with `python -m runtime_agent.app`: an HTTP server on a loopback
-address, not an MCP stdio server, so an MCP client that reads `mcp.json` cannot use these tools
-through it.
+To reach them, start the canary with `python -m runtime_agent.app`: an HTTP server on a loopback
+address, not an MCP stdio server. It listens on `127.0.0.1:18085` unless `HOST` or `PORT` say
+otherwise, and it does not start on an address that is not loopback. `GET /mcp/manifest` returns
+the tool list with each tool's input schema. `POST /tools/call` runs one tool from a JSON body
+that gives its `name` and `arguments`:
+
+```bash
+python -m runtime_agent.app
+```
+
+Then, from a second terminal:
+
+```bash
+curl -fsS http://127.0.0.1:18085/mcp/manifest
+curl -fsS -H "Content-Type: application/json" \
+  -d '{"name": "legal.sources.list", "arguments": {}}' \
+  http://127.0.0.1:18085/tools/call
+```
+
+The agent ships no MCP client configuration (no `mcp.json` or `.mcp.json`), because it has no MCP
+stdio server for a client to start. The `mcp.json` it carried until 2026-11-20 named this HTTP
+server as an MCP server, so an MCP client that loaded the file got no answer; the file is removed.
 
 See [docs/API.md](docs/API.md) for input schemas, output schemas, safety limits
 and example calls.
