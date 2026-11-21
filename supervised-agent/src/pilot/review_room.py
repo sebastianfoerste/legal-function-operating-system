@@ -333,7 +333,9 @@ function renderRequester(view, root) {
         onsubmit: (v) => command("respond_comment", {comment_id: c.comment_id, body: v.body, evidence_refs: splitRefs(v.evidence)})}, {primary: true}) : null)) : asked ? null : h("p", {class: "muted"}, "None.")));
   root.append(h("section", {"aria-labelledby": "d-h"}, h("h2", {id: "d-h"}, "Delivery package"),
     packageLine(view, "/pilot/api/matters/" + encodeURIComponent(view.matter.matter_id) + "/package?actor=1"),
-    view.matter.state === "ready_for_delivery" ? h("div", null, formButton("Accept delivery", {title: "Accept delivery", submit: "Accept delivery", fields: [note("Acceptance note", 20)], onsubmit: (v) => command("accept_delivery", {note: v.note})}, {primary: true})) : null));
+    // Acceptance is offered only beside a package that may be opened: the service's answer
+    // is the evidence accept_delivery needs, so a delivery that has ended offers neither.
+    view.matter.state === "ready_for_delivery" && view.package.may_open ? h("div", null, formButton("Accept delivery", {title: "Accept delivery", submit: "Accept delivery", fields: [note("Acceptance note", 20)], onsubmit: (v) => command("accept_delivery", {note: v.note})}, {primary: true})) : null));
 }
 // What a person in legal wrote for the requester: a pause's reason, or why the request was
 // closed in triage. Shown as written; the page adds no reason of its own.
@@ -469,7 +471,7 @@ function renderReview(view, root) {
     view.allowed.length ? view.allowed.map((item) => h("div", null, transitionControl(item, role), item.evidence.length ? evidenceList(item.evidence) : null)) : h("p", {class: "muted"}, "No transition is available from this state."),
     snoozeBlock(view, role),
     h("button", {class: "act secondary", onclick: () => command("export_internal_review")}, "write internal review draft"),
-    formButton("withdraw matter", {title: "Withdraw the matter", submit: "Withdraw", fields: [note("Reason for closing without delivery", 20)], onsubmit: (v) => command("withdraw", {note: v.note})}),
+    formButton("withdraw matter", {title: "Withdraw the matter", submit: "Withdraw", fields: [note("Reason for closing without delivery", 20, "At least 20 visible characters.")], onsubmit: (v) => command("withdraw", {note: v.note})}),
     packageLine(view, "#")));
   root.append(timingSection(view.timing, view.audit_chain.verified, view.matter.state));
   root.append(h("section", {"aria-labelledby": "ready-h"}, h("h2", {id: "ready-h"}, "Readiness check"), evidenceList(view.readiness),
