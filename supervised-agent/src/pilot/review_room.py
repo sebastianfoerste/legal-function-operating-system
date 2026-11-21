@@ -332,7 +332,7 @@ function renderRequester(view, root) {
         fields: [{name: "body", label: "Your answer", kind: "textarea", min: 10, hint: "At least 10 characters."}, refsField],
         onsubmit: (v) => command("respond_comment", {comment_id: c.comment_id, body: v.body, evidence_refs: splitRefs(v.evidence)})}, {primary: true}) : null)) : asked ? null : h("p", {class: "muted"}, "None.")));
   root.append(h("section", {"aria-labelledby": "d-h"}, h("h2", {id: "d-h"}, "Delivery package"),
-    view.delivery.length ? h("a", {href: "/pilot/api/matters/" + encodeURIComponent(view.matter.matter_id) + "/package?actor=1", onclick: openPackage}, "Open the approved customer package") : h("p", {class: "muted"}, "No approved package yet."),
+    packageLine(view, "/pilot/api/matters/" + encodeURIComponent(view.matter.matter_id) + "/package?actor=1"),
     view.matter.state === "ready_for_delivery" ? h("div", null, formButton("Accept delivery", {title: "Accept delivery", submit: "Accept delivery", fields: [note("Acceptance note", 20)], onsubmit: (v) => command("accept_delivery", {note: v.note})}, {primary: true})) : null));
 }
 // What a person in legal wrote for the requester: a pause's reason, or why the request was
@@ -347,6 +347,12 @@ function legalReason(status) {
       status.closure.original_matter_id ? h("p", null, h("strong", null, "The other matter: "), status.closure.original_matter_id) : null);
   }
   return null;
+}
+// The service says whether the package may be opened (view.package) and, when one was
+// prepared and its delivery no longer stands, why not. The page holds no rule of its own.
+function packageLine(view, href) {
+  if (view.package.may_open) return h("a", {href, onclick: openPackage}, "Open the approved customer package");
+  return h("p", {class: "muted"}, view.package.reason || "No approved package yet.");
 }
 async function openPackage(event) {
   event.preventDefault();
@@ -464,7 +470,7 @@ function renderReview(view, root) {
     snoozeBlock(view, role),
     h("button", {class: "act secondary", onclick: () => command("export_internal_review")}, "write internal review draft"),
     formButton("withdraw matter", {title: "Withdraw the matter", submit: "Withdraw", fields: [note("Reason for closing without delivery", 20)], onsubmit: (v) => command("withdraw", {note: v.note})}),
-    view.manifests.some((m) => m.kind === "delivery_package") ? h("a", {href: "#", onclick: openPackage}, "Open the approved customer package") : null));
+    packageLine(view, "#")));
   root.append(timingSection(view.timing, view.audit_chain.verified, view.matter.state));
   root.append(h("section", {"aria-labelledby": "ready-h"}, h("h2", {id: "ready-h"}, "Readiness check"), evidenceList(view.readiness),
     h("h3", null, "Required facts"), factList(view.required_facts),

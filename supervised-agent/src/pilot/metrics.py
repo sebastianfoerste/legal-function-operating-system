@@ -474,6 +474,9 @@ def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str,
 
     The parent lifecycle has no revision loop, so revision cycles are folded into
     the working state and the approval request is reported once, at final approval.
+    A matter is a request here only once it has a ledger entry, and the first entry is
+    its scripted submission to legal. A draft still in intake, or withdrawn there, is
+    left out: legal never received it, so there is no service event to measure.
     """
 
     requests: list[dict[str, Any]] = []
@@ -485,11 +488,16 @@ def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str,
         ]
         if not events:
             continue
-        requests.append(parent_request(matter_id, matter["body"].intake))
         # The scripted clock's "now" is the matter's latest scripted step, refusals included.
         scripted = [(parse_time(e["fixture_at"]), e["fixture_at"]) for e in matter["events"]]
         now = max(((m, t) for m, t in scripted if m is not None), default=(None, None))[1]
-        ledger_events.extend(matter_ledger(matter_id, events, as_of=now))
+        entries = matter_ledger(matter_id, events, as_of=now)
+        if not entries:
+            # The parent tower refuses a request without an event, and one such request
+            # would stop the view for every other matter in the store.
+            continue
+        requests.append(parent_request(matter_id, matter["body"].intake))
+        ledger_events.extend(entries)
     latest = max((e["occurred_at_utc"] for e in ledger_events), default=None)
     as_of = (
         (_parse(latest) + timedelta(hours=1)).isoformat().replace("+00:00", "Z") if latest else ""
@@ -540,6 +548,8 @@ def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict
     review_note = view["assessment"].get("review_note")
     if matter["closed_outcome"] == "withdrawn_without_delivery":
         # The withdrawal cancelled any approval, so that approval's note no longer stands.
+        # The note is read from the withdrawal event, not from the stored assessment: a
+        # store written before 2026-11-20 still holds the approved assessment there.
         review_note = _withdrawal_note(events)
     return {
         "schema": "legal-workflow-controls.v1",

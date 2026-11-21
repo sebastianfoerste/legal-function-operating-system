@@ -211,6 +211,10 @@ CHOICES = {
         "**A withdrawn matter is reported `rejected` in the shared contract.**",
         "`approved` only when the requester accepted the delivery of the approved package",
         "`rejected` when it was withdrawn, whatever state it had reached",
+        # What a withdrawal does to the stored assessment.
+        "A withdrawal also records a rejected review decision on the assessment stored in "
+        "the matter version",
+        "so the pilot keeps no approved or exportable assessment for a withdrawn matter",
         "The schema is unchanged and no value is added",
         "](../adr/0010-triage-verbs.md)",
     ),
@@ -335,6 +339,12 @@ class OwnerChoicesTest(unittest.TestCase):
             "(`delivered_locally_and_accepted`) is `approved`.",
             "A withdrawn matter (`withdrawn_without_delivery`) is `rejected`, whatever state "
             "it had reached",
+            "In the same step it records a rejected review decision on the assessment "
+            "stored in the matter version, with the actor and the reason they typed, so that "
+            "assessment is no longer approved or exportable",
+            "It does this for every withdrawal, whatever the assessment said before.",
+            "A delivery package prepared before the withdrawal stays in the store and in "
+            "the export folder, but the review room and the package route no longer open it.",
             "The schema is unchanged and no value is added.",
         ):
             with self.subTest(words):

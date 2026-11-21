@@ -114,7 +114,17 @@ Four constraints shape it here:
    state. Only a matter whose approved package the requester accepted
    (`delivered_locally_and_accepted`) is `approved`. A withdrawn matter
    (`withdrawn_without_delivery`) is `rejected`, whatever state it had reached, because a
-   withdrawal cancels every sign-off and approval on it. A closed matter with no recorded
+   withdrawal cancels every sign-off and approval on it. It invalidates the specialist
+   sign-offs and final approvals in the decision record. In the same step it records a
+   rejected review decision on the assessment stored in the matter version, with the actor
+   and the reason they typed, so that assessment is no longer approved or exportable and
+   the pilot's own export gate fails its check of it. It does this for every withdrawal,
+   whatever the assessment said before. A delivery package prepared before the withdrawal
+   stays in the store and in the export folder, but the review room and the package route
+   no longer open it. A store in which a matter was withdrawn before this was built keeps
+   the assessment as the approval left it. The contract takes neither its state nor its
+   note from that assessment, so such a matter is reported `rejected` as well. A closed
+   matter with no recorded
    outcome is `rejected` too, so nothing is reported approved unless its delivery was
    accepted. As for a decline, `rejected` takes precedence over `blocked`. The review note
    of a withdrawn matter is the withdrawal reason and the actor recorded for it, not the
@@ -123,7 +133,8 @@ Four constraints shape it here:
    without delivery and no approval stands. It does not say that a reviewer rejected a
    draft. The schema is unchanged and no value is added.
    `parent_bridge.contract_review_state` decides this in one place.
-   `supervised-agent/tests/test_pilot_contract_closings.py` guards what it returns.
+   `supervised-agent/tests/test_pilot_contract_closings.py` guards what it returns and
+   what a withdrawal leaves in the store.
    `scripts/check_shared_contracts.py` reads the module's source text and runs none of
    it. It fails if the state table has a `closed` entry, if a closing-outcome entry is
    missing or changed, or if the function does not begin with the closed branch that
