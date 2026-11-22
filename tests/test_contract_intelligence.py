@@ -19,7 +19,66 @@ def check(clauses, key):
     return row(build_dpa_review([document(clauses)]), key)
 
 
+# Article 28(3) GDPR as published in the Official Journal (OJ L 119, 4.5.2016, p. 1):
+# points (a) to (h) of the first subparagraph and the second subparagraph, word for word.
+OFFICIAL_ARTICLE_28_3 = {
+    "documented_instructions": (
+        "processes the personal data only on documented instructions from the controller, "
+        "including with regard to transfers of personal data to a third country or an "
+        "international organisation, unless required to do so by Union or Member State law "
+        "to which the processor is subject; in such a case, the processor shall inform the "
+        "controller of that legal requirement before processing, unless that law prohibits "
+        "such information on important grounds of public interest"
+    ),
+    "confidentiality_commitment": (
+        "ensures that persons authorised to process the personal data have committed "
+        "themselves to confidentiality or are under an appropriate statutory obligation of "
+        "confidentiality"
+    ),
+    "security_measures": "takes all measures required pursuant to Article 32",
+    "subprocessor_authorization": (
+        "respects the conditions referred to in paragraphs 2 and 4 for engaging another processor"
+    ),
+    "data_subject_rights_assistance": (
+        "taking into account the nature of the processing, assists the controller by "
+        "appropriate technical and organisational measures, insofar as this is possible, for "
+        "the fulfilment of the controller's obligation to respond to requests for exercising "
+        "the data subject's rights laid down in Chapter III"
+    ),
+    "breach_and_dpia_assistance": (
+        "assists the controller in ensuring compliance with the obligations pursuant to "
+        "Articles 32 to 36 taking into account the nature of processing and the information "
+        "available to the processor"
+    ),
+    "deletion_return": (
+        "at the choice of the controller, deletes or returns all the personal data to the "
+        "controller after the end of the provision of services relating to processing, and "
+        "deletes existing copies unless Union or Member State law requires storage of the "
+        "personal data"
+    ),
+    "audit_rights": (
+        "makes available to the controller all information necessary to demonstrate "
+        "compliance with the obligations laid down in this Article and allow for and "
+        "contribute to audits, including inspections, conducted by the controller or another "
+        "auditor mandated by the controller"
+    ),
+    "unlawful_instruction_notice": (
+        "With regard to point (h) of the first subparagraph, the processor shall immediately "
+        "inform the controller if, in its opinion, an instruction infringes this Regulation or "
+        "other Union or Member State data protection provisions"
+    ),
+}
+
+
 class DpaPlaybookTests(unittest.TestCase):
+    def test_every_statute_quote_is_the_official_wording_in_full(self):
+        # A quote that drops a qualifier ("insofar as this is possible") or an exception
+        # ("unless Union or Member State law requires storage") changes what the duty is.
+        self.assertEqual(
+            {requirement["key"]: requirement["statute"] for requirement in DPA_PLAYBOOK},
+            OFFICIAL_ARTICLE_28_3,
+        )
+
     def test_playbook_covers_all_eight_letters_and_the_second_subparagraph(self):
         self.assertEqual(len(DPA_PLAYBOOK), 9)
         for letter in "abcdefgh":
@@ -102,25 +161,37 @@ class StatutoryElementTests(unittest.TestCase):
         )
         self.assertEqual(german["status"], "pass")
 
-    def test_lit_f_needs_breach_notification_and_dpia_or_prior_consultation(self):
+    def test_lit_f_needs_every_article_it_names(self):
+        # Article 32, Articles 33 and 34 (one element: a personal data breach), Article 35
+        # and Article 36.
         breach_only = check(
             {"breach_and_dpia_assistance": "The processor notifies the controller without undue delay after becoming aware of a personal data breach."},
             "breach_and_dpia_assistance",
         )
         self.assertEqual(breach_only["status"], "review")
-        self.assertEqual(breach_only["missing_elements"], ["dpia_and_prior_consultation"])
+        self.assertEqual(breach_only["missing_elements"], ["security_of_processing", "dpia", "prior_consultation"])
         self.assertEqual(breach_only["negated_elements"], [])  # "without undue delay" is a deadline
+        breach_and_dpia = check(
+            {"breach_and_dpia_assistance": "The processor assists with personal data breach notifications and with any data protection impact assessment."},
+            "breach_and_dpia_assistance",
+        )
+        self.assertEqual(breach_and_dpia["status"], "review")
+        self.assertEqual(breach_and_dpia["missing_elements"], ["security_of_processing", "prior_consultation"])
         dpia_only = check(
             {"breach_and_dpia_assistance": "Der Auftragsverarbeiter unterstützt bei einer Datenschutz-Folgenabschätzung und der vorherigen Konsultation der Aufsichtsbehörde."},
             "breach_and_dpia_assistance",
         )
         self.assertEqual(dpia_only["status"], "review")
-        self.assertEqual(dpia_only["missing_elements"], ["breach_notification"])
-        both = check(
-            {"breach_and_dpia_assistance": "The processor assists with personal data breach notifications and with any data protection impact assessment."},
+        self.assertEqual(dpia_only["missing_elements"], ["security_of_processing", "breach_notification"])
+        every_article = check(
+            {"breach_and_dpia_assistance": "The processor assists the controller with the security of processing, personal data breach notifications, any data protection impact assessment and the prior consultation of the supervisory authority."},
             "breach_and_dpia_assistance",
         )
-        self.assertEqual(both["status"], "pass")
+        self.assertEqual(every_article["status"], "pass")
+        self.assertEqual(
+            [element["key"] for element in every_article["elements"]],
+            ["security_of_processing", "breach_notification", "dpia", "prior_consultation"],
+        )
         self.assertEqual(DPA_PLAYBOOK[5]["label"], "Unterstützung bei den Pflichten nach Art. 32 bis 36 DSGVO")
 
     def test_lit_f_reference_to_the_whole_range_satisfies_every_element(self):
@@ -131,7 +202,7 @@ class StatutoryElementTests(unittest.TestCase):
         ):
             found = check({"breach_and_dpia_assistance": text}, "breach_and_dpia_assistance")
             self.assertEqual(found["status"], "pass", text)
-            self.assertEqual([element["status"] for element in found["elements"]], ["found", "found"])
+            self.assertEqual([element["status"] for element in found["elements"]], ["found"] * 4)
 
     def test_second_subparagraph_row_is_review_when_absent_and_never_a_blocker(self):
         review = build_dpa_review([document({})])
@@ -222,7 +293,10 @@ class BundledAgreementsTests(unittest.TestCase):
             },
         )
         self.assertEqual(row(self.review, "documented_instructions", "DPA-002")["missing_elements"], ["third_country_transfers"])
-        self.assertEqual(row(self.review, "breach_and_dpia_assistance", "DPA-002")["missing_elements"], ["dpia_and_prior_consultation"])
+        self.assertEqual(
+            row(self.review, "breach_and_dpia_assistance", "DPA-002")["missing_elements"],
+            ["security_of_processing", "dpia", "prior_consultation"],
+        )
         self.assertEqual(self.review["blocker_count"], 1)
 
     def test_markdown_lists_the_missing_elements(self):

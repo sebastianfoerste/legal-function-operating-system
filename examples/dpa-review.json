@@ -10,7 +10,7 @@
       "label_en": "Processing only on documented instructions",
       "citation": "Art. 28 Abs. 3 lit. a DSGVO",
       "required": true,
-      "statute": "processes the personal data only on documented instructions from the controller, including with regard to transfers of personal data to a third country or an international organisation",
+      "statute": "processes the personal data only on documented instructions from the controller, including with regard to transfers of personal data to a third country or an international organisation, unless required to do so by Union or Member State law to which the processor is subject; in such a case, the processor shall inform the controller of that legal requirement before processing, unless that law prohibits such information on important grounds of public interest",
       "status": "pass",
       "elements": [
         {
@@ -107,7 +107,7 @@
       "label_en": "Assistance with data subject rights",
       "citation": "Art. 28 Abs. 3 lit. e DSGVO",
       "required": true,
-      "statute": "assists the controller by appropriate technical and organisational measures for the fulfilment of the controller's obligation to respond to requests for exercising the data subject's rights laid down in Chapter III",
+      "statute": "taking into account the nature of the processing, assists the controller by appropriate technical and organisational measures, insofar as this is possible, for the fulfilment of the controller's obligation to respond to requests for exercising the data subject's rights laid down in Chapter III",
       "status": "pass",
       "elements": [
         {
@@ -134,19 +134,29 @@
       "status": "pass",
       "elements": [
         {
+          "key": "security_of_processing",
+          "label": "Sicherheit der Verarbeitung (Art. 32)",
+          "status": "found"
+        },
+        {
           "key": "breach_notification",
           "label": "Meldung und Benachrichtigung bei Verletzungen des Schutzes personenbezogener Daten (Art. 33, 34)",
           "status": "found"
         },
         {
-          "key": "dpia_and_prior_consultation",
-          "label": "Datenschutz-Folgenabschätzung und vorherige Konsultation (Art. 35, 36)",
+          "key": "dpia",
+          "label": "Datenschutz-Folgenabschätzung (Art. 35)",
+          "status": "found"
+        },
+        {
+          "key": "prior_consultation",
+          "label": "Vorherige Konsultation der Aufsichtsbehörde (Art. 36)",
           "status": "found"
         }
       ],
       "missing_elements": [],
       "negated_elements": [],
-      "clause_excerpt": "Der Auftragsverarbeiter unterstützt bei der Meldung einer Verletzung des Schutzes personenbezogener Daten und bei einer Datenschutz-Folgenabschätzung.",
+      "clause_excerpt": "Der Auftragsverarbeiter unterstützt den Verantwortlichen bei der Sicherheit der Verarbeitung, bei der Meldung und Benachrichtigung bei einer Verletzung des Schutzes personenbezogener Daten, bei einer Datenschutz-Folgenabschätzung und bei de",
       "source_ref": "synthetic-dpa:DPA-001",
       "reviewer_note": null
     },
@@ -158,7 +168,7 @@
       "label_en": "Deletion or return after the end of the services",
       "citation": "Art. 28 Abs. 3 lit. g DSGVO",
       "required": true,
-      "statute": "at the choice of the controller, deletes or returns all the personal data to the controller after the end of the provision of services relating to processing, and deletes existing copies",
+      "statute": "at the choice of the controller, deletes or returns all the personal data to the controller after the end of the provision of services relating to processing, and deletes existing copies unless Union or Member State law requires storage of the personal data",
       "status": "pass",
       "elements": [
         {
@@ -209,7 +219,7 @@
       "label_en": "Duty to flag an instruction that infringes data protection law",
       "citation": "Art. 28 Abs. 3 UAbs. 2 DSGVO",
       "required": false,
-      "statute": "the processor shall immediately inform the controller if, in its opinion, an instruction infringes this Regulation or other Union or Member State data protection provisions",
+      "statute": "With regard to point (h) of the first subparagraph, the processor shall immediately inform the controller if, in its opinion, an instruction infringes this Regulation or other Union or Member State data protection provisions",
       "status": "pass",
       "elements": [
         {
@@ -232,7 +242,7 @@
       "label_en": "Processing only on documented instructions",
       "citation": "Art. 28 Abs. 3 lit. a DSGVO",
       "required": true,
-      "statute": "processes the personal data only on documented instructions from the controller, including with regard to transfers of personal data to a third country or an international organisation",
+      "statute": "processes the personal data only on documented instructions from the controller, including with regard to transfers of personal data to a third country or an international organisation, unless required to do so by Union or Member State law to which the processor is subject; in such a case, the processor shall inform the controller of that legal requirement before processing, unless that law prohibits such information on important grounds of public interest",
       "status": "review",
       "elements": [
         {
@@ -333,7 +343,7 @@
       "label_en": "Assistance with data subject rights",
       "citation": "Art. 28 Abs. 3 lit. e DSGVO",
       "required": true,
-      "statute": "assists the controller by appropriate technical and organisational measures for the fulfilment of the controller's obligation to respond to requests for exercising the data subject's rights laid down in Chapter III",
+      "statute": "taking into account the nature of the processing, assists the controller by appropriate technical and organisational measures, insofar as this is possible, for the fulfilment of the controller's obligation to respond to requests for exercising the data subject's rights laid down in Chapter III",
       "status": "pass",
       "elements": [
         {
@@ -360,18 +370,30 @@
       "status": "review",
       "elements": [
         {
+          "key": "security_of_processing",
+          "label": "Sicherheit der Verarbeitung (Art. 32)",
+          "status": "missing"
+        },
+        {
           "key": "breach_notification",
           "label": "Meldung und Benachrichtigung bei Verletzungen des Schutzes personenbezogener Daten (Art. 33, 34)",
           "status": "found"
         },
         {
-          "key": "dpia_and_prior_consultation",
-          "label": "Datenschutz-Folgenabschätzung und vorherige Konsultation (Art. 35, 36)",
+          "key": "dpia",
+          "label": "Datenschutz-Folgenabschätzung (Art. 35)",
+          "status": "missing"
+        },
+        {
+          "key": "prior_consultation",
+          "label": "Vorherige Konsultation der Aufsichtsbehörde (Art. 36)",
           "status": "missing"
         }
       ],
       "missing_elements": [
-        "dpia_and_prior_consultation"
+        "security_of_processing",
+        "dpia",
+        "prior_consultation"
       ],
       "negated_elements": [],
       "clause_excerpt": "The processor notifies the controller without undue delay after becoming aware of a personal data breach.",
@@ -386,7 +408,7 @@
       "label_en": "Deletion or return after the end of the services",
       "citation": "Art. 28 Abs. 3 lit. g DSGVO",
       "required": true,
-      "statute": "at the choice of the controller, deletes or returns all the personal data to the controller after the end of the provision of services relating to processing, and deletes existing copies",
+      "statute": "at the choice of the controller, deletes or returns all the personal data to the controller after the end of the provision of services relating to processing, and deletes existing copies unless Union or Member State law requires storage of the personal data",
       "status": "pass",
       "elements": [
         {
@@ -440,7 +462,7 @@
       "label_en": "Duty to flag an instruction that infringes data protection law",
       "citation": "Art. 28 Abs. 3 UAbs. 2 DSGVO",
       "required": false,
-      "statute": "the processor shall immediately inform the controller if, in its opinion, an instruction infringes this Regulation or other Union or Member State data protection provisions",
+      "statute": "With regard to point (h) of the first subparagraph, the processor shall immediately inform the controller if, in its opinion, an instruction infringes this Regulation or other Union or Member State data protection provisions",
       "status": "review",
       "elements": [
         {
