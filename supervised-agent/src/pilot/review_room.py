@@ -33,6 +33,7 @@ h2{font-size:15.5px;margin:0 0 10px}h3{font-size:14px;margin:12px 0 6px}
 table{width:100%;border-collapse:collapse;font-size:13.5px}th,td{border:1px solid var(--line);padding:6px 8px;text-align:left;vertical-align:top;overflow-wrap:anywhere}th{background:var(--panel)}
 code,.hash{font-family:var(--font-mono);overflow-wrap:anywhere;font-size:12px}
 .pill{display:inline-block;white-space:nowrap;padding:2px 9px;border-radius:999px;background:var(--panel);border:1px solid var(--pill-line);font-size:12.5px;margin:0 6px 4px 0}
+.pill.stage{white-space:normal;border-radius:12px}
 .ok{color:var(--ok)}.bad{color:var(--bad)}.muted{color:var(--muted)}
 button.act{font:inherit;font-size:13.5px;padding:6px 11px;border:1px solid var(--accent);background:var(--accent);color:var(--on-accent);border-radius:7px;cursor:pointer;margin:3px 4px 3px 0}
 button.act.secondary{background:var(--surface);color:var(--accent)}button.act:disabled{opacity:.55;cursor:not-allowed}
@@ -247,8 +248,12 @@ async function loadList() {
   const {payload} = await api("GET", "/matters");
   const list = $("list"); list.replaceChildren();
   for (const matter of payload.matters || []) {
+    // A requester's entry carries the label of their status, the one the matter itself shows
+    // under "Status". Every other role's entry has none, and the pill shows the pilot state.
+    // A status label can be longer than the list is wide, so its pill may wrap.
+    const label = matter.requester_status_label;
     list.append(h("button", {class: "matter", "aria-current": matter.matter_id === state.matterId ? "true" : null, onclick: () => loadMatter(matter.matter_id)},
-      h("strong", null, matter.matter_id), h("br"), matter.title, h("br"), h("span", {class: "pill"}, words(matter.state)), "v" + matter.current_version));
+      h("strong", null, matter.matter_id), h("br"), matter.title, h("br"), h("span", {class: label ? "pill stage" : "pill"}, label || words(matter.state)), "v" + matter.current_version));
   }
   if (!(payload.matters || []).length) list.append(h("p", {class: "muted"}, "No matter is visible to this role."));
   const create = $("create"); create.replaceChildren();

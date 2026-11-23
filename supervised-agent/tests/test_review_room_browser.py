@@ -498,12 +498,29 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   page = await room(APPROVER, ready);
   out.withdrawnApprover = await line(page, "next-h");
 
+  // The pill of a matter in the list: its text, how its text may break, and whether it
+  // stays inside its entry.
+  const listPill = async (page, matter) => {
+    const entry = page.locator("#list button.matter", { hasText: matter });
+    const pill = entry.locator("span.pill");
+    const [e, p] = [await entry.boundingBox(), await pill.boundingBox()];
+    return {
+      text: await pill.innerText(),
+      breaks: await pill.evaluate((el) => getComputedStyle(el).whiteSpace),
+      inside: p.x >= e.x && p.x + p.width <= e.x + e.width,
+    };
+  };
+
   // Delivered and accepted: the package still opens, for the requester and for a reviewer.
   page = await room(REQUESTER, accepted);
   out.acceptedRequester = await line(page, "d-h");
+  // The requester's list says how each matter closed, in the words of its status.
+  out.acceptedPill = await listPill(page, accepted);
+  out.withdrawnPill = await listPill(page, ready);
   out.acceptedRequesterHeading = await openIt(page);
   page = await room(OWNER, accepted);
   out.acceptedOwner = await line(page, "next-h");
+  out.acceptedOwnerPill = await listPill(page, accepted);
   out.acceptedOwnerHeading = await openIt(page);
 
   // Nothing was ever prepared: the plain sentence, and no reason.
@@ -525,7 +542,7 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 (async () => {
   let browser;
   try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
-  const [base, standing, ended, REQUESTER] = process.argv.slice(2);
+  const [base, standing, ended, REQUESTER, OWNER] = process.argv.slice(2);
   const out = {};
   const errors = [];
   async function room(actor, matter) {
@@ -541,6 +558,14 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
     await page.waitForTimeout(300);
     return page;
   }
+  // The matter list beside the matter: every pill of the two entries, as the reader sees them.
+  const pills = async (page) => {
+    const found = {};
+    for (const matter of [standing, ended]) {
+      found[matter] = await page.locator("#list button.matter", { hasText: matter }).locator("span.pill").allInnerTexts();
+    }
+    return found;
+  };
   // The requester's "Delivery package" section: the link, the Accept delivery button and
   // any muted sentence. The button is counted on the whole page, so none can hide elsewhere.
   const delivery = async (page) => {
@@ -569,6 +594,12 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
   out.endedStatus = await status(page);
   // Nowhere does the page of the ended delivery tell the requester to accept one.
   out.endedPage = await page.locator("#matter").innerText();
+  // The list beside it, and everything the requester can read on the page.
+  out.requesterPills = await pills(page);
+  out.requesterReads = await page.locator("body").innerText();
+  // A reviewer's list of the same two matters.
+  page = await room(OWNER, ended);
+  out.ownerPills = await pills(page);
   out.errors = errors;
   console.log(JSON.stringify(out));
   await browser.close();
@@ -850,6 +881,20 @@ def test_the_room_offers_the_package_only_while_its_delivery_stands(tmp_path, mo
     # A page loaded before the withdrawal: the route refuses, and the page shows its sentence.
     assert out["staleLinks"] == 1
     assert out["staleFlash"] == withdrawn and out["staleFrames"] == 0
+    # The requester's list gives each closed matter the label of its status. Such a label
+    # is longer than the list is wide, so its pill may wrap and stays inside its entry. A
+    # reviewer's list shows the pilot state in a pill that does not wrap, as before.
+    assert out["acceptedPill"] == {
+        "text": "Closed: delivered locally and accepted",
+        "breaks": "normal",
+        "inside": True,
+    }
+    assert out["withdrawnPill"] == {
+        "text": "Closed: withdrawn without delivery",
+        "breaks": "normal",
+        "inside": True,
+    }
+    assert out["acceptedOwnerPill"] == {"text": "closed", "breaks": "nowrap", "inside": True}
     # A delivered and accepted matter keeps its package.
     assert out["acceptedRequester"] == {"links": 1, "here": 1, "muted": []}
     assert (out["acceptedOwner"]["links"], out["acceptedOwner"]["here"]) == (1, 1)
@@ -878,7 +923,9 @@ def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
         anchor_id="accepted_exceptions",
         body="A late note on this section, written after the package was prepared.",
     )
-    out = _run_node(tmp_path, monkeypatch, service, ACCEPT_SCRIPT, standing, ended, REQUESTER)
+    out = _run_node(
+        tmp_path, monkeypatch, service, ACCEPT_SCRIPT, standing, ended, REQUESTER, OWNER
+    )
     changed = (
         "The package prepared earlier is no longer approved: the matter changed after it was "
         "prepared."
@@ -909,6 +956,14 @@ def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
     }
     assert "ccept delivery" not in out["endedPage"]
     assert "approved package is ready" not in out["endedPage"]
+    # The matter list says the same as the status beside it. The requester's pill is the
+    # label of their status, where it used to show the pilot state "ready for delivery"
+    # for both matters, and nothing else on their page names that state.
+    assert out["requesterPills"] == {standing: ["Ready for you"], ended: ["In review"]}
+    assert "ready for delivery" not in out["requesterReads"].lower()
+    assert "ready_for_delivery" not in out["requesterReads"]
+    # A reviewer's list is as it was: the pilot state, whatever became of the delivery.
+    assert out["ownerPills"] == {standing: ["ready for delivery"], ended: ["ready for delivery"]}
 
 
 def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:

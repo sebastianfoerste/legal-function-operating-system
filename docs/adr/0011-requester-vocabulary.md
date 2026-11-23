@@ -159,16 +159,35 @@ every other state shows the stage Decision 5 lists.
   earlier approver is assigned again. A new comment cannot be taken back, so after one a
   package is offered only after a revision request or a new version, a review and a new
   approval.
+- **The matter list says the same.** The list in the room showed every reader the pilot
+  state, so a requester read `ready for delivery` in the list beside "Status: In review".
+  For a requester, each entry of `GET /pilot/api/matters` now also carries
+  `requester_status_label`, the label of the status in their view of that matter, and the
+  room shows it in the entry's pill. One function in the service
+  (`PilotService._requester_status`) puts the facts together for the view and for the
+  list, so the two cannot differ. This holds in every state: a withdrawn matter reads
+  "Closed: withdrawn without delivery" in the requester's list, where it read `closed`.
+  The key `state` stays in the entry, every other role's list is unchanged, and their page
+  shows the pilot state as before. Apart from that pill, the requester's page showed the
+  pilot state nowhere, and still shows it nowhere.
+- **The view lists only the package that stands.** The requester's view listed every
+  stored delivery manifest as `delivery`, the package of an ended delivery included, with
+  its file names and an eligibility that read eligible. It now lists only the manifest of
+  the package that may be opened now, which is the one `PilotService._standing_package`
+  returns, and nothing otherwise. A reviewer's view keeps every stored manifest under
+  `manifests`.
 - **Unchanged.** The stored state, the state machine, the export gate and
-  `legal-workflow-controls.v1`. The matter list in the room still shows every reader the
-  pilot state, here `ready for delivery`.
+  `legal-workflow-controls.v1`. No manifest is deleted or rewritten.
 - **Tests.** `tests/test_requester_vocabulary.py` pins the stage of each state as before,
   and now also that `ready_for_delivery` shows `in_review` once its delivery has ended,
   that every other state stays as it is and that the six stages are kept. The agent's
   suite pins the wording (`supervised-agent/tests/test_pilot_intake_ux.py`), the matter
   view after a late comment, a replaced approver, a reopened question and a note that is
-  resolved and then reopened (`supervised-agent/tests/test_pilot_package_standing.py`) and
-  the page in a browser (`supervised-agent/tests/test_review_room_browser.py`).
+  resolved and then reopened, the requester's matter list beside their view at every step
+  of the three scenarios, and the `delivery` list after each way a delivery ends
+  (`supervised-agent/tests/test_pilot_package_standing.py`), and the page in a browser,
+  the pill in the matter list included
+  (`supervised-agent/tests/test_review_room_browser.py`).
 
 ## Alternatives rejected
 

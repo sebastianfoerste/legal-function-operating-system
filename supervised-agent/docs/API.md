@@ -291,6 +291,23 @@ the delivery stands but its
 `customer-package.html` is missing from the export folder, the route answers 404
 `not_found` and names the missing file.
 
+`package` is the answer to whether a package may be opened. The lists of manifests in the
+matter view do not say it. In a requester's view, `delivery` holds the manifest of the
+package that may be opened now and nothing else: one manifest while `package.may_open` is
+true, and an empty list when no package was prepared or its delivery has ended. An earlier
+package of the same matter is not listed. A reviewer's view has no `delivery`. Its
+`manifests` holds every manifest stored for the matter, internal review drafts and
+packages whose delivery has ended included, as the record of what was written.
+
+`GET /pilot/api/matters` gives each matter as `matter_id`, `title`, `state`,
+`current_version`, `revision` and `closed_outcome`. `state` is the pilot state, for every
+role. For a business requester each entry also carries `requester_status_label`, the
+`label` of the `requester_status` in their view of that matter, for example "In review"
+for a matter that is `ready_for_delivery` after its delivery ended and "Closed: withdrawn
+without delivery" for a withdrawn one. The service puts both together in one place, so
+the list and the view cannot differ. The review room shows a requester that label in the
+list and every other role the pilot state. No other role's entry has the key.
+
 Answers to a refused request or command:
 
 | Status | `error` | Meaning |

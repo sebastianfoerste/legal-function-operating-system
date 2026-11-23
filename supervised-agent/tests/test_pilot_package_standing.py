@@ -6,19 +6,22 @@ new version, a comment written, resolved or reopened after the package was prepa
 another final approver in place of the one who approved ends it. The package route then
 refuses, the matter view says why, and the stored manifest and its files stay for the audit
 trail. A matter that stays ready for delivery after its delivery ended is shown to its
-requester as "In review", not as a package to accept. Everything here is synthetic.
+requester as "In review", not as a package to accept. The requester's view lists only the
+manifest of the package that may be opened, and their matter list shows the label of their
+status in place of the pilot state. Everything here is synthetic.
 """
 
 from __future__ import annotations
 
 import json
 from collections.abc import Callable
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
 import pytest
 
-from src.pilot.api import PilotApi
+from src.pilot.api import PilotApi, encode
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.review_room import REVIEW_ROOM_HTML
 from src.pilot.scenario_runner import ScenarioRunner
@@ -90,6 +93,43 @@ def _stored_page(service: PilotService, matter: str) -> str:
     return (folder / "customer-package.html").read_text(encoding="utf-8")
 
 
+def _stored_manifests(service: PilotService, matter: str) -> list[dict[str, Any]]:
+    """Every stored delivery manifest, oldest first, in the words of a matter view."""
+
+    with service.store.reading() as connection:
+        rows = connection.execute(
+            "SELECT * FROM deliverable_manifests WHERE matter_id = ? AND kind = "
+            "'delivery_package' ORDER BY manifest_id",
+            (matter,),
+        ).fetchall()
+    return [
+        {
+            "manifest_id": row["manifest_id"],
+            "version": row["version"],
+            "kind": row["kind"],
+            "created_at": row["created_at"],
+            **json.loads(row["body"]),
+        }
+        for row in rows
+    ]
+
+
+def _lists_what_stands(service: PilotService, view: dict[str, Any], *, stands: bool) -> None:
+    """A requester's view lists the manifest of the package that may be opened, and no other.
+
+    A reviewer's view has no such list. It carries every stored manifest, as the record of
+    what was written, whether or not a delivery stands.
+    """
+
+    stored = _stored_manifests(service, view["matter"]["matter_id"])
+    if view["view"] == "requester_summary":
+        assert view["delivery"] == (stored[-1:] if stands else []), view["delivery"]
+        assert "manifests" not in view
+    else:
+        assert "delivery" not in view
+        assert [m for m in view["manifests"] if m["kind"] == "delivery_package"] == stored
+
+
 def _offered(api: PilotApi, matter: str, readers: tuple[str, ...]) -> None:
     """Every reader of the matter gets the stored page, and their view says it may be opened."""
 
@@ -97,7 +137,9 @@ def _offered(api: PilotApi, matter: str, readers: tuple[str, ...]) -> None:
         status, page = _package(api, actor, matter)
         assert status == 200, (actor, page)
         assert page == _stored_page(api.service, matter) and "Customer package:" in page
-        assert _view(api, actor, matter)["package"] == {"may_open": True, "reason": None}
+        view = _view(api, actor, matter)
+        assert view["package"] == {"may_open": True, "reason": None}
+        _lists_what_stands(api.service, view, stands=True)
 
 
 def _refused(api: PilotApi, matter: str, readers: tuple[str, ...], reason: str | None) -> None:
@@ -114,7 +156,9 @@ def _refused(api: PilotApi, matter: str, readers: tuple[str, ...], reason: str |
             "permission_denied",
             reason or NEVER_PREPARED,
         ), (actor, answer)
-        assert _view(api, actor, matter)["package"] == {"may_open": False, "reason": reason}
+        view = _view(api, actor, matter)
+        assert view["package"] == {"may_open": False, "reason": reason}
+        _lists_what_stands(api.service, view, stands=False)
 
 
 def _kept(service: PilotService, matter: str) -> dict[str, Any]:
@@ -678,6 +722,322 @@ def test_the_status_goes_by_the_answer_the_accept_button_goes_by(tmp_path) -> No
     assert _told(api, matter) == TOLD_ENDED
 
 
+# -- what the requester's view lists as delivered -------------------------------------
+
+
+@pytest.mark.parametrize(
+    ("end", "state_after"),
+    [
+        pytest.param(_comment, "ready_for_delivery", id="a comment after the package"),
+        pytest.param(_replace_the_approver, "ready_for_delivery", id="another final approver"),
+        pytest.param(_withdraw_as(OWNER), "closed", id="a withdrawal after the package"),
+        pytest.param(_amend, "revised", id="an amendment that makes a new version"),
+    ],
+)
+def test_the_requester_view_lists_no_package_whose_delivery_has_ended(
+    tmp_path, end, state_after: str
+) -> None:
+    # "delivery" used to list every stored delivery manifest, so beside "package" saying
+    # that nothing may be opened the requester's view still carried the ended package:
+    # its folder, its file names and hashes, and an eligibility that read "eligible".
+    api, service, matter = _ready(tmp_path)
+    [stored] = _stored_manifests(service, matter)
+    assert stored["folder"] == f"{matter}/v1/delivery" and stored["eligibility"]["eligible"]
+    view = _view(api, REQUESTER, matter)
+    assert view["package"] == {"may_open": True, "reason": None}
+    assert view["delivery"] == [stored]
+    reviewer = _view(api, OWNER, matter)["manifests"]
+    assert reviewer == [stored]
+
+    end(service, matter)
+
+    view = _view(api, REQUESTER, matter)
+    assert view["matter"]["state"] == state_after
+    assert view["package"]["may_open"] is False and view["package"]["reason"]
+    assert view["delivery"] == []
+    # Nothing was deleted or rewritten: the manifest is stored as it was, and a reviewer's
+    # view carries it as before, under "manifests" and with no "delivery" list.
+    assert _stored_manifests(service, matter) == [stored]
+    owner = _view(api, OWNER, matter)
+    assert owner["manifests"] == reviewer and "delivery" not in owner
+
+
+def test_the_requester_view_lists_the_package_of_the_delivery_that_stands_now(tmp_path) -> None:
+    api, service, matter, note = _ready_with_an_open_note(tmp_path)
+    [first] = _stored_manifests(service, matter)
+
+    def listed() -> list[dict[str, Any]]:
+        delivery: list[dict[str, Any]] = _view(api, REQUESTER, matter)["delivery"]
+        return delivery
+
+    assert listed() == [first]
+    # A second package for the same version, after a revision and a new approval. Both
+    # manifests are stored, and only the one that may be opened now is listed.
+    for actor, command, args in (
+        (
+            APPROVER_LEAD,
+            "request_revision",
+            {"comment_ids": [note], "note": "The open note has to be answered first."},
+        ),
+        (
+            OWNER,
+            "respond_comment",
+            {"comment_id": note, "body": "Answered; nothing changes in the package."},
+        ),
+        (OWNER, "submit_revision", {"note": "The open note is answered."}),
+        (APPROVER_LEAD, "resume_review", {}),
+        (APPROVER_LEAD, "approve", {"note": APPROVAL}),
+    ):
+        service.execute(actor, matter, command, revision(service, matter), args)
+        assert listed() == [], command
+    service.prepare_delivery(OWNER, matter, revision(service, matter))
+    stored = _stored_manifests(service, matter)
+    assert [m["manifest_id"] for m in stored] == [first["manifest_id"], first["manifest_id"] + 1]
+    assert stored[0] == first and listed() == [stored[1]]
+    # The reviewers still see both, as the record of what was written.
+    assert _view(api, OWNER, matter)["manifests"] == stored
+
+    # Accepted, the delivery stands for good, and its manifest stays listed.
+    service.accept_delivery(REQUESTER, matter, revision(service, matter), note=ACCEPTANCE)
+    assert state(service, matter) == "closed" and listed() == [stored[1]]
+
+
+def test_a_package_prepared_on_an_earlier_version_is_not_listed_after_an_amendment(
+    tmp_path,
+) -> None:
+    # Scenario 2 is delivered on version 3. Its package is listed while that delivery stands
+    # and after it is accepted, and not once an amendment has made version 4.
+    api, service, matter = _ready(tmp_path, "specialist-revision")
+    [stored] = _stored_manifests(service, matter)
+    assert stored["version"] == 3
+    assert _view(api, REQUESTER, matter)["delivery"] == [stored]
+
+    _amend(service, matter)
+
+    view = _view(api, REQUESTER, matter)
+    assert (view["matter"]["state"], view["matter"]["current_version"]) == ("revised", 4)
+    assert view["package"] == {"may_open": False, "reason": CHANGED}
+    assert view["delivery"] == []
+    assert _stored_manifests(service, matter) == [stored]
+
+
+# -- what the matter list shows a requester -------------------------------------------
+
+# The entry of the list as every role gets it, in this order.
+LIST_KEYS = ["matter_id", "title", "state", "current_version", "revision", "closed_outcome"]
+
+
+def _list(api: PilotApi, actor: str) -> list[dict[str, Any]]:
+    status, payload, _ = api.handle("GET", "/pilot/api/matters", {"X-Pilot-Actor": actor})
+    assert status == 200, payload
+    matters: list[dict[str, Any]] = payload["matters"]
+    return matters
+
+
+def _listed_and_told(api: PilotApi, matter: str) -> tuple[str, str]:
+    """The pilot state the list gives for the matter, and the label it gives a requester.
+
+    The label is the one of the status in the requester's view of that matter, always.
+    """
+
+    [entry] = [m for m in _list(api, REQUESTER) if m["matter_id"] == matter]
+    assert list(entry) == [*LIST_KEYS, "requester_status_label"]
+    view = _view(api, REQUESTER, matter)
+    assert entry["requester_status_label"] == view["requester_status"]["label"]
+    assert {key: entry[key] for key in LIST_KEYS} == {key: view["matter"][key] for key in LIST_KEYS}
+    return entry["state"], entry["requester_status_label"]
+
+
+def _open(api: PilotApi, matter: str) -> None:
+    """A draft of scenario 1 under another matter ID, opened by the requester."""
+
+    status, made, _ = api.handle(
+        "POST",
+        "/pilot/api/matters",
+        {"X-Pilot-Actor": REQUESTER},
+        {"scenario_id": "routine", "matter_id": matter},
+    )
+    assert status == 201, made
+
+
+class _StepClock:
+    """A service clock one second later each time it is read, not the computer's.
+
+    The list is ordered by the time each matter was opened, so its order here does not
+    depend on the wall clock.
+    """
+
+    def __init__(self) -> None:
+        self.start, self.reads = datetime(2031, 3, 3, 8, 0, tzinfo=UTC), 0
+
+    def now(self) -> str:
+        self.reads += 1
+        moment = self.start + timedelta(seconds=self.reads)
+        return moment.isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def _a_room_with_matters_in_many_states(tmp_path: Path) -> tuple[PilotApi, dict[str, str]]:
+    """One store, and what the requester's list should say of each matter in it."""
+
+    service = make_service(tmp_path, clock=_StepClock())
+    api = PilotApi(service)
+    ended = run_until(service, "routine", "A12")
+    _comment(service, ended)  # ready for delivery, and the delivery has ended
+    accepted = run_until(service, "specialist-revision", "B45")
+    held = run_until(service, "blocked", "C02")
+    for matter in ("PM-DRAFT", "PM-WITHDRAWN", "PM-DECLINED", "PM-DUPLICATE"):
+        _open(api, matter)
+    service.withdraw(REQUESTER, "PM-WITHDRAWN", revision(service, "PM-WITHDRAWN"), note=REASON)
+    for matter in ("PM-DECLINED", "PM-DUPLICATE"):
+        service.submit_intake(REQUESTER, matter, revision(service, matter))
+    service.decline(
+        OWNER,
+        "PM-DECLINED",
+        revision(service, "PM-DECLINED"),
+        reason="Outside what legal reviews in this pilot.",
+    )
+    service.mark_duplicate(
+        OWNER,
+        "PM-DUPLICATE",
+        revision(service, "PM-DUPLICATE"),
+        original_matter_id=ended,
+        reason="The same request as the routine matter, sent twice.",
+    )
+    return api, {
+        ended: "In review",
+        accepted: "Closed: delivered locally and accepted",
+        held: "Received by legal",
+        "PM-DRAFT": "Not yet submitted",
+        "PM-WITHDRAWN": "Closed: withdrawn without delivery",
+        "PM-DECLINED": "Closed: declined by legal",
+        "PM-DUPLICATE": "Closed: duplicate of another matter",
+    }
+
+
+def test_the_matter_list_gives_a_requester_the_label_of_their_status(tmp_path) -> None:
+    # The list showed every reader the pilot state. For a requester that put "ready for
+    # delivery" beside "Status: In review" once a delivery had ended. Their entry now also
+    # carries the label of their status, and "state" stays in it as it always was.
+    api, expected = _a_room_with_matters_in_many_states(tmp_path)
+    service = api.service
+    with service.store.reading() as connection:
+        before = list(connection.iterdump())
+
+    entries = _list(api, REQUESTER)
+
+    assert [m["matter_id"] for m in entries] == list(expected)
+    assert {m["matter_id"]: m["requester_status_label"] for m in entries} == expected
+    states = {matter: _listed_and_told(api, matter)[0] for matter in expected}
+    assert states == {
+        "PM-ROUTINE-001": "ready_for_delivery",
+        "PM-SPECIALIST-002": "closed",
+        "PM-BLOCKED-003": "triage",
+        "PM-DRAFT": "intake",
+        "PM-WITHDRAWN": "closed",
+        "PM-DECLINED": "declined",
+        "PM-DUPLICATE": "duplicate",
+    }
+    # Listing reads. It writes no row of any table, and so no event.
+    with service.store.reading() as connection:
+        assert list(connection.iterdump()) == before
+
+
+def test_the_matter_list_of_every_other_role_is_as_it_always_was(tmp_path) -> None:
+    api, expected = _a_room_with_matters_in_many_states(tmp_path)
+    with api.service.store.reading() as connection:
+        rows = connection.execute("SELECT * FROM matters ORDER BY created_at, matter_id").fetchall()
+    assert [row["matter_id"] for row in rows] == list(expected)
+    seen = {
+        # The owner is on every matter that left the requester's hands; the drafts are not
+        # theirs to see. The triage queue shows the held matter to the second owner too.
+        OWNER: ["PM-ROUTINE-001", "PM-SPECIALIST-002", "PM-BLOCKED-003", "PM-DECLINED"]
+        + ["PM-DUPLICATE"],
+        OTHER_OWNER: ["PM-BLOCKED-003"],
+        APPROVER_LEAD: ["PM-ROUTINE-001"],
+        APPROVER_GC: ["PM-SPECIALIST-002"],
+        SPECIALIST: ["PM-SPECIALIST-002"],
+    }
+    for actor, matters in seen.items():
+        status, payload, _ = api.handle("GET", "/pilot/api/matters", {"X-Pilot-Actor": actor})
+        assert status == 200
+        as_before = {
+            "matters": [
+                {key: row[key] for key in LIST_KEYS} for row in rows if row["matter_id"] in matters
+            ]
+        }
+        assert [m["matter_id"] for m in payload["matters"]] == matters, actor
+        # Byte for byte, the order of the keys included: no entry gained a key.
+        assert encode(payload) == encode(as_before), actor
+
+
+@pytest.mark.parametrize("scenario_id", ["routine", "specialist-revision", "blocked"])
+def test_the_list_and_the_status_agree_at_every_step_of_a_scenario(
+    tmp_path, scenario_id: str
+) -> None:
+    # One helper in the service feeds both, so the two cannot differ. Each scripted step is
+    # run, and after each the list entry is compared with the requester's view.
+    service = make_service(tmp_path)
+    api = PilotApi(service)
+    script = scenario(scenario_id)
+    runner = ScenarioRunner(service)
+    told = []
+    for step in script["steps"]:
+        if step.get("restart"):
+            continue
+        record = runner.run_step(script, step)
+        assert record["passed"], record
+        told.append(_listed_and_told(api, script["matter_id"]))
+    assert len(told) >= 10
+    finals = {
+        "routine": ("closed", "Closed: delivered locally and accepted"),
+        "specialist-revision": ("closed", "Closed: delivered locally and accepted"),
+        "blocked": ("triage", "Received by legal"),
+    }
+    assert told[-1] == finals[scenario_id]
+    if scenario_id != "blocked":
+        # Every stage but the first is passed on the way; the draft is opened complete.
+        assert [label for _, label in dict.fromkeys(told)][:2] == [
+            "Not yet submitted",
+            "Received by legal",
+        ]
+        assert ("approved", "Approved") in told and ("ready_for_delivery", "Ready for you") in told
+
+
+@pytest.mark.parametrize(
+    "end",
+    [_comment, _replace_the_approver],
+    ids=["a comment after the approval", "another final approver"],
+)
+def test_the_list_and_the_status_agree_when_an_approval_no_longer_counts(tmp_path, end) -> None:
+    # In "approved" a later comment, or another final approver, leaves `prepare_delivery`
+    # refused. What the requester is told then is the business of the status; the list
+    # says the same, whatever that is.
+    service = make_service(tmp_path)
+    matter = run_until(service, "routine", "A11")
+    api = PilotApi(service)
+    before = _listed_and_told(api, matter)
+    assert before == ("approved", "Approved")
+
+    end(service, matter)
+
+    allowed = {item["command"]: item for item in _view(api, OWNER, matter)["allowed"]}
+    assert [e["ok"] for e in allowed["prepare_delivery"]["evidence"]] == [False]
+    assert _listed_and_told(api, matter)[0] == "approved"
+
+
+def test_the_list_follows_the_delivery_while_the_matter_stays_ready(tmp_path) -> None:
+    api, service, matter = _ready(tmp_path)
+    assert _listed_and_told(api, matter) == ("ready_for_delivery", "Ready for you")
+    _replace_the_approver(service, matter)
+    assert _listed_and_told(api, matter) == ("ready_for_delivery", "In review")
+    service.assign(
+        OWNER, matter, revision(service, matter), role="final_approver", assignee_id=APPROVER_LEAD
+    )
+    assert _listed_and_told(api, matter) == ("ready_for_delivery", "Ready for you")
+    service.accept_delivery(REQUESTER, matter, revision(service, matter), note=ACCEPTANCE)
+    assert _listed_and_told(api, matter) == ("closed", "Closed: delivered locally and accepted")
+
+
 # -- a delivered and accepted matter ------------------------------------------------
 
 
@@ -817,6 +1177,22 @@ def test_the_room_takes_the_package_line_from_the_service() -> None:
     assert "view.delivery" not in REVIEW_ROOM_HTML
     assert 'm.kind === "delivery_package"' not in REVIEW_ROOM_HTML
     assert "innerHTML" not in REVIEW_ROOM_HTML
+
+
+def test_the_room_shows_a_requester_the_status_label_in_the_matter_list() -> None:
+    # One pill per entry of the list. It shows the label the entry carries, which only a
+    # requester's entry does, and the pilot state where the entry carries none.
+    assert REVIEW_ROOM_HTML.count("matter.requester_status_label") == 1
+    assert "const label = matter.requester_status_label;" in REVIEW_ROOM_HTML
+    assert (
+        'h("span", {class: label ? "pill stage" : "pill"}, label || words(matter.state))'
+        in REVIEW_ROOM_HTML
+    )
+    assert REVIEW_ROOM_HTML.count("words(matter.state)") == 1
+    # A status label can be longer than the list is wide, so its pill, and no other, wraps.
+    assert REVIEW_ROOM_HTML.count("pill stage") == 1
+    assert ".pill.stage{white-space:normal;border-radius:12px}" in REVIEW_ROOM_HTML
+    assert REVIEW_ROOM_HTML.count("white-space:normal") == 1
 
 
 def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened() -> None:

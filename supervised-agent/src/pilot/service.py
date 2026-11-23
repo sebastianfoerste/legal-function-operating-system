@@ -2452,13 +2452,23 @@ class PilotService:
     # -------------------------------------------------------------------- views
 
     def list_matters(self, actor_id: str) -> list[dict[str, Any]]:
+        """The matters the actor may read. Writes nothing.
+
+        A business requester's entry also carries ``requester_status_label``, the label of
+        the status their matter view gives, so the list does not show them a pilot state
+        that the status contradicts. Every other role gets the entry as it always was.
+        """
+
         with self.store.reading() as connection:
             actor = self._actor(connection, actor_id)
             rows = connection.execute(
                 "SELECT * FROM matters ORDER BY created_at, matter_id"
             ).fetchall()
-            return [
-                {
+            matters = []
+            for row in rows:
+                if not self._can_read(connection, actor, row):
+                    continue
+                entry = {
                     key: row[key]
                     for key in (
                         "matter_id",
@@ -2469,9 +2479,41 @@ class PilotService:
                         "closed_outcome",
                     )
                 }
-                for row in rows
-                if self._can_read(connection, actor, row)
-            ]
+                if actor.role == "business_requester":
+                    ctx = self._context(connection, actor_id, row["matter_id"], Stamp())
+                    standing, _ = self._standing_package(ctx)
+                    status = self._requester_status(
+                        ctx, standing, self._comments(connection, ctx.matter_id)
+                    )
+                    entry["requester_status_label"] = status["label"]
+                matters.append(entry)
+            return matters
+
+    def _requester_status(
+        self, ctx: _Ctx, standing: sqlite3.Row | None, comments: list[Comment]
+    ) -> dict[str, Any]:
+        """What the requester is told about the matter: stage, explanation and next step.
+
+        The one place that puts together the facts ``requester_status`` needs. The matter
+        view and the matter list both ask here, so the label in the list is the label of
+        the status in the view. ``standing`` is the caller's answer from
+        ``_standing_package`` and ``comments`` are the matter's comments as the caller
+        read them; neither is worked out again. Reads only.
+        """
+
+        _, events, now = self._events_and_now(ctx.connection, ctx.matter_id)
+        snooze = latest_snooze(events, *matter_clock(events, now))
+        questions = [c for c in comments if c.addressed_to == "business_requester"]
+        return requester_status(
+            ctx.matter["state"],
+            closed_outcome=ctx.matter["closed_outcome"],
+            open_questions=sum(c.state == "open" for c in questions),
+            snooze=snooze if snooze and snooze["active"] else None,
+            closure=self._closure(ctx.connection, ctx),
+            # The same answer as "package" in the matter view, so the status cannot tell
+            # the requester to accept a delivery that the room no longer offers.
+            delivery_stands=standing is not None,
+        )
 
     def view_matter(self, actor_id: str, matter_id: str) -> dict[str, Any]:
         with self.store.reading() as connection:
@@ -2507,22 +2549,18 @@ class PilotService:
             standing, reason = self._standing_package(ctx)
             base["package"] = {"may_open": standing is not None, "reason": reason}
             if ctx.actor.role == "business_requester":
-                _, events, now = self._events_and_now(connection, matter_id)
-                snooze = latest_snooze(events, *matter_clock(events, now))
                 # Requesters see status, questions addressed to them and the approved package.
                 clarifications = [c for c in comments if c.addressed_to == "business_requester"]
                 base["clarifications"] = [c.model_dump() for c in clarifications]
-                base["delivery"] = [m for m in manifests if m["kind"] == "delivery_package"]
-                base["requester_status"] = requester_status(
-                    ctx.matter["state"],
-                    closed_outcome=ctx.matter["closed_outcome"],
-                    open_questions=sum(c.state == "open" for c in clarifications),
-                    snooze=snooze if snooze and snooze["active"] else None,
-                    closure=self._closure(connection, ctx),
-                    # The same answer as "package" above, so the status cannot tell the
-                    # requester to accept a delivery that the room no longer offers.
-                    delivery_stands=standing is not None,
-                )
+                # Only the manifest of the package that may be opened now, so a delivery
+                # that has ended is not listed beside "package" saying that it cannot be
+                # opened. Every stored manifest stays in the reviewers' "manifests".
+                base["delivery"] = [
+                    m
+                    for m in manifests
+                    if standing is not None and m["manifest_id"] == standing["manifest_id"]
+                ]
+                base["requester_status"] = self._requester_status(ctx, standing, comments)
                 base["view"] = "requester_summary"
                 return base
             changes = self._changes(connection, matter_id, ctx.version)

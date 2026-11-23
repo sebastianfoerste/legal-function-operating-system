@@ -13,6 +13,10 @@ resolved or reopened after the package was prepared (any change to the state of 
 comment), or another final approver in place of the one who approved, leaves no approved
 package to accept. The requester is then shown "In review", because legal has to act
 before a package can be offered again (ADR 0011, note of 2026-11-23).
+
+The service puts the facts together in one place, ``PilotService._requester_status``,
+for the requester's matter view and for their matter list. The list shows the label of
+this status, so it cannot show a requester a pilot state that the status contradicts.
 """
 
 from __future__ import annotations
