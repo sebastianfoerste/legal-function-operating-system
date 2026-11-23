@@ -3,7 +3,7 @@
   "input_schema": "legal-function-os.raas-deal-input.v1",
   "generated_from": "synthetic-deal:RAAS-2026-001",
   "verified_on": "2026-10-13",
-  "last_verified_on": "2026-10-31",
+  "last_verified_on": "2026-11-23",
   "title": "Industrial Robotics RaaS Deal Decision Pack",
   "deal_id": "RAAS-2026-001",
   "deal_facts": {
@@ -566,7 +566,7 @@
       "regime": "Product Liability Directive transition",
       "actor": "Manufacturer, component manufacturer, importer, authorised representative, or fulfilment provider",
       "obligation_or_question": "Map national implementation and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
-      "deal_relevance": "Later framework deployments may be placed on the market or put into service after 9 December 2026.",
+      "deal_relevance": "Later framework deployments may be placed on the market or put into service after 8 December 2026.",
       "status": "transition_plan_required",
       "gate_effect": "transition_follow_up",
       "owner": "Product counsel, Product Safety, Insurance, and Engineering",
@@ -789,7 +789,7 @@
       "url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng",
       "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
       "legal_effect": "directive_requires_national_implementation",
-      "verified_on": "2026-10-31",
+      "verified_on": "2026-11-23",
       "timing": "Member States must transpose the Directive by 9 December 2026 (Article 22). It applies to products placed on the market or put into service after 8 December 2026 (Article 2(1), as corrected by the corrigendum of 7 May 2026); products placed on the market or put into service on or before that date are outside its scope."
     },
     {
@@ -802,7 +802,7 @@
       "timing": "In force and directly applicable. The concrete obligations depend on the roles, data, purposes, and transfer path."
     }
   ],
-  "source_digest": "913a6832aa1a2fdb09aa52fa036289c19a8c88ef55eb5aff492c6ec3f5265271",
+  "source_digest": "327e886069be5c76171fb07bb07b4e91386bd283bc7b331bb12c8caf446cd111",
   "disclaimer": "This public-safe demonstration uses synthetic facts and illustrative internal guardrails. It is legal-operations and deal-structuring support. It is not legal or accounting advice. Qualified Legal, Finance, Tax, Security, Product, and Safety reviewers must validate the analysis before any external use.",
   "external_action_allowed": false
 }

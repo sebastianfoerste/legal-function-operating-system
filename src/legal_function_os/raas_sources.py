@@ -19,19 +19,26 @@ RECHECKED_ON = "2026-10-13"
 # legalize-eu mirror of EUR-Lex/CELLAR, which holds no consolidated version of
 # any of them after the original publication.
 MIRROR_RECHECKED_ON = "2026-10-18"
-# The Cyber Resilience Act, Data Act, Machinery Directive and Product Liability
-# Directive entries were re-checked on this date. EUR-Lex could not be read from
-# the checking environment, so the texts used were: for the Cyber Resilience Act
-# and the Data Act, the springlex.eu article pages of Regulations (EU) 2024/2847
-# (Articles 69 and 71) and (EU) 2023/2854 (Article 50), which name the Official
-# Journal as the authentic text, plus the European Commission's page on CRA
-# reporting obligations for the single reporting platform; for the Machinery
-# Directive's end date, Article 51(2) of Regulation (EU) 2023/1230 in the
-# gesetze.legal mirror together with the corrigendum of 4 July 2023 (OJ L 169,
-# p. 35, item 5), read as a copy of the Official Journal page; for the Product
-# Liability Directive, the corrigendum of 7 May 2026 (OJ L, 2026/90364), read as
-# a copy of the Official Journal page, which corrects Article 2(1).
+# The Cyber Resilience Act, Data Act and Machinery Directive entries were
+# re-checked on this date. EUR-Lex could not be read from the checking
+# environment, so the texts used were: for the Cyber Resilience Act and the Data
+# Act, the springlex.eu article pages of Regulations (EU) 2024/2847 (Articles 69
+# and 71) and (EU) 2023/2854 (Article 50), which name the Official Journal as the
+# authentic text, plus the European Commission's page on CRA reporting
+# obligations for the single reporting platform; for the Machinery Directive's
+# end date, Article 51(2) of Regulation (EU) 2023/1230 in the gesetze.legal
+# mirror together with the corrigendum of 4 July 2023 (OJ L 169, p. 35, item 5),
+# read as a copy of the Official Journal page.
 CURRENCY_RECHECKED_ON = "2026-10-31"
+# The Product Liability Directive entry was re-checked on this date against the
+# Official Journal itself, read through the EU Publications Office (CELLAR):
+# Directive (EU) 2024/2853 as published (OJ L, 2024/2853, 18.11.2024), Articles 2,
+# 21 and 22 and the headings of the other pinpointed Articles, and the corrigendum
+# of 7 May 2026 (OJ L, 2026/90364), which corrects Article 2(1) from "after
+# 9 December 2026" to "after 8 December 2026". Article 21 keeps Directive
+# 85/374/EEC for products placed on the market or put into service before
+# 9 December 2026, so the corrected Article 2(1) leaves no day uncovered.
+OJ_RECHECKED_ON = "2026-11-23"
 
 DISCLAIMER = (
     "This public-safe demonstration uses synthetic facts and illustrative internal "
@@ -169,7 +176,7 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng",
         "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
         "legal_effect": "directive_requires_national_implementation",
-        "verified_on": CURRENCY_RECHECKED_ON,
+        "verified_on": OJ_RECHECKED_ON,
         "timing": (
             "Member States must transpose the Directive by 9 December 2026 "
             "(Article 22). It applies to products placed on the market or put "
