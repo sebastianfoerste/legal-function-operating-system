@@ -433,6 +433,133 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
+PACKAGE_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, ready, accepted, untouched, OWNER, REQUESTER, APPROVER, REASON] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function room(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    return page;
+  }
+  const LINK = "Open the approved customer package";
+  // The requester's package line is under "Delivery package", a reviewer's under
+  // "State and next steps". "links" counts the whole page, so no second link can hide.
+  const line = async (page, heading) => ({
+    links: await page.getByRole("link", { name: LINK }).count(),
+    here: await page.locator("section", { has: page.locator("#" + heading) }).getByRole("link", { name: LINK }).count(),
+    muted: await page.locator("section", { has: page.locator("#" + heading) }).locator("p.muted").allInnerTexts(),
+  });
+  const openIt = async (page) => {
+    await page.getByRole("link", { name: LINK }).click();
+    const frame = page.frameLocator('iframe[title="Customer package"]');
+    await frame.locator("h1").waitFor();
+    return frame.locator("h1").innerText();
+  };
+
+  // Ready for delivery: the requester and a reviewer each have the link.
+  const stale = await room(REQUESTER, ready);
+  out.readyRequester = await line(stale, "d-h");
+  let page = await room(OWNER, ready);
+  out.readyOwner = await line(page, "next-h");
+
+  // The owner withdraws the matter in the room. The link goes and the reason takes its place.
+  await page.getByRole("button", { name: "withdraw matter" }).click();
+  await page.locator("form.inline textarea").fill(REASON);
+  await page.getByRole("button", { name: "Withdraw", exact: true }).click();
+  await page.locator("#flash", { hasText: "withdraw saved." }).waitFor();
+  out.withdrawnOwner = await line(page, "next-h");
+
+  // The requester's page was loaded before the withdrawal and still shows the link. The
+  // server refuses the package, and the page says why in the server's words.
+  out.staleLinks = (await line(stale, "d-h")).links;
+  await stale.getByRole("link", { name: LINK }).click();
+  await stale.locator("#flash.error").waitFor();
+  out.staleFlash = await stale.locator("#flash").innerText();
+  out.staleFrames = await stale.locator("iframe").count();
+
+  // Loaded afresh, no view of the withdrawn matter has the link.
+  page = await room(REQUESTER, ready);
+  out.withdrawnRequester = await line(page, "d-h");
+  out.withdrawnStatus = await page.locator("#status-h").innerText();
+  page = await room(APPROVER, ready);
+  out.withdrawnApprover = await line(page, "next-h");
+
+  // Delivered and accepted: the package still opens, for the requester and for a reviewer.
+  page = await room(REQUESTER, accepted);
+  out.acceptedRequester = await line(page, "d-h");
+  out.acceptedRequesterHeading = await openIt(page);
+  page = await room(OWNER, accepted);
+  out.acceptedOwner = await line(page, "next-h");
+  out.acceptedOwnerHeading = await openIt(page);
+
+  // Nothing was ever prepared: the plain sentence, and no reason.
+  page = await room(REQUESTER, untouched);
+  out.untouchedRequester = await line(page, "d-h");
+  page = await room(OWNER, untouched);
+  out.untouchedOwner = await line(page, "next-h");
+
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
+ACCEPT_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, standing, ended, REQUESTER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function room(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    return page;
+  }
+  // The requester's "Delivery package" section: the link, the Accept delivery button and
+  // any muted sentence. The button is counted on the whole page, so none can hide elsewhere.
+  const delivery = async (page) => {
+    const section = page.locator("section", { has: page.locator("#d-h") });
+    return {
+      links: await section.getByRole("link", { name: "Open the approved customer package" }).count(),
+      accept: await page.getByRole("button", { name: "Accept delivery" }).count(),
+      muted: await section.locator("p.muted").allInnerTexts(),
+    };
+  };
+  out.standing = await delivery(await room(REQUESTER, standing));
+  out.ended = await delivery(await room(REQUESTER, ended));
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
 def _node_env() -> dict[str, str] | None:
     node, npm = shutil.which("node"), shutil.which("npm")
     if not node or not npm:
@@ -675,6 +802,74 @@ def test_room_shows_its_package_but_cannot_be_framed_by_another_page(tmp_path, m
     assert "/pilot" in out["requested"]
     assert out["framedTitle"] != "Pilot review room" and out["framedControls"] == 0
     assert "/pilot/api/actors" not in out["requested"]
+
+
+def test_the_room_offers_the_package_only_while_its_delivery_stands(tmp_path, monkeypatch) -> None:
+    service = make_service(tmp_path)
+    ready = run_until(service, "routine", "A12")  # ready for delivery: the package exists
+    accepted = run_until(service, "specialist-revision", "B45")  # delivered and accepted
+    untouched = run_until(service, "blocked", "C02")  # in triage: nothing was ever prepared
+    reason = "Customer paused the deal; closing without delivery."
+    out = _run_node(
+        tmp_path, monkeypatch, service, PACKAGE_SCRIPT, ready, accepted, untouched, OWNER,
+        REQUESTER, APPROVER_LEAD, reason,
+    )  # fmt: skip
+    withdrawn = (
+        "The package prepared earlier is no longer approved: the matter was withdrawn "
+        "without delivery."
+    )
+    never = "No approved package yet."
+
+    assert out["errors"] == []
+    # While the delivery stands, each view has exactly one link, in its own section.
+    assert out["readyRequester"] == {"links": 1, "here": 1, "muted": []}
+    assert (out["readyOwner"]["links"], out["readyOwner"]["here"]) == (1, 1)
+    assert withdrawn not in out["readyOwner"]["muted"] and never not in out["readyOwner"]["muted"]
+    # Withdrawn after the package was prepared: no link for anyone, and the reason is shown.
+    for view in ("withdrawnOwner", "withdrawnApprover"):
+        assert (out[view]["links"], out[view]["here"]) == (0, 0), view
+        assert withdrawn in out[view]["muted"] and never not in out[view]["muted"], view
+    assert out["withdrawnRequester"] == {"links": 0, "here": 0, "muted": [withdrawn]}
+    assert out["withdrawnStatus"] == "Status: Closed: withdrawn without delivery"
+    # A page loaded before the withdrawal: the route refuses, and the page shows its sentence.
+    assert out["staleLinks"] == 1
+    assert out["staleFlash"] == withdrawn and out["staleFrames"] == 0
+    # A delivered and accepted matter keeps its package.
+    assert out["acceptedRequester"] == {"links": 1, "here": 1, "muted": []}
+    assert (out["acceptedOwner"]["links"], out["acceptedOwner"]["here"]) == (1, 1)
+    assert out["acceptedRequesterHeading"].startswith("Customer package")
+    assert out["acceptedOwnerHeading"] == out["acceptedRequesterHeading"]
+    # No package was ever prepared: the plain sentence, in both views.
+    assert out["untouchedRequester"] == {"links": 0, "here": 0, "muted": [never]}
+    assert (out["untouchedOwner"]["links"], out["untouchedOwner"]["here"]) == (0, 0)
+    assert never in out["untouchedOwner"]["muted"]
+
+
+def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
+    tmp_path, monkeypatch
+) -> None:
+    service = make_service(tmp_path)
+    standing = run_until(service, "routine", "A12")  # ready for delivery: the package stands
+    ended = run_until(service, "specialist-revision", "B44")  # ready for delivery as well
+    # A note written after the package was prepared ends that delivery; the matter stays
+    # ready for delivery, where the room used to keep offering the button.
+    service.comment(
+        OWNER,
+        ended,
+        revision(service, ended),
+        anchor_kind="deliverable_section",
+        anchor_id="accepted_exceptions",
+        body="A late note on this section, written after the package was prepared.",
+    )
+    out = _run_node(tmp_path, monkeypatch, service, ACCEPT_SCRIPT, standing, ended, REQUESTER)
+    changed = (
+        "The package prepared earlier is no longer approved: the matter changed after it was "
+        "prepared."
+    )
+
+    assert out["errors"] == []
+    assert out["standing"] == {"links": 1, "accept": 1, "muted": []}
+    assert out["ended"] == {"links": 0, "accept": 0, "muted": [changed]}
 
 
 def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:

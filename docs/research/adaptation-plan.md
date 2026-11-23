@@ -953,11 +953,17 @@ owner took the recommended option for each.
    of the approved package, and `rejected` when it was withdrawn, whatever state it had
    reached. A withdrawal cancels every sign-off and approval, so this holds after a final
    approval too, and the review note in the contract is then the withdrawal reason, not
-   the cancelled approval's note. `export_allowed` was already false for every closed
-   matter. The schema is unchanged and no value is added; `contracts/README.md` says what
-   `rejected` means in the pilot. `supervised-agent/tests/test_pilot_contract_closings.py`
-   guards the behaviour: it asks `contract_review_state` about each closing outcome and
-   withdraws a matter from each state it can reach with a reviewer on it.
+   the cancelled approval's note. A withdrawal also records a rejected review decision on
+   the assessment stored in the matter version, which a final approval approves together
+   with the matter, so the pilot keeps no approved or exportable assessment for a withdrawn
+   matter. A store in which a matter was withdrawn before this was built keeps the old
+   assessment and is still reported `rejected`. `export_allowed` was already false for
+   every closed matter. The schema is unchanged and no value is added;
+   `contracts/README.md` says what `rejected` means in the pilot.
+   `supervised-agent/tests/test_pilot_contract_closings.py`
+   guards the behaviour: it asks `contract_review_state` about each closing outcome,
+   withdraws a matter from each state it can reach with a reviewer on it, and reads what
+   a withdrawal from every open state leaves in the store.
    `make contract-check` reads the bridge's source text and runs none of it. It fails if
    the state table has a `closed` entry, if a closing-outcome entry is missing or
    changed, or if `contract_review_state` does not begin with the closed branch that

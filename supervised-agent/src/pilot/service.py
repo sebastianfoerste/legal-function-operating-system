@@ -95,6 +95,21 @@ COMMENT_STATES = frozenset(
     {"review", "revision_requested", "revised", "approved", "ready_for_delivery"}
 )
 DECISION_STATES = frozenset({"review", "revision_requested"})
+# Why no package may be opened. The package route answers with these sentences and the
+# review room shows them, so the two cannot differ.
+NO_PACKAGE = "no approved delivery package exists for this matter"
+PACKAGE_WITHDRAWN = (
+    "The package prepared earlier is no longer approved: the matter was withdrawn without "
+    "delivery."
+)
+PACKAGE_CHANGED = (
+    "The package prepared earlier is no longer approved: the matter changed after it was "
+    "prepared."
+)
+PACKAGE_NOT_THE_ACCEPTED_ONE = (
+    "The package stored for this matter cannot be opened: it is not the package whose "
+    "delivery was accepted."
+)
 
 
 class PilotError(Exception):
@@ -850,12 +865,17 @@ class PilotService:
         eligibility = self._eligibility(ctx, "delivery_package")
         return (eligibility.eligible, "; ".join(eligibility.reasons()) or "eligible")
 
-    def _ev_delivery_manifest_current(self, ctx: _Ctx) -> tuple[bool, str]:
-        manifest = ctx.connection.execute(
+    @staticmethod
+    def _latest_delivery_manifest(ctx: _Ctx) -> sqlite3.Row | None:
+        row: sqlite3.Row | None = ctx.connection.execute(
             "SELECT * FROM deliverable_manifests WHERE matter_id = ? AND kind = "
             "'delivery_package' ORDER BY manifest_id DESC LIMIT 1",
             (ctx.matter_id,),
         ).fetchone()
+        return row
+
+    def _ev_delivery_manifest_current(self, ctx: _Ctx) -> tuple[bool, str]:
+        manifest = self._latest_delivery_manifest(ctx)
         if manifest is None:
             return False, "no delivery package has been prepared"
         if manifest["version"] != ctx.version or manifest["review_hash"] != self._review_hash(ctx):
@@ -1828,6 +1848,7 @@ class PilotService:
                 ReviewDecision(
                     reviewer=ctx.actor.display_name, state="revision_requested", note=text
                 ),
+                decided_at=ctx.now,
             )
             self._save_body(ctx)
             self._decision(
@@ -1872,7 +1893,8 @@ class PilotService:
             text = _require_text(note, 30, "approval note")
             self._transition(ctx, "approve")
             # The parent assessment and the pilot decision are approved in one step,
-            # so neither can be approved without the other.
+            # so neither can be approved without the other. The assessment's audit entry
+            # takes the command's time, the time the approval event records.
             ctx.body.assessment = apply_review_decision(
                 ctx.body.assessment,
                 ReviewDecision(
@@ -1880,6 +1902,7 @@ class PilotService:
                     state="approved",
                     note=text,
                 ),
+                decided_at=ctx.now,
             )
             self._save_body(ctx)
             self._decision(
@@ -2121,8 +2144,25 @@ class PilotService:
     def withdraw(self, actor_id, matter_id, expected_revision, *, note, stamp=None):
         def handler(ctx: _Ctx) -> None:
             self._require_access(ctx, WITHDRAWAL_ROLES)
-            text = _require_text(note, 20, "withdrawal reason")
+            # The requester and the record read this reason, so only the characters a reader
+            # sees count toward the minimum, as for the triage reasons.
+            text = _require_visible_text(note, 20, "withdrawal reason")
             self._invalidate(ctx, ("specialist_signoff", "final_approval"), "matter withdrawn")
+            # A withdrawal also records a rejected review decision on the parent assessment,
+            # in the same step and whatever state the matter had reached, so the assessment
+            # is not left approved or exportable once its approval is cancelled. A review
+            # decision needs a note of 20 characters; the reason alone has that many. Its
+            # audit entry takes the command's time, the time the withdrawal event records.
+            ctx.body.assessment = apply_review_decision(
+                ctx.body.assessment,
+                ReviewDecision(
+                    reviewer=f"{ctx.actor.display_name} [{ctx.actor.actor_id}, simulated role]",
+                    state="rejected",
+                    note=f"Matter withdrawn without delivery: {text}",
+                ),
+                decided_at=ctx.now,
+            )
+            self._save_body(ctx)
             ctx.new_state, ctx.extra["closed_outcome"] = "closed", "withdrawn_without_delivery"
             self._event(ctx, "matter_withdrawn", text)
 
@@ -2192,6 +2232,44 @@ class PilotService:
                 ctx.now,
             ),
         )
+
+    def _standing_package(self, ctx: _Ctx) -> tuple[sqlite3.Row | None, str | None]:
+        """The delivery manifest whose package may be opened now, or why none may.
+
+        A package is offered only while its delivery stands: while the matter is ready
+        for delivery and the evidence ``accept_delivery`` needs holds (asked here, not
+        restated, so the two cannot drift apart), and after the requester accepted that
+        delivery. A withdrawal, a revision request, a new version, a later comment or
+        another final approver in place of the one who approved ends it. The stored
+        manifest and its files stay where they are, for the audit trail. ``(None, None)``
+        means that no package was ever prepared.
+        """
+
+        latest = self._latest_delivery_manifest(ctx)
+        if latest is None:
+            return None, None
+        state, outcome = ctx.matter["state"], ctx.matter["closed_outcome"]
+        if state == "ready_for_delivery":
+            standing, _ = self._ev_delivery_manifest_current(ctx)
+            return (latest, None) if standing else (None, PACKAGE_CHANGED)
+        if state == "closed" and outcome == "delivered_locally_and_accepted":
+            # A closed matter accepts no command, so the latest manifest is the one the
+            # acceptance was checked against. The acceptance is recorded on a version and
+            # a content hash; the manifest that is served must carry the same two.
+            accepted = ctx.connection.execute(
+                "SELECT version, content_hash FROM decisions WHERE matter_id = ? AND "
+                "kind = 'acceptance' ORDER BY decision_id DESC LIMIT 1",
+                (ctx.matter_id,),
+            ).fetchone()
+            if accepted is not None and (latest["version"], latest["content_hash"]) == (
+                accepted["version"],
+                accepted["content_hash"],
+            ):
+                return latest, None
+            return None, PACKAGE_NOT_THE_ACCEPTED_ONE
+        if outcome == "withdrawn_without_delivery":
+            return None, PACKAGE_WITHDRAWN
+        return None, PACKAGE_CHANGED
 
     def _obligations(
         self, ctx: _Ctx, changes: list[StoredChange], names: dict[str, str]
@@ -2422,6 +2500,11 @@ class PilotService:
                 "required_facts": required_fact_checklist(ctx.body.intake.facts),
                 "external_delivery_allowed": False,
             }
+            # Decided once, here: the package route gives the same answer and the room
+            # shows this field as it is. "reason" is null while a package may be opened
+            # and when none was ever prepared.
+            standing, reason = self._standing_package(ctx)
+            base["package"] = {"may_open": standing is not None, "reason": reason}
             if ctx.actor.role == "business_requester":
                 _, events, now = self._events_and_now(connection, matter_id)
                 snooze = latest_snooze(events, *matter_clock(events, now))
@@ -2688,6 +2771,30 @@ class PilotService:
                 "events": events,
                 "audit_chain": self.store.check_events(rows)[0].model_dump(),
             }
+
+    def package_file(self, actor_id: str, matter_id: str) -> Path:
+        """The customer package of a delivery that stands. Refused in every other case.
+
+        A delivery that stands but whose file is gone from the export folder is a fault in
+        the store. It is answered as not found, with the file named, so the reader learns
+        what is missing.
+        """
+
+        with self.store.reading() as connection:
+            ctx = self._context(connection, actor_id, matter_id, Stamp())
+            if not self._can_read(connection, ctx.actor, ctx.matter):
+                raise PermissionDeniedError(f"{actor_id} has no access to matter {matter_id}")
+            standing, reason = self._standing_package(ctx)
+            if standing is None:
+                raise PermissionDeniedError(reason or NO_PACKAGE)
+            folder = str(json.loads(standing["body"])["folder"])
+            path = self.export_root / folder / "customer-package.html"
+            if not path.is_file():
+                raise NotFoundError(
+                    "the package file of this delivery is missing from the export folder: "
+                    f"{folder}/customer-package.html"
+                )
+            return path
 
     def version_document(self, actor_id: str, matter_id: str, version: int) -> bytes:
         with self.store.reading() as connection:
