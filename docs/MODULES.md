@@ -130,7 +130,7 @@ Start with:
 
 The generated HTML deal room is published at
 [sebastianfoerste.github.io/legal-function-operating-system/raas-deal-room.html](https://sebastianfoerste.github.io/legal-function-operating-system/raas-deal-room.html)
-and committed as an offline artifact at [`examples/raas-deal-room.html`](../examples/raas-deal-room.html).
+and committed as a self-contained file at [`examples/raas-deal-room.html`](../examples/raas-deal-room.html).
 Like the outcome control tower, it uses the shared design tokens
 ([ADR 0001](adr/0001-design-tokens.md)): it follows the reader's dark mode, fits a phone
 with keyboard-reachable scrolling tables, and prints in the light palette.
