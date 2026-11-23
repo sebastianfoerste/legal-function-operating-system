@@ -116,22 +116,22 @@ Four constraints shape it here:
    (`withdrawn_without_delivery`) is `rejected`, whatever state it had reached, because a
    withdrawal cancels every sign-off and approval on it. It invalidates the specialist
    sign-offs and final approvals in the decision record. In the same step it records a
-   rejected review decision on the assessment stored in the matter version, with the actor
-   and the reason they typed, so that assessment is no longer approved or exportable and
-   the pilot's own export gate fails its check of it. It does this for every withdrawal,
-   whatever the assessment said before. A delivery package prepared before the withdrawal
-   stays in the store and in the export folder, but the review room and the package route
-   no longer open it. A store in which a matter was withdrawn before this was built keeps
-   the assessment as the approval left it. The contract takes neither its state nor its
-   note from that assessment, so such a matter is reported `rejected` as well. A closed
-   matter with no recorded
-   outcome is `rejected` too, so nothing is reported approved unless its delivery was
-   accepted. As for a decline, `rejected` takes precedence over `blocked`. The review note
-   of a withdrawn matter is the withdrawal reason and the actor recorded for it, not the
-   note of an approval that no longer stands. `export_allowed` was already false for every
-   closed matter. In the pilot, `rejected` now means that a person closed the matter
-   without delivery and no approval stands. It does not say that a reviewer rejected a
-   draft. The schema is unchanged and no value is added.
+   rejected review decision on the assessment stored in the current matter version, with
+   the actor and the reason they typed, so that assessment is no longer approved or
+   exportable and the pilot's own export gate fails its check of it. It does this for
+   every withdrawal, whatever the assessment said before. A delivery package prepared
+   before the withdrawal stays in the store and in the export folder, but the review room
+   and the package route no longer open it. A store in which a matter was withdrawn before
+   this was built keeps the assessment as the approval left it. The contract takes neither
+   its state nor its note from that assessment, so such a matter is reported `rejected` as
+   well. A closed matter with no recorded outcome is `rejected` too, so nothing is
+   reported approved unless its delivery was accepted. As for a decline, `rejected` takes
+   precedence over `blocked`. The review note of a withdrawn matter is the withdrawal
+   reason and the actor recorded for it, not the note of an approval that no longer
+   stands. `export_allowed` was already false for every closed matter. In the pilot,
+   `rejected` now means that a person closed the matter without delivery and no approval
+   stands. It does not say that a reviewer rejected a draft. The schema is unchanged and
+   no value is added.
    `parent_bridge.contract_review_state` decides this in one place.
    `supervised-agent/tests/test_pilot_contract_closings.py` guards what it returns and
    what a withdrawal leaves in the store.

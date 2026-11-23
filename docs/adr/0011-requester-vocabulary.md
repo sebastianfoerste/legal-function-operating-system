@@ -44,11 +44,14 @@ aligning the two, German labels included. Read side by side, they do not line up
 - **`blocked` means different things.** The core sets it when a request's urgency is
   `blocker` (priority `P1_blocker`) or its response SLA was missed. In
   `legal-workflow-controls.v1` the pilot reports `blocked` for a matter that a charter
-  exclusion or a blocked source holds. `complete_triage` refuses such a matter, so a
-  matter held when it reaches triage stays there. A matter that an amendment after triage
-  brings under a charter exclusion moves to `revised`, cannot be exported, and stays
-  `blocked` in the contract until a new version removes the exclusion or the matter is
-  withdrawn. Since 2026-11-20 a withdrawn matter is reported `rejected`
+  exclusion or a blocked source holds, until the matter is declined, closed as a duplicate
+  or withdrawn; it is then reported `rejected`
+  ([ADR 0010](0010-triage-verbs.md), Decision 9). `complete_triage` refuses a held
+  matter, so a matter held when it reaches triage stays there while it is held, or is
+  closed in one of these three ways. A matter that an amendment after triage brings under
+  a charter exclusion moves to `revised`, cannot be exported, and stays `blocked` in the
+  contract until a new version removes the exclusion or the matter is withdrawn. Since
+  2026-11-20 a withdrawn matter is reported `rejected`
   ([ADR 0010](0010-triage-verbs.md), amended that day).
 - **Nothing in the repository reads the shared space** except its tests. No page renders
   it, no schema in `contracts/` describes it, no MCP tool returns it and `make demo` does

@@ -2,8 +2,9 @@
 
 Only a matter whose approved package the requester accepted is reported ``approved``. A
 matter closed without delivery is ``rejected``. A withdrawal also records a rejected review
-decision on the assessment stored in the matter version, so the pilot holds no approved or
-exportable assessment for a withdrawn matter. Everything here is synthetic.
+decision on the assessment stored in the current matter version, so the version a withdrawal
+closes holds no approved or exportable assessment. Earlier versions are not rewritten: each
+keeps the assessment it had. Everything here is synthetic.
 """
 
 from __future__ import annotations
@@ -31,6 +32,7 @@ from src.pilot.service import (
     PilotService,
     Stamp,
     TransitionBlockedError,
+    VersionBody,
     compute_review_hash,
 )
 from src.pilot.state_machine import STATES
@@ -46,6 +48,7 @@ from tests.pilot_support import (
 )
 
 REPOSITORY = Path(__file__).resolve().parents[2]
+PILOT_DOCS = Path(__file__).resolve().parents[1] / "docs" / "pilot"
 NOTE = "Customer paused the deal; closing without delivery."
 REASON = "Outside the pilot charter: the customer asks for uncapped liability."
 PAUSE = "Waiting for the signed order form from the sales team."
@@ -623,6 +626,189 @@ def test_the_stored_assessment_is_approved_only_while_a_final_approval_stands(tm
     assert seen["declined"] == seen["duplicate"] == "needs_review"
 
 
+def _versions_as_stored(service: PilotService, matter_id: str) -> dict[int, dict[str, Any]]:
+    """Every version of the matter exactly as the store holds it.
+
+    The whole version row, with the body as its stored text and the document as its bytes,
+    and the version's finding and change rows.
+    """
+
+    with service.store.reading() as connection:
+
+        def rows(table: str, version: int) -> list[tuple[Any, ...]]:
+            return sorted(
+                tuple(row)
+                for row in connection.execute(
+                    f"SELECT * FROM {table} WHERE matter_id = ? AND version = ?",
+                    (matter_id, version),
+                )
+            )
+
+        return {
+            row["version"]: {
+                "row": {name: row[name] for name in row.keys()},
+                "findings": rows("findings", row["version"]),
+                "changes": rows("changes", row["version"]),
+            }
+            for row in connection.execute(
+                "SELECT * FROM matter_versions WHERE matter_id = ? ORDER BY version", (matter_id,)
+            ).fetchall()
+        }
+
+
+def _signoffs_and_approvals(service: PilotService, matter_id: str) -> list[tuple[Any, ...]]:
+    """Each specialist sign-off and final approval: its id, version, kind and whether it stands."""
+
+    with service.store.reading() as connection:
+        return [
+            tuple(row)
+            for row in connection.execute(
+                "SELECT decision_id, version, kind, invalidated_at IS NULL FROM decisions WHERE "
+                "matter_id = ? AND kind IN ('specialist_signoff', 'final_approval') "
+                "ORDER BY decision_id",
+                (matter_id,),
+            )
+        ]
+
+
+def _assessment(stored_version: dict[str, Any]) -> Any:
+    return VersionBody.model_validate_json(stored_version["row"]["body"]).assessment
+
+
+@pytest.mark.parametrize(
+    ("scenario_id", "step", "amendment", "review_states", "standing"),
+    [
+        # Approved on version 1, amended to version 2, withdrawn on version 2. The
+        # amendment cancelled the approval, so none stands when the withdrawal comes.
+        ("routine", "A11", {"personal_data": True}, ["approved", "rejected"], 0),
+        ("routine", "A12", {"personal_data": True}, ["approved", "rejected"], 0),
+        # Approved on version 3 after a revision, amended to version 4, withdrawn there.
+        (
+            "specialist-revision",
+            "B42",
+            {"non_eea_transfer": True},
+            ["needs_review", "revision_requested", "approved", "rejected"],
+            0,
+        ),
+        # Withdrawn on the approved version 3 itself: its sign-off and its approval stood.
+        ("specialist-revision", "B42", None, ["needs_review", "revision_requested", "rejected"], 2),
+    ],
+    ids=[
+        "approved, then amended",
+        "package prepared, then amended",
+        "approved after a revision, then amended",
+        "approved after a revision",
+    ],
+)
+def test_a_withdrawal_rejects_the_version_it_closes_and_rewrites_no_earlier_version(
+    tmp_path,
+    scenario_id: str,
+    step: str,
+    amendment: dict[str, bool] | None,
+    review_states: list[str],
+    standing: int,
+) -> None:
+    # Earlier versions are history. A withdrawal writes the assessment of the current
+    # version only, so an earlier version keeps the assessment it had, approved if it was
+    # approved when a later version replaced it. What stops such an approval from counting
+    # is the decision record, where it is cancelled. The runbook (section 4), the contract
+    # README, ADR 0010 and the plan say "the version a withdrawal closes" for this reason.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, scenario_id, step)
+    assert _stored(service, matter_id)["assessment"].review_state == "approved"
+    approved = _versions_as_stored(service, matter_id)
+    if amendment is not None:
+        service.amend_matter(
+            REQUESTER,
+            matter_id,
+            revision(service, matter_id),
+            reason="The customer changed the scope after the approval.",
+            routing_fields=amendment,
+            stamp=Stamp(fixture_at="2026-09-10T15:00:00Z"),
+        )
+    before = _versions_as_stored(service, matter_id)
+    decisions = _signoffs_and_approvals(service, matter_id)
+    current = len(review_states)
+    assert list(before) == list(range(1, current + 1))
+    # The amendment made the next version and wrote nothing to the versions before it.
+    assert len(before) == len(approved) + (1 if amendment else 0)
+    assert {version: before[version] for version in approved} == approved
+    assert _stored(service, matter_id)["bound"]["version"] == current
+    assert sum(stands for *_, stands in decisions) == standing
+
+    _withdraw(service, matter_id, OWNER, "2026-09-10T16:00:00Z")
+    after = _versions_as_stored(service, matter_id)
+    assert list(after) == list(before)
+
+    # 1. The version the withdrawal closes is rejected and not exportable. Of its row only
+    #    the body moved, and of the body only the assessment.
+    closed = _assessment(after[current])
+    assert (closed.review_state, closed.export_allowed) == ("rejected", False)
+    assert closed == _stored(service, matter_id)["assessment"]
+    refused = ("fail", "parent assessment is rejected and not approved for export")
+    for kind in EXPORT_KINDS:
+        assert _gate_check(service, OWNER, matter_id, kind) == refused
+    was, now = before[current], after[current]
+    assert {name for name in now["row"] if now["row"][name] != was["row"][name]} == {"body"}
+    assert (now["findings"], now["changes"]) == (was["findings"], was["changes"])
+    assert VersionBody.model_validate_json(now["row"]["body"]).model_dump(
+        exclude={"assessment"}
+    ) == VersionBody.model_validate_json(was["row"]["body"]).model_dump(exclude={"assessment"})
+
+    # 2. Every earlier version is untouched, byte for byte: the stored body text, the
+    #    document bytes and every other column, and its finding and change rows.
+    for version in range(1, current):
+        assert after[version] == before[version], version
+        assert isinstance(after[version]["row"]["body"], str)
+        assert isinstance(after[version]["row"]["document_blob"], bytes)
+    #    So an earlier version that was approved still reads approved and exportable.
+    assessments = [_assessment(after[version]) for version in sorted(after)]
+    assert [a.review_state for a in assessments] == review_states
+    assert [a.export_allowed for a in assessments] == [s == "approved" for s in review_states]
+
+    # 3. No sign-off or approval stands on any version. Each is cancelled, not deleted.
+    assert {kind for _, _, kind, _ in decisions} >= {"final_approval"}
+    assert _signoffs_and_approvals(service, matter_id) == [
+        (decision_id, version, kind, 0) for decision_id, version, kind, _ in decisions
+    ]
+    assert _contract(service, matter_id)[1]["review_state"] == "rejected"
+
+
+def test_the_pilot_records_scope_the_rejected_assessment_to_the_version_closed() -> None:
+    # The sentences that describe the behaviour the test above pins.
+    runbook = (PILOT_DOCS / "RUNBOOK.md").read_text(encoding="utf-8")
+    [withdraw] = [
+        paragraph
+        for paragraph in runbook.split("\n\n")
+        if paragraph.startswith("Five commands sit outside the table.")
+    ]
+    assert (
+        "records a rejected review decision with the reason on the assessment the current "
+        "version holds, so the version a withdrawal closes keeps no approved or exportable "
+        "assessment."
+    ) in withdraw
+    assert (
+        "Earlier versions are history and are not rewritten (section 5): each keeps the "
+        "assessment it had when a later version replaced it, which still reads approved if "
+        "the version was approved then, and the approvals given on it are cancelled in the "
+        "decision record."
+    ) in withdraw
+    # Section 5 is where the runbook says that a replaced version is never written.
+    section_5 = runbook.split("\n## 5. Versions, approvals and reassessment\n", 1)[1]
+    assert (
+        "Nothing is written to a version once a later version has replaced it."
+        in section_5.split("\n## ", 1)[0]
+    )
+    record = (PILOT_DOCS / "CAPABILITY_RECORD.md").read_text(encoding="utf-8")
+    assert (
+        "records a rejected review decision on the parent assessment of the current version, "
+        "so that assessment is not left `approved` or exportable."
+    ) in record
+    # Said of the whole matter, the sentence is false for an earlier version.
+    assert "a withdrawn matter keeps no approved or exportable assessment" not in runbook
+    assert "so the assessment is not left `approved` or exportable" not in record
+
+
 @pytest.mark.parametrize(
     ("step", "actor", "at"),
     [("A11", OWNER, "2026-09-07T14:05:00Z"), ("A12", REQUESTER, "2026-09-07T14:20:00Z")],
@@ -683,3 +869,11 @@ def test_the_contract_readme_lists_a_closed_matter_by_how_it_closed() -> None:
         "In the pilot, `rejected` means a person closed the matter without delivery and no "
         "approval stands"
     ) in readme
+    # What a withdrawal rejects is the assessment of the version it closes, not of an
+    # earlier version (the test of that behaviour is above).
+    assert (
+        "it records a rejected review decision on the assessment stored in the current matter "
+        "version, so a matter withdrawn after its final approval is `rejected` too and the "
+        "version the withdrawal closes keeps no approved or exportable assessment."
+    ) in readme
+    assert "and keeps no approved or exportable assessment" not in readme

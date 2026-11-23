@@ -7,12 +7,18 @@ holds per ring, how many rows hold no capability data, and lists each product un
 landscape states from it, so a matrix change that the prose does not follow fails here.
 """
 
+import ast
 import csv
 import os
 import re
+import shutil
+import subprocess
+import sys
 import tempfile
 import unittest
+from collections.abc import Sequence
 from pathlib import Path
+from unittest import mock
 
 ROOT = Path(__file__).resolve().parents[1]
 RESEARCH = ROOT / "docs" / "research"
@@ -211,10 +217,13 @@ CHOICES = {
         "**A withdrawn matter is reported `rejected` in the shared contract.**",
         "`approved` only when the requester accepted the delivery of the approved package",
         "`rejected` when it was withdrawn, whatever state it had reached",
-        # What a withdrawal does to the stored assessment.
+        # What a withdrawal does to the stored assessment, and of which version. An earlier
+        # version keeps the assessment it had, so the sentence is not said of the matter
+        # (supervised-agent/tests/test_pilot_contract_closings.py pins the behaviour).
         "A withdrawal also records a rejected review decision on the assessment stored in "
-        "the matter version",
-        "so the pilot keeps no approved or exportable assessment for a withdrawn matter",
+        "the current matter version",
+        "so the version a withdrawal closes keeps no approved or exportable assessment",
+        "Earlier versions are history and are not rewritten, as recorded on 2026-11-23",
         "The schema is unchanged and no value is added",
         "](../adr/0010-triage-verbs.md)",
     ),
@@ -229,8 +238,51 @@ CHOICES = {
         # depends on output buffering, so the plan does not say it did.
         "that started the command got no answer to `initialize`",
         "the agent ships no MCP client configuration",
+        # What the guard against a returning file looks at, and since when.
+        "The guard is about what the agent ships (corrected on 2026-11-23:",
+        "In a git checkout it asks git for the files it tracks or would add under the agent",
+        "Where git cannot say (no checkout, no git, a command that fails or lists nothing), "
+        "it walks every directory except the ones a tool fills on the machine",
     ),
 }
+# Decision 9 of ADR 0010, the shared contract, as amended on 2026-11-20: each sentence that
+# carries a decision. The two sentences that only point to files are not pinned.
+DECISION_9 = (
+    "`declined` and `duplicate` map to `rejected`, which v1 already allows.",
+    "`rejected` takes precedence over `blocked`: a declined matter that a charter exclusion "
+    "held is no longer pending, so it is reported `rejected`.",
+    "Amended on 2026-11-20. A `closed` matter is reported by how it closed, not by its state.",
+    "Only a matter whose approved package the requester accepted "
+    "(`delivered_locally_and_accepted`) is `approved`.",
+    "A withdrawn matter (`withdrawn_without_delivery`) is `rejected`, whatever state it had "
+    "reached, because a withdrawal cancels every sign-off and approval on it.",
+    "It invalidates the specialist sign-offs and final approvals in the decision record.",
+    # The assessment of the current version: an earlier version is not rewritten.
+    "In the same step it records a rejected review decision on the assessment stored in the "
+    "current matter version, with the actor and the reason they typed, so that assessment is "
+    "no longer approved or exportable and the pilot's own export gate fails its check of it.",
+    "It does this for every withdrawal, whatever the assessment said before.",
+    "A delivery package prepared before the withdrawal stays in the store and in the export "
+    "folder, but the review room and the package route no longer open it.",
+    "A store in which a matter was withdrawn before this was built keeps the assessment as "
+    "the approval left it. The contract takes neither its state nor its note from that "
+    "assessment, so such a matter is reported `rejected` as well.",
+    "A closed matter with no recorded outcome is `rejected` too, so nothing is reported "
+    "approved unless its delivery was accepted.",
+    "As for a decline, `rejected` takes precedence over `blocked`.",
+    "The review note of a withdrawn matter is the withdrawal reason and the actor recorded "
+    "for it, not the note of an approval that no longer stands.",
+    "`export_allowed` was already false for every closed matter.",
+    "In the pilot, `rejected` now means that a person closed the matter without delivery and "
+    "no approval stands. It does not say that a reviewer rejected a draft.",
+    "The schema is unchanged and no value is added.",
+    "`parent_bridge.contract_review_state` decides this in one place.",
+    # What the contract check can tell from the source text, and no more than that.
+    "`scripts/check_shared_contracts.py` reads the module's source text and runs none of it. "
+    "It fails if the state table has a `closed` entry, if a closing-outcome entry is missing "
+    "or changed, or if the function does not begin with the closed branch that returns "
+    '`CLOSED_OUTCOME_REVIEW_STATE.get(closed_outcome or "", "rejected")`.',
+)
 # The one paragraph in each record that starts with "Confirmed:", in full.
 CONFIRMED = {
     "0010-triage-verbs.md": (
@@ -244,10 +296,28 @@ CONFIRMED = {
         "open."
     ),
 }
-# Directories a tool fills on the machine it runs on: version control data, virtual
-# environments, installed packages, tool caches and the local pilot store. Nothing in them
-# is written for the agent or committed. Every other directory is searched, hidden or not.
-# The agent's own test of the same thing, supervised-agent/tests/test_docs.py, has this list.
+# The agent ships what git tracks or would add. `git ls-files` with these options lists both,
+# by their path under the directory it runs in, and leaves out what a .gitignore or the
+# machine's own exclude file names, such as a developer's .vscode/mcp.json. NUL ends each path.
+# The agent's own test of the same thing, supervised-agent/tests/test_docs.py, cannot import
+# this module, because it also runs in a standalone export of the agent. So the definitions
+# in SHARED_WITH_THE_AGENT are written out in both files, and a test below requires the two
+# copies to be the same.
+GIT_LISTING = ("git", "ls-files", "--cached", "--others", "--exclude-standard", "-z")
+# A hook or a wrapper script can export these to point git at another repository or index.
+# The question is about the checkout this directory is in, so git is asked without them.
+GIT_REPOSITORY_VARIABLES = frozenset(
+    {
+        "GIT_DIR",
+        "GIT_WORK_TREE",
+        "GIT_INDEX_FILE",
+        "GIT_COMMON_DIR",
+    }
+)
+# Where git cannot say, every directory is walked, hidden or not, except the ones a tool
+# fills on the machine it runs on: version control data, virtual environments, installed
+# packages, tool caches and the local pilot store. The walk cannot tell which files in
+# them are shipped, and on a developer's machine they hold many that are not.
 MACHINE_LOCAL_DIRECTORIES = frozenset(
     {
         ".git",
@@ -264,6 +334,87 @@ MACHINE_LOCAL_DIRECTORIES = frozenset(
 )
 
 
+def _git(root: Path, command: Sequence[str]) -> bytes | None:
+    """What a git command prints when run in ``root``, or None if it cannot run or fails."""
+
+    environment = {
+        name: value for name, value in os.environ.items() if name not in GIT_REPOSITORY_VARIABLES
+    }
+    try:
+        done = subprocess.run(command, cwd=root, env=environment, capture_output=True, check=False)
+    except OSError:
+        return None
+    return done.stdout if done.returncode == 0 else None
+
+
+def _walked(root: Path) -> list[str]:
+    """Every file under ``root`` outside the machine-local directories, by its path."""
+
+    found: list[str] = []
+    for directory, subdirectories, files in os.walk(root):
+        subdirectories[:] = [d for d in subdirectories if d not in MACHINE_LOCAL_DIRECTORIES]
+        found += [Path(directory, name).relative_to(root).as_posix() for name in files]
+    return found
+
+
+def _files_named(root: Path, *names: str, listing: Sequence[str] = GIT_LISTING) -> list[str]:
+    """The files with one of these names that ``root`` ships, by their path under it.
+
+    In a git checkout these are the files git tracks or would add under ``root``, whether
+    ``root`` is the repository or a directory in it. Where git cannot say, they are the
+    files the walk finds: without a checkout, without git, when the command fails, and when
+    it lists nothing at all, as it does for a copy of the tree inside a directory that
+    another checkout ignores.
+    """
+
+    listed = _git(root, listing)
+    if listed:
+        paths = [os.fsdecode(path) for path in listed.split(b"\0") if path]
+    else:
+        paths = _walked(root)
+    return sorted(path for path in paths if path.rsplit("/", 1)[-1] in names)
+
+
+SHARED_WITH_THE_AGENT = (
+    "GIT_LISTING",
+    "GIT_REPOSITORY_VARIABLES",
+    "MACHINE_LOCAL_DIRECTORIES",
+    "_git",
+    "_walked",
+    "_files_named",
+)
+
+
+def _definition(source: str, name: str) -> str:
+    """One top-level assignment or function of a module, as it is written in ``source``.
+
+    It runs from the line that starts with the name to the next line that starts a new
+    top-level statement or comment. Read as text, so nothing of the module is imported.
+    """
+
+    match = re.search(
+        rf"^(?:def {re.escape(name)}\(|{re.escape(name)} = ).*?(?=^[^\s)\]}}])",
+        source,
+        re.M | re.S,
+    )
+    if match is None:
+        raise AssertionError(f"no top-level definition of {name}")
+    return match.group(0).rstrip() + "\n"
+
+
+# A program that stands in for git: this interpreter, started without the site module and
+# without its environment variables, so nothing of the machine is printed or read.
+PYTHON = (sys.executable, "-I", "-S", "-c")
+FAILS_AFTER_A_LISTING = "import sys; sys.stdout.write('docs/notes.md\\0'); sys.exit(128)"
+
+
+def _write(root: Path, *names: str) -> None:
+    for name in names:
+        path = root / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("{}\n", encoding="utf-8")
+
+
 def _flat(text: str) -> str:
     return " ".join(text.split())
 
@@ -273,18 +424,6 @@ def _numbered_items(text: str) -> dict[str, str]:
 
     parts = re.split(r"^(\d+)\. ", text, flags=re.M)
     return {number: _flat(item) for number, item in zip(parts[1::2], parts[2::2], strict=True)}
-
-
-def _files_named(root: Path, *names: str) -> list[str]:
-    """Files with one of these names anywhere under ``root``, hidden directories included."""
-
-    found: list[str] = []
-    for directory, subdirectories, files in os.walk(root):
-        subdirectories[:] = [d for d in subdirectories if d not in MACHINE_LOCAL_DIRECTORIES]
-        found += [
-            Path(directory, name).relative_to(root).as_posix() for name in files if name in names
-        ]
-    return sorted(found)
 
 
 class OwnerChoicesTest(unittest.TestCase):
@@ -299,6 +438,8 @@ class OwnerChoicesTest(unittest.TestCase):
                 self.assertTrue(items[number].startswith(outcome), items[number][:80])
                 for phrase in words:
                     self.assertIn(phrase, items[number])
+        # Said of the whole matter, this is false where an earlier version was approved.
+        self.assertNotIn("the pilot keeps no approved or exportable assessment", items["2"])
 
     def test_each_confirmed_record_carries_its_confirmation(self) -> None:
         adr = ROOT / "docs" / "adr"
@@ -332,33 +473,35 @@ class OwnerChoicesTest(unittest.TestCase):
         )
         shared_contract = _numbered_items(_section(text, "Decision"))["9"]
         self.assertTrue(shared_contract.startswith("**Shared contract.**"))
-        for words in (
-            "Amended on 2026-11-20. A `closed` matter is reported by how it closed, not by "
-            "its state.",
-            "Only a matter whose approved package the requester accepted "
-            "(`delivered_locally_and_accepted`) is `approved`.",
-            "A withdrawn matter (`withdrawn_without_delivery`) is `rejected`, whatever state "
-            "it had reached",
-            "In the same step it records a rejected review decision on the assessment "
-            "stored in the matter version, with the actor and the reason they typed, so that "
-            "assessment is no longer approved or exportable",
-            "It does this for every withdrawal, whatever the assessment said before.",
-            "A delivery package prepared before the withdrawal stays in the store and in "
-            "the export folder, but the review room and the package route no longer open it.",
-            "The schema is unchanged and no value is added.",
-        ):
+        for words in DECISION_9:
             with self.subTest(words):
                 self.assertIn(words, shared_contract)
+        # The check reads text. It cannot tell how a closed matter is mapped when the code
+        # runs, and the record claimed that once.
+        self.assertNotIn("mapped by its state alone", shared_contract)
 
     def test_the_vocabulary_record_says_when_a_held_matter_stops_being_blocked(self) -> None:
-        # ADR 0011, which choice 3 confirms, describes the contract value of a matter a
-        # charter exclusion holds after triage. Since choice 2 a withdrawal ends it too.
+        # ADR 0011, which choice 3 confirms, describes the contract value of a matter that
+        # a charter exclusion or a blocked source holds. A decline, a duplicate and, since
+        # choice 2, a withdrawal end it: `rejected` takes precedence over `blocked` (ADR
+        # 0010, Decision 9), and the matter leaves triage.
         text = (ROOT / "docs" / "adr" / "0011-requester-vocabulary.md").read_text(encoding="utf-8")
         [blocked] = [
             _flat(entry)
             for entry in re.split(r"^- ", _section(text, "Context"), flags=re.M)
             if entry.startswith("**`blocked` means different things.**")
         ]
+        for words in (
+            "the pilot reports `blocked` for a matter that a charter exclusion or a blocked "
+            "source holds, until the matter is declined, closed as a duplicate or withdrawn; "
+            "it is then reported `rejected` ([ADR 0010](0010-triage-verbs.md), Decision 9).",
+            "`complete_triage` refuses a held matter, so a matter held when it reaches triage "
+            "stays there while it is held, or is closed in one of these three ways.",
+        ):
+            with self.subTest(words):
+                self.assertIn(words, blocked)
+        # The record said such a matter "stays there", as if nothing could close it.
+        self.assertNotIn("reaches triage stays there.", blocked)
         ending = (
             "stays `blocked` in the contract until a new version removes the exclusion or "
             "the matter is withdrawn. Since 2026-11-20 a withdrawn matter is reported "
@@ -368,13 +511,105 @@ class OwnerChoicesTest(unittest.TestCase):
 
     def test_the_removed_agent_configuration_stays_removed(self) -> None:
         # The plan says the file is removed; the agent's own tests say why it stays out.
-        # No file of either name is anywhere in the agent, a hidden directory included.
+        # No file of either name that git tracks or would add is anywhere in the agent, a
+        # hidden directory included. A file git ignores, such as a developer's own
+        # .vscode/mcp.json, is not shipped. Where git cannot say, every directory is
+        # searched except the machine-local ones.
         self.assertEqual(_files_named(ROOT / "supervised-agent", "mcp.json", ".mcp.json"), [])
 
-    def test_the_search_for_a_client_configuration_reads_hidden_directories(self) -> None:
+    def test_both_suites_search_for_a_client_configuration_in_the_same_way(self) -> None:
+        mine = Path(__file__).read_text(encoding="utf-8")
+        agents = (ROOT / "supervised-agent" / "tests" / "test_docs.py").read_text(encoding="utf-8")
+        for name in SHARED_WITH_THE_AGENT:
+            with self.subTest(name):
+                self.assertEqual(_definition(agents, name), _definition(mine, name))
+        # What was compared is the list itself: the agent's text gives the names used here.
+        written = _definition(agents, "MACHINE_LOCAL_DIRECTORIES")
+        names = ast.literal_eval(written[written.index("{") : written.rindex("}") + 1])
+        self.assertEqual(names, set(MACHINE_LOCAL_DIRECTORIES))
+        self.assertIn(".git", names)
+
+    @unittest.skipUnless(shutil.which("git"), "git is not installed")
+    def test_in_a_checkout_the_search_asks_git_what_is_shipped(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
-            root = Path(temporary)
-            for name in (
+            base = Path(temporary)
+            home = base / "home"
+            home.mkdir()
+            # The ignore rules of this checkout decide, not the configuration of the machine.
+            isolated = {
+                "HOME": str(home),
+                "XDG_CONFIG_HOME": str(home / "config"),
+                "GIT_CONFIG_GLOBAL": os.devnull,
+                "GIT_CONFIG_NOSYSTEM": "1",
+            }
+            # Variables that point git somewhere else must change nothing.
+            elsewhere = {
+                "GIT_DIR": str(base / "elsewhere.git"),
+                "GIT_WORK_TREE": str(base),
+                "GIT_INDEX_FILE": str(base / "elsewhere.index"),
+                "GIT_COMMON_DIR": str(base / "elsewhere.git"),
+            }
+            # The agent is a directory of the checkout here, as in this repository.
+            checkout = base / "checkout"
+            agent = checkout / "agent"
+            _write(
+                agent,
+                "README.md",
+                "docs/.mcp.json",
+                "docs/mcp.json.txt",
+                "runtime/mcp.json",
+                ".idea/.mcp.json",
+                ".vscode/mcp.json",
+                ".cursor/mcp.json",
+                "node_modules/package/mcp.json",
+            )
+            _write(checkout, "mcp.json", "plugin/.mcp.json")
+            (agent / ".gitignore").write_text(".idea/\n.vscode/\n", encoding="utf-8")
+            shipped = [
+                ".cursor/mcp.json",  # untracked and not ignored: git would add it
+                ".idea/.mcp.json",
+                "docs/.mcp.json",
+                "node_modules/package/mcp.json",  # git decides here, not the list of names
+                "runtime/mcp.json",
+            ]
+            with mock.patch.dict(os.environ, isolated):
+                # Each command names its directory itself, so the set-up can only write
+                # under the temporary directory. The checkout starts without the machine's
+                # template, which could bring ignore rules.
+                for directory, arguments in (
+                    (checkout, ("init", "--quiet", "--template=")),
+                    (checkout, ("add", "mcp.json", "plugin", "agent/README.md")),
+                    (agent, ("add", ".gitignore", "docs", "runtime")),
+                    # Tracked although its directory is ignored.
+                    (agent, ("add", "--force", ".idea/.mcp.json")),
+                ):
+                    command = ("git", "-C", str(directory), *arguments)
+                    self.assertIsNotNone(_git(directory, command), arguments)
+                self.assertEqual(_files_named(agent, "mcp.json", ".mcp.json"), shipped)
+                # The agent is the repository itself in a standalone export.
+                self.assertEqual(
+                    _files_named(checkout, "mcp.json", ".mcp.json"),
+                    sorted([*(f"agent/{path}" for path in shipped), "mcp.json", "plugin/.mcp.json"]),
+                )
+                with mock.patch.dict(os.environ, elsewhere):
+                    self.assertEqual(_files_named(agent, "mcp.json", ".mcp.json"), shipped)
+                # A directory in no checkout: git is not allowed to look above it, says
+                # so, and the walk answers. Nothing is ignored there, and the machine-local
+                # directories are left out.
+                plain = base / "plain"
+                _write(plain, ".vscode/mcp.json", "node_modules/package/mcp.json")
+                with mock.patch.dict(os.environ, {"GIT_CEILING_DIRECTORIES": str(base)}):
+                    self.assertIsNone(_git(plain, GIT_LISTING))
+                    self.assertEqual(
+                        _files_named(plain, "mcp.json", ".mcp.json"), [".vscode/mcp.json"]
+                    )
+
+    def test_without_git_the_search_walks_all_but_the_machine_local_directories(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            base = Path(temporary)
+            tree = base / "tree"
+            _write(
+                tree,
                 "mcp.json",
                 ".mcp.json",
                 ".cursor/mcp.json",
@@ -384,20 +619,26 @@ class OwnerChoicesTest(unittest.TestCase):
                 "docs/notes.md",
                 *(f"{skipped}/mcp.json" for skipped in sorted(MACHINE_LOCAL_DIRECTORIES)),
                 "src/__pycache__/.mcp.json",
-            ):
-                path = root / name
-                path.parent.mkdir(parents=True, exist_ok=True)
-                path.write_text("{}\n", encoding="utf-8")
-            self.assertEqual(
-                _files_named(root, "mcp.json", ".mcp.json"),
-                [
-                    ".cursor/mcp.json",
-                    ".mcp.json",
-                    ".vscode/mcp.json",
-                    "docs/.hidden/.mcp.json",
-                    "mcp.json",
-                ],
             )
+            # Git is taken away by the command, so this does not need a machine without
+            # git: a program that does not exist, one that fails with git's exit status
+            # after it listed a file, and one that lists nothing.
+            for case, listing in (
+                ("no such program", (str(base / "git-is-not-installed"), *GIT_LISTING[1:])),
+                ("fails after a listing", (*PYTHON, FAILS_AFTER_A_LISTING)),
+                ("lists nothing", (*PYTHON, "")),
+            ):
+                with self.subTest(case):
+                    self.assertEqual(
+                        _files_named(tree, "mcp.json", ".mcp.json", listing=listing),
+                        [
+                            ".cursor/mcp.json",
+                            ".mcp.json",
+                            ".vscode/mcp.json",
+                            "docs/.hidden/.mcp.json",
+                            "mcp.json",
+                        ],
+                    )
 
 
 if __name__ == "__main__":
