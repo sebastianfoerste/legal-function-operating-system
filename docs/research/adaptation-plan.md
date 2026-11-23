@@ -205,16 +205,21 @@ playbook position next to each change, and the evidence next to each resolution.
   6. Closed
 
   Each stage has one explanation and one next step. Open questions addressed to the
-  requester override the next step.
+  requester override the next step. Since 2026-11-23 there is one exception: a matter
+  that stays ready for delivery after its delivery ended is shown as "In review", with
+  its own explanation and nothing to accept
+  ([ADR 0011](../adr/0011-requester-vocabulary.md), note of that day).
 - **Done differently.** No new state or clock; see ADR 0003. No SLA countdown is shown
   to the requester, because pilot service levels are internal.
 - **Acceptance.**
-  - Every pilot state maps to exactly one stage.
+  - Every pilot state maps to exactly one stage, except that `ready_for_delivery` shows
+    "In review" while its delivery has ended.
   - A closed matter never reports "waiting on you".
 - **Files.** `src/pilot/requester_status.py`, `src/pilot/service.py`,
   `src/pilot/review_room.py`.
 - **Tests.** In `test_pilot_intake_ux.py`. `tests/test_requester_vocabulary.py` pins the
-  six stage ids, the stage of every pilot state and the core's words (ADR 0011).
+  six stage ids, the stage of every pilot state, the exception for an ended delivery and
+  the core's words (ADR 0011).
 - **Risk.** Low. The core shared space keeps its own v1 words, including two German
   next-step sentences; [ADR 0011](../adr/0011-requester-vocabulary.md) records why, and
   no German stage labels are added.
@@ -954,16 +959,19 @@ owner took the recommended option for each.
    reached. A withdrawal cancels every sign-off and approval, so this holds after a final
    approval too, and the review note in the contract is then the withdrawal reason, not
    the cancelled approval's note. A withdrawal also records a rejected review decision on
-   the assessment stored in the matter version, which a final approval approves together
-   with the matter, so the pilot keeps no approved or exportable assessment for a withdrawn
-   matter. A store in which a matter was withdrawn before this was built keeps the old
-   assessment and is still reported `rejected`. `export_allowed` was already false for
-   every closed matter. The schema is unchanged and no value is added;
+   the assessment stored in the current matter version, which a final approval approves
+   together with the matter, so the version a withdrawal closes keeps no approved or
+   exportable assessment. Earlier versions are history and are not rewritten, as recorded
+   on 2026-11-23; the pilot runbook (`supervised-agent/docs/pilot/RUNBOOK.md`, section 4)
+   says what they keep. A store in which a matter was withdrawn before this was built
+   keeps the old assessment and is still reported `rejected`. `export_allowed` was already
+   false for every closed matter. The schema is unchanged and no value is added;
    `contracts/README.md` says what `rejected` means in the pilot.
    `supervised-agent/tests/test_pilot_contract_closings.py`
    guards the behaviour: it asks `contract_review_state` about each closing outcome,
    withdraws a matter from each state it can reach with a reviewer on it, and reads what
-   a withdrawal from every open state leaves in the store.
+   a withdrawal from every open state leaves in the store, on the version it closes and
+   on every earlier version.
    `make contract-check` reads the bridge's source text and runs none of it. It fails if
    the state table has a `closed` entry, if a closing-outcome entry is missing or
    changed, or if `contract_review_state` does not begin with the closed branch that
@@ -985,10 +993,17 @@ owner took the recommended option for each.
    README says how the tools are reached instead: start the runtime and call
    `GET /mcp/manifest` and `POST /tools/call`. In `supervised-agent/tests/`,
    `test_docs.py` fails if an `mcp.json` or `.mcp.json` comes back anywhere in the agent,
-   in a hidden directory such as `.cursor` or `.vscode` too. It leaves out only the
-   directories a tool fills on the machine: version control data, virtual environments,
-   installed packages, tool caches and the local pilot store. `test_runtime_agent.py`
-   sends the README's two example requests with the headers and the body the README
-   gives, so an example without its `Content-Type` header fails. `test_no_external_model.py`
-   still checks that no external-model switch is offered: in the runtime modules, the
-   files at the agent's root and its guides.
+   in a hidden directory such as `.cursor` too. The guard is about what the agent ships
+   (corrected on 2026-11-23: it had failed on a developer's own ignored file and passed
+   for a file under `node_modules`, which git would add). In a git checkout it asks git
+   for the files it tracks or would add under the agent, so a file git ignores, such as a
+   developer's own `.vscode/mcp.json`, does not fail it and a tracked file does, wherever
+   it is. Where git cannot say (no checkout, no git, a command that fails or lists
+   nothing), it walks every directory except the ones a tool fills on the machine: version
+   control data, virtual environments, installed packages, tool caches and the local pilot
+   store. `tests/test_research_docs.py` searches the same way and requires its copy of the
+   search to be the same as the agent's. `test_runtime_agent.py` sends the README's two
+   example requests with the headers and the body the README gives, so an example without
+   its `Content-Type` header fails. `test_no_external_model.py` still checks that no
+   external-model switch is offered: in the runtime modules, the files at the agent's
+   root and its guides.

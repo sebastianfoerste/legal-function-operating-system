@@ -2239,10 +2239,11 @@ class PilotService:
         A package is offered only while its delivery stands: while the matter is ready
         for delivery and the evidence ``accept_delivery`` needs holds (asked here, not
         restated, so the two cannot drift apart), and after the requester accepted that
-        delivery. A withdrawal, a revision request, a new version, a later comment or
-        another final approver in place of the one who approved ends it. The stored
-        manifest and its files stay where they are, for the audit trail. ``(None, None)``
-        means that no package was ever prepared.
+        delivery. A withdrawal, a revision request, a new version, a comment written,
+        resolved or reopened after the package was prepared, or another final approver
+        in place of the one who approved ends it. The stored manifest and its files stay
+        where they are, for the audit trail. ``(None, None)`` means that no package was
+        ever prepared.
         """
 
         latest = self._latest_delivery_manifest(ctx)
@@ -2518,6 +2519,9 @@ class PilotService:
                     open_questions=sum(c.state == "open" for c in clarifications),
                     snooze=snooze if snooze and snooze["active"] else None,
                     closure=self._closure(connection, ctx),
+                    # The same answer as "package" above, so the status cannot tell the
+                    # requester to accept a delivery that the room no longer offers.
+                    delivery_stands=standing is not None,
                 )
                 base["view"] = "requester_summary"
                 return base

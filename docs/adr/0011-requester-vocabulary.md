@@ -44,11 +44,14 @@ aligning the two, German labels included. Read side by side, they do not line up
 - **`blocked` means different things.** The core sets it when a request's urgency is
   `blocker` (priority `P1_blocker`) or its response SLA was missed. In
   `legal-workflow-controls.v1` the pilot reports `blocked` for a matter that a charter
-  exclusion or a blocked source holds. `complete_triage` refuses such a matter, so a
-  matter held when it reaches triage stays there. A matter that an amendment after triage
-  brings under a charter exclusion moves to `revised`, cannot be exported, and stays
-  `blocked` in the contract until a new version removes the exclusion or the matter is
-  withdrawn. Since 2026-11-20 a withdrawn matter is reported `rejected`
+  exclusion or a blocked source holds, until the matter is declined, closed as a duplicate
+  or withdrawn; it is then reported `rejected`
+  ([ADR 0010](0010-triage-verbs.md), Decision 9). `complete_triage` refuses a held
+  matter, so a matter held when it reaches triage stays there while it is held, or is
+  closed in one of these three ways. A matter that an amendment after triage brings under
+  a charter exclusion moves to `revised`, cannot be exported, and stays `blocked` in the
+  contract until a new version removes the exclusion or the matter is withdrawn. Since
+  2026-11-20 a withdrawn matter is reported `rejected`
   ([ADR 0010](0010-triage-verbs.md), amended that day).
 - **Nothing in the repository reads the shared space** except its tests. No page renders
   it, no schema in `contracts/` describes it, no MCP tool returns it and `make demo` does
@@ -117,6 +120,55 @@ aligning the two, German labels included. Read side by side, they do not line up
 
 Confirmed: 2026-11-20, the owner confirmed that no German requester labels are added
 (Decision 3 and 4). Nothing in the code changed, and both owner questions above stay open.
+
+Note (2026-11-23): one state now shows another of the six stages in one case. A matter can
+stay `ready_for_delivery` after its delivery ended. A comment written, resolved or
+reopened after the package was prepared does that, in other words any change to the state
+of a comment, and so does another final approver assigned in place of the one who
+approved. No package can then be opened or accepted, yet the requester's
+view still said "Ready for you", "The approved package is ready. Read it, then accept
+delivery." and "Accept delivery.". Such a matter is now shown as `in_review` (In review),
+with the explanation "The package prepared earlier is no longer approved, because the
+matter changed after it was prepared. Legal has to review the matter again before a
+package is ready for you." and the next step "No action needed from you.". An open
+question to the requester still replaces that next step, as it does in every stage but
+`closed`. A `ready_for_delivery` matter whose delivery stands is `ready`, as before, and
+every other state shows the stage Decision 5 lists.
+
+- **Why `in_review`.** The state machine has two transitions from `ready_for_delivery`.
+  `accept_delivery` is the requester's, and its evidence `delivery_manifest_current`
+  fails. The other is `request_revision`, for the matter owner, a specialist reviewer or
+  the final approver, and it leads to `revision_requested`, which is `in_review` already.
+  `approve` and `prepare_delivery` are not open from `ready_for_delivery`. As in every
+  open state, the requester or the matter owner can withdraw the matter or amend it, and
+  a substantive amendment makes a new version that is reviewed again. A package can be
+  offered again only after legal acts, so the matter is with legal, which is what "In
+  review" tells a requester. `approved` would say that the review is approved and a
+  package is being prepared, and neither is true.
+- **Why no stage was added.** The six stages can say it, so Decision 1 stands: no stage
+  is added, renamed or moved, and no pilot state is added either. A seventh stage would
+  name a difference the requester cannot act on.
+- **The status follows the delivery, not a stored flag.** The service decides in one
+  place whether a delivery stands (`PilotService._standing_package`). The package route,
+  the package line in the room, the "Accept delivery" button and now this status all use
+  that answer; `requester_status` receives it as `delivery_stands` and does not work it
+  out again. If legal restores the reviewed state the approval was given on, the delivery
+  stands again and the stage is `ready` again. A comment has two ways back, and each puts
+  it into the state it had when the package was prepared: a comment that was reopened is
+  resolved again, or a comment that was resolved is reopened. The approver has one: the
+  earlier approver is assigned again. A new comment cannot be taken back, so after one a
+  package is offered only after a revision request or a new version, a review and a new
+  approval.
+- **Unchanged.** The stored state, the state machine, the export gate and
+  `legal-workflow-controls.v1`. The matter list in the room still shows every reader the
+  pilot state, here `ready for delivery`.
+- **Tests.** `tests/test_requester_vocabulary.py` pins the stage of each state as before,
+  and now also that `ready_for_delivery` shows `in_review` once its delivery has ended,
+  that every other state stays as it is and that the six stages are kept. The agent's
+  suite pins the wording (`supervised-agent/tests/test_pilot_intake_ux.py`), the matter
+  view after a late comment, a replaced approver, a reopened question and a note that is
+  resolved and then reopened (`supervised-agent/tests/test_pilot_package_standing.py`) and
+  the page in a browser (`supervised-agent/tests/test_review_room_browser.py`).
 
 ## Alternatives rejected
 

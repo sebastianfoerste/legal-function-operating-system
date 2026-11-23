@@ -474,30 +474,43 @@ def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str,
 
     The parent lifecycle has no revision loop, so revision cycles are folded into
     the working state and the approval request is reported once, at final approval.
-    A matter is a request here only once it has a ledger entry, and the first entry is
-    its scripted submission to legal. A draft still in intake, or withdrawn there, is
-    left out: legal never received it, so there is no service event to measure.
+    A matter is a request here from its submission to legal on, and its first ledger
+    entry is that submission at its scripted time. A draft has no ``intake_submitted``
+    event, whether it is still in intake or was withdrawn there. It is left out: legal
+    never received it, so there is no service event to measure. A submitted matter is
+    never left out. If its submission carries no scripted time, the ledger has no first
+    event for it, and this stops with a ``ValueError`` that names every such matter.
     """
 
     requests: list[dict[str, Any]] = []
     ledger_events: list[dict[str, Any]] = []
+    unscripted: list[str] = []
     for matter in _load(store):
         matter_id = matter["row"]["matter_id"]
+        if not any(e["event_type"] == "intake_submitted" for e in matter["events"]):
+            # A draft. The parent tower refuses a request without an event, and one such
+            # request would stop the view for every other matter in the store.
+            continue
         events = [
             e for e in matter["events"] if e["fixture_at"] and e["event_type"] != "command_refused"
         ]
-        if not events:
-            continue
         # The scripted clock's "now" is the matter's latest scripted step, refusals included.
         scripted = [(parse_time(e["fixture_at"]), e["fixture_at"]) for e in matter["events"]]
         now = max(((m, t) for m, t in scripted if m is not None), default=(None, None))[1]
         entries = matter_ledger(matter_id, events, as_of=now)
         if not entries:
-            # The parent tower refuses a request without an event, and one such request
-            # would stop the view for every other matter in the store.
+            # Legal received this matter. Its ledger starts at the scripted submission, so
+            # without a scripted time there the ledger has nothing to report it with.
+            unscripted.append(matter_id)
             continue
         requests.append(parent_request(matter_id, matter["body"].intake))
         ledger_events.extend(entries)
+    if unscripted:
+        raise ValueError(
+            f"parent ledger has no first event for {', '.join(unscripted)}: a matter named "
+            "here was submitted to legal, but its submission carries no scripted time, and "
+            "the ledger starts a request at its scripted submission"
+        )
     latest = max((e["occurred_at_utc"] for e in ledger_events), default=None)
     as_of = (
         (_parse(latest) + timedelta(hours=1)).isoformat().replace("+00:00", "Z") if latest else ""

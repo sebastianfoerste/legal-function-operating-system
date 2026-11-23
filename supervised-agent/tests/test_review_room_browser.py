@@ -551,8 +551,24 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
       muted: await section.locator("p.muted").allInnerTexts(),
     };
   };
-  out.standing = await delivery(await room(REQUESTER, standing));
-  out.ended = await delivery(await room(REQUESTER, ended));
+  // The requester's "Status" section: the heading, the stage marked as current, and the
+  // explanation and the next step as the page words them.
+  const status = async (page) => {
+    const section = page.locator("section", { has: page.locator("#status-h") });
+    return {
+      heading: await page.locator("#status-h").innerText(),
+      current: await section.locator("ol.stages li[aria-current='step']").allTextContents(),
+      said: await section.locator(":scope > p:not(.muted)").allInnerTexts(),
+    };
+  };
+  let page = await room(REQUESTER, standing);
+  out.standing = await delivery(page);
+  out.standingStatus = await status(page);
+  page = await room(REQUESTER, ended);
+  out.ended = await delivery(page);
+  out.endedStatus = await status(page);
+  // Nowhere does the page of the ended delivery tell the requester to accept one.
+  out.endedPage = await page.locator("#matter").innerText();
   out.errors = errors;
   console.log(JSON.stringify(out));
   await browser.close();
@@ -852,7 +868,8 @@ def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
     standing = run_until(service, "routine", "A12")  # ready for delivery: the package stands
     ended = run_until(service, "specialist-revision", "B44")  # ready for delivery as well
     # A note written after the package was prepared ends that delivery; the matter stays
-    # ready for delivery, where the room used to keep offering the button.
+    # ready for delivery, where the room used to keep offering the button and the status
+    # used to read "Ready for you" with the next step "Accept delivery.".
     service.comment(
         OWNER,
         ended,
@@ -870,6 +887,28 @@ def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
     assert out["errors"] == []
     assert out["standing"] == {"links": 1, "accept": 1, "muted": []}
     assert out["ended"] == {"links": 0, "accept": 0, "muted": [changed]}
+    # The status above the package line says the same. A standing delivery is ready for
+    # the requester. One that ended is back with legal, and nothing asks for an acceptance.
+    assert out["standingStatus"] == {
+        "heading": "Status: Ready for you",
+        "current": ["Ready for you (current stage)"],
+        "said": [
+            "The approved package is ready. Read it, then accept delivery.",
+            "Your next step: Accept delivery.",
+        ],
+    }
+    assert out["endedStatus"] == {
+        "heading": "Status: In review",
+        "current": ["In review (current stage)"],
+        "said": [
+            "The package prepared earlier is no longer approved, because the matter changed "
+            "after it was prepared. Legal has to review the matter again before a package is "
+            "ready for you.",
+            "Your next step: No action needed from you.",
+        ],
+    }
+    assert "ccept delivery" not in out["endedPage"]
+    assert "approved package is ready" not in out["endedPage"]
 
 
 def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:

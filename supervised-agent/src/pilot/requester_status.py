@@ -6,6 +6,13 @@ tier, playbook positions, internal comments) is never part of it. Two things a p
 in legal typed for the requester are shown as written: the reason for a running snooze
 (and its question, if any), and the reason legal closed the request in triage
 (ADR 0010).
+
+Each state has one stage, with one exception that the service decides and hands in. A
+matter can stay ``ready_for_delivery`` after its delivery ended: a comment written,
+resolved or reopened after the package was prepared (any change to the state of a
+comment), or another final approver in place of the one who approved, leaves no approved
+package to accept. The requester is then shown "In review", because legal has to act
+before a package can be offered again (ADR 0011, note of 2026-11-23).
 """
 
 from __future__ import annotations
@@ -44,6 +51,13 @@ _EXPLANATION = {
     "ready": "The approved package is ready. Read it, then accept delivery.",
     "closed": "This request is closed.",
 }
+# Ready for delivery, but the delivery no longer stands. No stage is added: the matter is
+# with legal again, which is what "In review" says. The first sentence is the reason the
+# room shows where the package link was (``service.PACKAGE_CHANGED``), in other words.
+_DELIVERY_ENDED = (
+    "The package prepared earlier is no longer approved, because the matter changed after "
+    "it was prepared. Legal has to review the matter again before a package is ready for you."
+)
 # A request legal closed in triage says so, whatever outcome text is stored.
 _CLOSED_IN_TRIAGE = {
     "declined": ("Closed: declined by legal", "Legal declined this request. The reason is below."),
@@ -66,16 +80,23 @@ def requester_status(
     open_questions: int = 0,
     snooze: dict[str, Any] | None = None,
     closure: dict[str, Any] | None = None,
+    delivery_stands: bool = True,
 ) -> dict[str, Any]:
     """Map a pilot state to the requester's stage, explanation and next action.
 
     ``snooze`` is the running snooze from ``snooze.latest_snooze``, if any; ``closure``
     is the reason legal recorded when it declined the request or marked it a duplicate.
+    ``delivery_stands`` says whether the delivery package may be opened now. The service
+    decides that once (``PilotService._standing_package``) and this function does not
+    work it out again. It is read only for ``ready_for_delivery``: a matter in that state
+    whose delivery has ended is shown "In review", and is not told that an approved
+    package is ready or to accept delivery. Every other state ignores it.
     """
 
-    stage = _STAGE_OF_STATE[state]
+    ended = state == "ready_for_delivery" and not delivery_stands
+    stage = "in_review" if ended else _STAGE_OF_STATE[state]
     label = dict(REQUESTER_STAGES)[stage]
-    explanation = _EXPLANATION[stage]
+    explanation = _DELIVERY_ENDED if ended else _EXPLANATION[stage]
     if stage == "closed" and closed_outcome:
         label = f"Closed: {closed_outcome.replace('_', ' ')}"
     if state in _CLOSED_IN_TRIAGE:
