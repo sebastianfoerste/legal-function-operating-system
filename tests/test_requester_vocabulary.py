@@ -3,9 +3,11 @@
 The pilot's six stage ids are the repository's requester-stage vocabulary. The core
 shared space keeps its own ``legal-function-os.shared-space.v1`` words: its ``in_review``
 is the pilot's stage, ``blocked`` is a core flag and not a stage, and its two German
-next-step sentences are v1 values. These tests pin all of it, so that a change to any of
-it is deliberate. The pilot module is read by path: it needs nothing outside the standard
-library, and the agent's own dependencies are not installed for the core's tests.
+next-step sentences are v1 values. A matter that stays ready for delivery after its
+delivery ended is shown "In review", and no stage is added for it (note of 2026-11-23).
+These tests pin all of it, so that a change to any of it is deliberate. The pilot module
+is read by path: it needs nothing outside the standard library, and the agent's own
+dependencies are not installed for the core's tests.
 """
 
 import ast
@@ -97,6 +99,24 @@ class RequesterVocabularyTests(unittest.TestCase):
                 "duplicate": "closed",
             },
         )
+
+    def test_an_ended_delivery_is_shown_in_review_and_adds_no_stage(self) -> None:
+        # ADR 0011, note of 2026-11-23. A matter can stay ready for delivery after its
+        # delivery ended. Its requester then sees "In review", one of the six stages, and
+        # is not told to accept a delivery. No other state reads the answer.
+        for state in _pilot_states():
+            standing = self.pilot.requester_status(state)
+            ended = self.pilot.requester_status(state, delivery_stands=False)
+            self.assertEqual(tuple(s["id"] for s in ended["stages"]), STAGE_IDS, state)
+            if state != "ready_for_delivery":
+                self.assertEqual(ended, standing, state)
+                continue
+            self.assertEqual((standing["stage"], standing["label"]), ("ready", "Ready for you"))
+            self.assertEqual(standing["your_action"], "Accept delivery.")
+            self.assertEqual((ended["stage"], ended["label"]), ("in_review", "In review"))
+            self.assertEqual(ended["your_action"], "No action needed from you.")
+            self.assertFalse(ended["waiting_on_you"])
+            self.assertNotIn("accept delivery", ended["explanation"].lower())
 
     def test_the_core_in_review_is_the_pilot_stage(self) -> None:
         status = _core_entry()["status"]

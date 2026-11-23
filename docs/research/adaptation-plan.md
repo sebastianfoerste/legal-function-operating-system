@@ -205,16 +205,21 @@ playbook position next to each change, and the evidence next to each resolution.
   6. Closed
 
   Each stage has one explanation and one next step. Open questions addressed to the
-  requester override the next step.
+  requester override the next step. Since 2026-11-23 there is one exception: a matter
+  that stays ready for delivery after its delivery ended is shown as "In review", with
+  its own explanation and nothing to accept
+  ([ADR 0011](../adr/0011-requester-vocabulary.md), note of that day).
 - **Done differently.** No new state or clock; see ADR 0003. No SLA countdown is shown
   to the requester, because pilot service levels are internal.
 - **Acceptance.**
-  - Every pilot state maps to exactly one stage.
+  - Every pilot state maps to exactly one stage, except that `ready_for_delivery` shows
+    "In review" while its delivery has ended.
   - A closed matter never reports "waiting on you".
 - **Files.** `src/pilot/requester_status.py`, `src/pilot/service.py`,
   `src/pilot/review_room.py`.
 - **Tests.** In `test_pilot_intake_ux.py`. `tests/test_requester_vocabulary.py` pins the
-  six stage ids, the stage of every pilot state and the core's words (ADR 0011).
+  six stage ids, the stage of every pilot state, the exception for an ended delivery and
+  the core's words (ADR 0011).
 - **Risk.** Low. The core shared space keeps its own v1 words, including two German
   next-step sentences; [ADR 0011](../adr/0011-requester-vocabulary.md) records why, and
   no German stage labels are added.

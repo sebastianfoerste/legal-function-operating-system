@@ -6,7 +6,7 @@ from src.pilot.api import PilotApi
 from src.pilot.models import REQUIRED_FACTS, required_fact_checklist
 from src.pilot.requester_status import REQUESTER_STAGES, requester_status
 from src.pilot.review_room import REVIEW_ROOM_HTML
-from src.pilot.state_machine import TRANSITIONS
+from src.pilot.state_machine import STATES, TRANSITIONS
 from tests.pilot_support import OWNER, REQUESTER, make_service, run_until
 
 
@@ -96,6 +96,75 @@ def test_requester_status_names_the_next_step_and_what_is_withheld() -> None:
     )
     assert closed["label"] == "Closed: withdrawn without delivery" and not closed["waiting_on_you"]
     assert "negotiation positions" in requester_status("review")["withheld"]
+
+
+READY = "The approved package is ready. Read it, then accept delivery."
+DELIVERY_ENDED = (
+    "The package prepared earlier is no longer approved, because the matter changed after "
+    "it was prepared. Legal has to review the matter again before a package is ready for you."
+)
+SNOOZE = {
+    "since": "2026-11-02T08:00:00Z",
+    "until": None,
+    "question": "Who signs?",
+    "reason": "Open",
+}
+CLOSURE = {"reason": "Outside the pilot charter.", "original_matter_id": None}
+
+
+def test_a_standing_delivery_is_ready_for_the_requester_as_before() -> None:
+    ready = requester_status("ready_for_delivery")
+    assert (ready["stage"], ready["label"], ready["explanation"]) == (
+        "ready",
+        "Ready for you",
+        READY,
+    )
+    assert ready["your_action"] == "Accept delivery." and ready["waiting_on_you"]
+    # Saying that the delivery stands changes nothing: it is what the function assumed.
+    assert requester_status("ready_for_delivery", delivery_stands=True) == ready
+    asked = requester_status("ready_for_delivery", open_questions=1, delivery_stands=True)
+    assert asked == requester_status("ready_for_delivery", open_questions=1)
+    assert (asked["stage"], asked["your_action"]) == ("ready", "Answer the open question below.")
+
+
+def test_an_ended_delivery_in_ready_for_delivery_is_shown_in_review() -> None:
+    # The matter stayed ready for delivery, but a later comment or another final approver
+    # ended the delivery. No approved package is ready and there is nothing to accept.
+    status = requester_status("ready_for_delivery", delivery_stands=False)
+    assert (status["stage"], status["label"]) == ("in_review", "In review")
+    assert status["explanation"] == DELIVERY_ENDED
+    assert status["your_action"] == "No action needed from you."
+    assert not status["waiting_on_you"]
+    # One of the six stages is current, and the list is the six stages as they are.
+    assert [(s["id"], s["label"]) for s in status["stages"]] == list(REQUESTER_STAGES)
+    assert [s["id"] for s in status["stages"] if s["current"]] == ["in_review"]
+    assert (status["snooze"], status["closure"]) == (None, None)
+    # Everything else is what "In review" gives a matter in review.
+    in_review = requester_status("review")
+    assert {**status, "explanation": in_review["explanation"]} == in_review
+
+    # An open question to the requester still overrides the action.
+    one = requester_status("ready_for_delivery", open_questions=1, delivery_stands=False)
+    assert (one["stage"], one["explanation"]) == ("in_review", DELIVERY_ENDED)
+    assert one["your_action"] == "Answer the open question below." and one["waiting_on_you"]
+    two = requester_status("ready_for_delivery", open_questions=2, delivery_stands=False)
+    assert two["your_action"] == "Answer the 2 open questions below." and two["waiting_on_you"]
+
+
+@pytest.mark.parametrize("state", [s for s in STATES if s != "ready_for_delivery"])
+def test_every_other_state_ignores_whether_a_delivery_stands(state: str) -> None:
+    for given in (
+        {},
+        {"open_questions": 1},
+        {"closed_outcome": "withdrawn_without_delivery"},
+        {"closed_outcome": "delivered_locally_and_accepted", "open_questions": 2},
+        {"snooze": SNOOZE},
+        {"closure": CLOSURE},
+    ):
+        expected = requester_status(state, **given)
+        for stands in (True, False):
+            assert requester_status(state, delivery_stands=stands, **given) == expected, given
+        assert expected["explanation"] != DELIVERY_ENDED
 
 
 def test_requester_view_carries_status_but_no_internal_detail(tmp_path) -> None:

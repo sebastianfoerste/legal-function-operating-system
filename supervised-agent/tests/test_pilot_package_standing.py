@@ -4,7 +4,9 @@ It stands while the matter is ready for delivery and the evidence ``accept_deliv
 holds, and after the requester accepted that delivery. A withdrawal, a revision request, a
 new version, a later comment or another final approver in place of the one who approved
 ends it. The package route then refuses, the matter view says why, and the stored manifest
-and its files stay for the audit trail. Everything here is synthetic.
+and its files stay for the audit trail. A matter that stays ready for delivery after its
+delivery ended is shown to its requester as "In review", not as a package to accept.
+Everything here is synthetic.
 """
 
 from __future__ import annotations
@@ -416,6 +418,205 @@ def test_a_new_package_opens_only_after_a_new_approval_and_a_new_preparation(tmp
     step(REQUESTER, "accept_delivery", "closed", note=ACCEPTANCE)
     _offered(api, matter, readers)
     assert _package(api, REQUESTER, matter)[1] == second
+
+
+# -- what the requester is told while the matter stays ready for delivery -----------
+
+# Stage, label, explanation, next step and whether the matter waits on the requester.
+TOLD_READY = (
+    "ready",
+    "Ready for you",
+    "The approved package is ready. Read it, then accept delivery.",
+    "Accept delivery.",
+    True,
+)
+ENDED = (
+    "The package prepared earlier is no longer approved, because the matter changed after "
+    "it was prepared. Legal has to review the matter again before a package is ready for you."
+)
+TOLD_ENDED = ("in_review", "In review", ENDED, "No action needed from you.", False)
+
+
+def _told(api: PilotApi, matter: str) -> tuple[str, str, str, str, bool]:
+    """What the requester's view says of the matter, with one stage marked as current."""
+
+    status = _view(api, REQUESTER, matter)["requester_status"]
+    assert [s["id"] for s in status["stages"] if s["current"]] == [status["stage"]]
+    return (
+        status["stage"],
+        status["label"],
+        status["explanation"],
+        status["your_action"],
+        status["waiting_on_you"],
+    )
+
+
+def _replace_the_approver(service: PilotService, matter: str) -> None:
+    service.assign(
+        OWNER, matter, revision(service, matter), role="final_approver", assignee_id=APPROVER_GC
+    )
+
+
+@pytest.mark.parametrize(
+    "end",
+    [_comment, _replace_the_approver],
+    ids=["a comment after the package", "another final approver"],
+)
+def test_the_requester_is_not_told_to_accept_a_delivery_that_has_ended(tmp_path, end) -> None:
+    api, service, matter = _ready(tmp_path)
+    assert _view(api, REQUESTER, matter)["package"] == {"may_open": True, "reason": None}
+    assert _told(api, matter) == TOLD_READY
+    kept = _kept(service, matter)
+
+    end(service, matter)
+
+    # The matter did not move, and the status goes by the same answer as the package line.
+    view = _view(api, REQUESTER, matter)
+    assert view["matter"]["state"] == "ready_for_delivery"
+    assert view["package"] == {"may_open": False, "reason": CHANGED}
+    assert _told(api, matter) == TOLD_ENDED
+    # Reading the status changed nothing: no state, no manifest, no file and no event.
+    events = event_types(service, matter)
+    assert _told(api, matter) == TOLD_ENDED
+    assert state(service, matter) == "ready_for_delivery"
+    assert _kept(service, matter) == kept and event_types(service, matter) == events
+    # A reviewer's view has no requester status, as before.
+    assert "requester_status" not in _view(api, OWNER, matter)
+
+    # The status says what the workflow does. Acceptance is refused, and the one transition
+    # the state leaves open to anyone else is a revision request by a reviewer in legal.
+    allowed = {item["command"]: item for item in _view(api, OWNER, matter)["allowed"]}
+    assert sorted(allowed) == ["accept_delivery", "request_revision"]
+    assert allowed["request_revision"]["roles"] == [
+        "matter_owner",
+        "specialist_reviewer",
+        "final_approver",
+    ]
+    assert allowed["accept_delivery"]["roles"] == ["business_requester"]
+    assert [e["name"] for e in allowed["accept_delivery"]["evidence"] if not e["ok"]] == [
+        "delivery_manifest_current"
+    ]
+    status, answer, _ = api.handle(
+        "POST",
+        f"/pilot/api/matters/{matter}/commands",
+        {"X-Pilot-Actor": REQUESTER},
+        {
+            "command": "accept_delivery",
+            "expected_revision": revision(service, matter),
+            "args": {"note": ACCEPTANCE},
+        },
+    )
+    assert (status, answer["error"]) == (409, "transition_blocked")
+    assert _told(api, matter) == TOLD_ENDED
+
+
+def test_the_requester_status_follows_the_delivery_while_the_matter_stays_ready(tmp_path) -> None:
+    api, service, matter = _ready(tmp_path)
+
+    # Another final approver ends the delivery. The earlier one, assigned again, restores
+    # it: the approval counts again, and the status is the one of a standing delivery.
+    _replace_the_approver(service, matter)
+    assert _told(api, matter) == TOLD_ENDED
+    service.assign(
+        OWNER, matter, revision(service, matter), role="final_approver", assignee_id=APPROVER_LEAD
+    )
+    assert _view(api, REQUESTER, matter)["package"] == {"may_open": True, "reason": None}
+    assert _told(api, matter) == TOLD_READY
+
+    # A new comment cannot be taken back. Resolving it leaves the reviewed state changed.
+    _comment(service, matter)
+    assert _told(api, matter) == TOLD_ENDED
+    late = _view(api, OWNER, matter)["comments"][-1]
+    assert (late["body"], late["state"]) == (LATE_NOTE, "open")
+    service.resolve_comment(
+        OWNER,
+        matter,
+        revision(service, matter),
+        comment_id=late["comment_id"],
+        resolution="Read and noted; nothing changes in the package.",
+    )
+    assert state(service, matter) == "ready_for_delivery"
+    assert _told(api, matter) == TOLD_ENDED
+
+    # Once a reviewer asks for a revision the state says "In review" by itself, with its
+    # ordinary explanation, and whether a delivery stands is no longer asked.
+    _comment(service, matter)
+    note = _view(api, OWNER, matter)["comments"][-1]["comment_id"]
+    service.request_revision(
+        APPROVER_LEAD,
+        matter,
+        revision(service, matter),
+        comment_ids=[note],
+        note="The late note has to be answered before delivery.",
+    )
+    assert state(service, matter) == "revision_requested"
+    assert _told(api, matter) == (
+        "in_review",
+        "In review",
+        "Reviewers are working on the customer's draft.",
+        "No action needed from you.",
+        False,
+    )
+
+
+def test_an_open_question_overrides_the_action_after_a_delivery_ended(tmp_path) -> None:
+    api, service, matter = _ready(tmp_path, "specialist-revision")
+    [question] = _view(api, REQUESTER, matter)["clarifications"]
+    assert question["state"] == "resolved"
+    assert _told(api, matter) == TOLD_READY
+
+    # The owner reopens the question that was put to the requester. That changes the
+    # reviewed state, so the delivery ends, and the requester has a question to answer.
+    service.reopen_comment(
+        OWNER,
+        matter,
+        revision(service, matter),
+        comment_id=question["comment_id"],
+        reason="The answer needs one more detail before delivery.",
+    )
+
+    view = _view(api, REQUESTER, matter)
+    assert view["matter"]["state"] == "ready_for_delivery"
+    assert view["package"] == {"may_open": False, "reason": CHANGED}
+    assert [c["state"] for c in view["clarifications"]] == ["open"]
+    asked = ("in_review", "In review", ENDED, "Answer the open question below.", True)
+    assert _told(api, matter) == asked
+
+    # The requester answers, and the question stays open until the owner resolves it.
+    service.respond_comment(
+        REQUESTER,
+        matter,
+        revision(service, matter),
+        comment_id=question["comment_id"],
+        body="The detail is in section 3 of the order form.",
+    )
+    assert _told(api, matter) == asked
+    # Resolved again, the comments are in the state the approval was given on. The
+    # delivery stands again, and so does the status of a standing delivery.
+    service.resolve_comment(
+        OWNER,
+        matter,
+        revision(service, matter),
+        comment_id=question["comment_id"],
+        resolution="Answer read; nothing changes in the package.",
+        evidence_refs=["synthetic:order-form-section-3"],
+    )
+    assert state(service, matter) == "ready_for_delivery"
+    assert _view(api, REQUESTER, matter)["package"] == {"may_open": True, "reason": None}
+    assert _told(api, matter) == TOLD_READY
+
+
+def test_the_status_goes_by_the_answer_the_accept_button_goes_by(tmp_path) -> None:
+    # Not a command: someone removes the stored manifest. The view then gives no reason,
+    # as for a package that was never prepared. The status goes by whether a package may
+    # be opened, as the "Accept delivery" button does, so it still offers nothing to accept.
+    api, service, matter = _ready(tmp_path)
+    with service.store.transaction() as connection:
+        connection.execute("DELETE FROM deliverable_manifests WHERE matter_id = ?", (matter,))
+
+    assert state(service, matter) == "ready_for_delivery"
+    assert _view(api, REQUESTER, matter)["package"] == {"may_open": False, "reason": None}
+    assert _told(api, matter) == TOLD_ENDED
 
 
 # -- a delivered and accepted matter ------------------------------------------------

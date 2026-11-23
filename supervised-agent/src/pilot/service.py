@@ -2518,6 +2518,9 @@ class PilotService:
                     open_questions=sum(c.state == "open" for c in clarifications),
                     snooze=snooze if snooze and snooze["active"] else None,
                     closure=self._closure(connection, ctx),
+                    # The same answer as "package" above, so the status cannot tell the
+                    # requester to accept a delivery that the room no longer offers.
+                    delivery_stands=standing is not None,
                 )
                 base["view"] = "requester_summary"
                 return base

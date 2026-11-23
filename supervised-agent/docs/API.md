@@ -282,7 +282,11 @@ kinds of reader as `package`: `{"may_open": true, "reason": null}` while the pac
 be opened, `{"may_open": false, "reason": null}` when none was ever prepared, and
 `{"may_open": false, "reason": "<sentence>"}` when one was prepared and its delivery has
 ended. The review room shows the link or the sentence from that field, and offers the
-requester "Accept delivery" only while `may_open` is true. If the delivery stands but its
+requester "Accept delivery" only while `may_open` is true. The requester's
+`requester_status` goes by the same answer: a matter that is `ready_for_delivery` while
+`may_open` is false has the stage `in_review` and, unless a question to the requester is
+open, the next step "No action needed from you.", not `ready` and "Accept delivery.". If
+the delivery stands but its
 `customer-package.html` is missing from the export folder, the route answers 404
 `not_found` and names the missing file.
 
