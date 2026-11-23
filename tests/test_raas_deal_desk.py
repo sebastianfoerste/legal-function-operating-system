@@ -212,6 +212,26 @@ class RaaSDealDeskTests(unittest.TestCase):
         rendered = render_raas_markdown(self.pack) + render_raas_html(self.pack)
         self.assertNotIn("after 9 December 2026", rendered)
 
+    def test_product_liability_names_the_german_implementation(self):
+        # BGBl. 2026 I Nr. 321: Article 17(1) brings the new Produkthaftungsgesetz
+        # (Article 1) into force on 9 December 2026, and its § 23 keeps the Act of
+        # 1989 for products placed on the market or put into service up to and
+        # including 8 December 2026. REG-006 names the German Act as national
+        # implementation to map and draws no conclusion on which national law
+        # governs a claim.
+        reg_006 = next(
+            item for item in self.pack.regulatory_readiness if item.control_id == "REG-006"
+        )
+        self.assertIn("Map national implementation, such as Germany's", reg_006.obligation_or_question)
+        self.assertIn("BGBl. 2026 I Nr. 321, in force from 9 December 2026", reg_006.obligation_or_question)
+        product_liability = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-PRODUCT-LIABILITY"
+        )
+        self.assertIn("(BGBl. 2026 I Nr. 321), in force from 9 December 2026", product_liability["timing"])
+        self.assertIn(
+            "up to and including 8 December 2026 (§ 23 of the new Act)", product_liability["timing"]
+        )
+
     def test_pack_states_the_scenario_date_next_to_the_verification_range(self):
         markdown = render_raas_markdown(self.pack)
         signing = DEAL["requested_signing_date"]

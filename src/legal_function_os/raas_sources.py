@@ -38,7 +38,16 @@ CURRENCY_RECHECKED_ON = "2026-10-31"
 # 9 December 2026" to "after 8 December 2026". Article 21 keeps Directive
 # 85/374/EEC for products placed on the market or put into service before
 # 9 December 2026, so the corrected Article 2(1) leaves no day uncovered.
-OJ_RECHECKED_ON = "2026-11-23"
+# The German implementation named in the entry was checked on the same date in
+# the official Bundesgesetzblatt (recht.bund.de): the Gesetz zur Modernisierung
+# des Produkthaftungsrechts und zur Änderung weiterer Vorschriften of 22 October
+# 2026, BGBl. 2026 I Nr. 321, issued on 27 October 2026, whose footnote names
+# Directive (EU) 2024/2853. Article 17(1) brings its Article 1, the new
+# Produkthaftungsgesetz, into force on 9 December 2026; § 23 of that Act keeps the
+# Produkthaftungsgesetz of 15 December 1989 for products placed on the market or
+# put into service up to and including 8 December 2026; Article 2 gives the 1989
+# Act a new § 19 under which it expires on 9 December 2026.
+PLD_RECHECKED_ON = "2026-11-23"
 
 DISCLAIMER = (
     "This public-safe demonstration uses synthetic facts and illustrative internal "
@@ -176,13 +185,18 @@ SOURCE_MANIFEST: tuple[dict[str, str], ...] = (
         "url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng",
         "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
         "legal_effect": "directive_requires_national_implementation",
-        "verified_on": OJ_RECHECKED_ON,
+        "verified_on": PLD_RECHECKED_ON,
         "timing": (
             "Member States must transpose the Directive by 9 December 2026 "
             "(Article 22). It applies to products placed on the market or put "
             "into service after 8 December 2026 (Article 2(1), as corrected by the "
             "corrigendum of 7 May 2026); products placed on the market or put into "
-            "service on or before that date are outside its scope."
+            "service on or before that date are outside its scope. Germany "
+            "implements it with the Produkthaftungsgesetz in Article 1 of the Act "
+            "of 22 October 2026 (BGBl. 2026 I Nr. 321), in force from 9 December "
+            "2026; the Produkthaftungsgesetz of 1989 continues to apply to products "
+            "placed on the market or put into service up to and including "
+            "8 December 2026 (§ 23 of the new Act)."
         ),
     },
     {

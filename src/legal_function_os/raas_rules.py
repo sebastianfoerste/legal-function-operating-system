@@ -479,7 +479,7 @@ def _build_regulatory_readiness(deal: dict[str, Any]) -> list[RegulatoryItem]:
             "REG-006",
             "Product Liability Directive transition",
             "Manufacturer, component manufacturer, importer, authorised representative, or fulfilment provider",
-            "Map national implementation and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
+            "Map national implementation, such as Germany's new Produkthaftungsgesetz (BGBl. 2026 I Nr. 321, in force from 9 December 2026), and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
             "Later framework deployments may be placed on the market or put into service after 8 December 2026.",
             "transition_plan_required",
             "transition_follow_up",

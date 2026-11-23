@@ -155,7 +155,7 @@
       {
         "control_id": "REG-006",
         "regime": "Product Liability Directive transition",
-        "question": "Map national implementation and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
+        "question": "Map national implementation, such as Germany's new Produkthaftungsgesetz (BGBl. 2026 I Nr. 321, in force from 9 December 2026), and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
         "owner": "Product counsel, Product Safety, Insurance, and Engineering",
         "gate_effect": "transition_follow_up"
       }
@@ -565,7 +565,7 @@
       "control_id": "REG-006",
       "regime": "Product Liability Directive transition",
       "actor": "Manufacturer, component manufacturer, importer, authorised representative, or fulfilment provider",
-      "obligation_or_question": "Map national implementation and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
+      "obligation_or_question": "Map national implementation, such as Germany's new Produkthaftungsgesetz (BGBl. 2026 I Nr. 321, in force from 9 December 2026), and responsibility for hardware, software, AI, updates, remote services, components, technical evidence, and post-market control.",
       "deal_relevance": "Later framework deployments may be placed on the market or put into service after 8 December 2026.",
       "status": "transition_plan_required",
       "gate_effect": "transition_follow_up",
@@ -790,7 +790,7 @@
       "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
       "legal_effect": "directive_requires_national_implementation",
       "verified_on": "2026-11-23",
-      "timing": "Member States must transpose the Directive by 9 December 2026 (Article 22). It applies to products placed on the market or put into service after 8 December 2026 (Article 2(1), as corrected by the corrigendum of 7 May 2026); products placed on the market or put into service on or before that date are outside its scope."
+      "timing": "Member States must transpose the Directive by 9 December 2026 (Article 22). It applies to products placed on the market or put into service after 8 December 2026 (Article 2(1), as corrected by the corrigendum of 7 May 2026); products placed on the market or put into service on or before that date are outside its scope. Germany implements it with the Produkthaftungsgesetz in Article 1 of the Act of 22 October 2026 (BGBl. 2026 I Nr. 321), in force from 9 December 2026; the Produkthaftungsgesetz of 1989 continues to apply to products placed on the market or put into service up to and including 8 December 2026 (§ 23 of the new Act)."
     },
     {
       "id": "EU-GDPR",
@@ -802,7 +802,7 @@
       "timing": "In force and directly applicable. The concrete obligations depend on the roles, data, purposes, and transfer path."
     }
   ],
-  "source_digest": "327e886069be5c76171fb07bb07b4e91386bd283bc7b331bb12c8caf446cd111",
+  "source_digest": "0805108033d3abd5f725e11133448c29a0a06e57d4f6b7804ac03a3cc90c6214",
   "disclaimer": "This public-safe demonstration uses synthetic facts and illustrative internal guardrails. It is legal-operations and deal-structuring support. It is not legal or accounting advice. Qualified Legal, Finance, Tax, Security, Product, and Safety reviewers must validate the analysis before any external use.",
   "external_action_allowed": false
 }
