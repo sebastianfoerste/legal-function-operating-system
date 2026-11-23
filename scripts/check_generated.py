@@ -20,6 +20,8 @@ EXPECTED = (
     "approval-matrix.md",
     "approval-matrix.json",
     "approval-matrix.html",
+    "dpa-review.md",
+    "dpa-review.json",
     "intake-page.html",
     "message-drafts.json",
     "message-drafts.md",
@@ -57,6 +59,7 @@ def main() -> int:
                 "--quiet",
             ]
         )
+        dpa_status = board_cli(["dpa-review", "--out", str(output)])
         raas_status = raas_cli(
             [
                 "--input",
@@ -68,7 +71,8 @@ def main() -> int:
         )
         intake_status = board_cli(["intake-page", "--out", str(output)])
         drafts_status = board_cli(["message-drafts", "--out", str(output)])
-        if board_status != 0 or raas_status != 0 or intake_status != 0 or drafts_status != 0:
+        statuses = (board_status, dpa_status, raas_status, intake_status, drafts_status)
+        if any(status != 0 for status in statuses):
             print("generated-artifact check could not regenerate the demo")
             return 1
 
