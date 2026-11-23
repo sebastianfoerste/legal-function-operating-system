@@ -519,6 +519,47 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
+ACCEPT_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, standing, ended, REQUESTER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function room(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    return page;
+  }
+  // The requester's "Delivery package" section: the link, the Accept delivery button and
+  // any muted sentence. The button is counted on the whole page, so none can hide elsewhere.
+  const delivery = async (page) => {
+    const section = page.locator("section", { has: page.locator("#d-h") });
+    return {
+      links: await section.getByRole("link", { name: "Open the approved customer package" }).count(),
+      accept: await page.getByRole("button", { name: "Accept delivery" }).count(),
+      muted: await section.locator("p.muted").allInnerTexts(),
+    };
+  };
+  out.standing = await delivery(await room(REQUESTER, standing));
+  out.ended = await delivery(await room(REQUESTER, ended));
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
 def _node_env() -> dict[str, str] | None:
     node, npm = shutil.which("node"), shutil.which("npm")
     if not node or not npm:
@@ -802,6 +843,33 @@ def test_the_room_offers_the_package_only_while_its_delivery_stands(tmp_path, mo
     assert out["untouchedRequester"] == {"links": 0, "here": 0, "muted": [never]}
     assert (out["untouchedOwner"]["links"], out["untouchedOwner"]["here"]) == (0, 0)
     assert never in out["untouchedOwner"]["muted"]
+
+
+def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
+    tmp_path, monkeypatch
+) -> None:
+    service = make_service(tmp_path)
+    standing = run_until(service, "routine", "A12")  # ready for delivery: the package stands
+    ended = run_until(service, "specialist-revision", "B44")  # ready for delivery as well
+    # A note written after the package was prepared ends that delivery; the matter stays
+    # ready for delivery, where the room used to keep offering the button.
+    service.comment(
+        OWNER,
+        ended,
+        revision(service, ended),
+        anchor_kind="deliverable_section",
+        anchor_id="accepted_exceptions",
+        body="A late note on this section, written after the package was prepared.",
+    )
+    out = _run_node(tmp_path, monkeypatch, service, ACCEPT_SCRIPT, standing, ended, REQUESTER)
+    changed = (
+        "The package prepared earlier is no longer approved: the matter changed after it was "
+        "prepared."
+    )
+
+    assert out["errors"] == []
+    assert out["standing"] == {"links": 1, "accept": 1, "muted": []}
+    assert out["ended"] == {"links": 0, "accept": 0, "muted": [changed]}
 
 
 def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:

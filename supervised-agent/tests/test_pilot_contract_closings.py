@@ -9,6 +9,7 @@ exportable assessment for a withdrawn matter. Everything here is synthetic.
 from __future__ import annotations
 
 import json
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -403,6 +404,79 @@ def test_the_shortest_reason_a_withdrawal_accepts_makes_a_valid_review_decision(
     with pytest.raises(InvalidCommandError, match="withdrawal reason must be at least 20"):
         service.withdraw(OWNER, other, revision(service, other), note="Paused by customer.")
     assert _stored(service, other) == before
+
+
+@pytest.mark.parametrize(
+    "reason",
+    [
+        "​" * 25,  # zero-width spaces only
+        "Paused by customer." + "​" * 5,  # 19 visible characters, padded
+        "Paused" + "⁠" * 20 + " by customer",  # word joiners count for nothing
+    ],
+)
+def test_a_withdrawal_reason_counts_only_the_characters_a_reader_sees(tmp_path, reason) -> None:
+    # The requester and the record read the reason, as they read the triage reasons, so
+    # invisible characters do not make up the 20. A refusal writes nothing.
+    service = make_service(tmp_path)
+    matter_id = run_until(service, "routine", "A11")
+    before = _stored(service, matter_id)
+    with pytest.raises(
+        InvalidCommandError, match="withdrawal reason must be at least 20 visible characters"
+    ):
+        service.withdraw(REQUESTER, matter_id, revision(service, matter_id), note=reason)
+    assert _stored(service, matter_id) == before
+
+    # Twenty visible characters are enough, and the reason is kept as typed.
+    typed = "​Paused by customer .​"
+    service.withdraw(REQUESTER, matter_id, revision(service, matter_id), note=typed)
+    assessment = _stored(service, matter_id)["assessment"]
+    assert assessment.review_state == "rejected"
+    assert assessment.review_note.endswith(f"Matter withdrawn without delivery: {typed}")
+
+
+class _StepClock:
+    """A service clock far from the computer's, one second later each time it is read."""
+
+    def __init__(self) -> None:
+        self.start, self.reads = datetime(2031, 3, 3, 8, 0, tzinfo=UTC), 0
+
+    def now(self) -> str:
+        self.reads += 1
+        moment = self.start + timedelta(seconds=self.reads)
+        return moment.isoformat(timespec="microseconds").replace("+00:00", "Z")
+
+
+def test_each_review_decision_on_the_stored_assessment_takes_its_commands_time(
+    tmp_path,
+) -> None:
+    # request_revision, approve and withdraw record a review decision on the stored
+    # assessment in the same step as their event. Both carry the time the service's clock
+    # gave that command.
+    service = make_service(tmp_path, clock=_StepClock())
+    matter_id = run_until(service, "specialist-revision", "B42")  # revised, then approved
+    _withdraw(service, matter_id, OWNER, "2026-09-09T09:00:00Z")
+
+    step_event = {
+        "revision_requested": "revision_requested",
+        "approved": "approved",
+        "rejected": "matter_withdrawn",
+    }
+    events = [
+        (e["event_type"], e["occurred_at"])
+        for e in service.history(OWNER, matter_id)["events"]
+        if e["event_type"] in step_event.values()
+    ]
+    with service.store.reading() as connection:
+        current = service._matter(connection, matter_id)["current_version"]
+        decisions = [
+            (step_event[(entry.details or {})["state"]], entry.timestamp_utc)
+            for version in range(1, current + 1)
+            for entry in service._version(connection, matter_id, version)[0].assessment.audit_events
+            if entry.event_type == "review_decision_applied"
+        ]
+    assert [kind for kind, _ in events] == ["revision_requested", "approved", "matter_withdrawn"]
+    assert decisions == events
+    assert all(moment.startswith("2031-03-03T08:") for _, moment in decisions)
 
 
 @pytest.mark.parametrize(

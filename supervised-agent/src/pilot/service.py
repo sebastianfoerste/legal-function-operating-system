@@ -1848,6 +1848,7 @@ class PilotService:
                 ReviewDecision(
                     reviewer=ctx.actor.display_name, state="revision_requested", note=text
                 ),
+                decided_at=ctx.now,
             )
             self._save_body(ctx)
             self._decision(
@@ -1892,7 +1893,8 @@ class PilotService:
             text = _require_text(note, 30, "approval note")
             self._transition(ctx, "approve")
             # The parent assessment and the pilot decision are approved in one step,
-            # so neither can be approved without the other.
+            # so neither can be approved without the other. The assessment's audit entry
+            # takes the command's time, the time the approval event records.
             ctx.body.assessment = apply_review_decision(
                 ctx.body.assessment,
                 ReviewDecision(
@@ -1900,6 +1902,7 @@ class PilotService:
                     state="approved",
                     note=text,
                 ),
+                decided_at=ctx.now,
             )
             self._save_body(ctx)
             self._decision(
@@ -2141,12 +2144,15 @@ class PilotService:
     def withdraw(self, actor_id, matter_id, expected_revision, *, note, stamp=None):
         def handler(ctx: _Ctx) -> None:
             self._require_access(ctx, WITHDRAWAL_ROLES)
-            text = _require_text(note, 20, "withdrawal reason")
+            # The requester and the record read this reason, so only the characters a reader
+            # sees count toward the minimum, as for the triage reasons.
+            text = _require_visible_text(note, 20, "withdrawal reason")
             self._invalidate(ctx, ("specialist_signoff", "final_approval"), "matter withdrawn")
             # A withdrawal also records a rejected review decision on the parent assessment,
             # in the same step and whatever state the matter had reached, so the assessment
             # is not left approved or exportable once its approval is cancelled. A review
-            # decision needs a note of 20 characters; the reason alone has that many.
+            # decision needs a note of 20 characters; the reason alone has that many. Its
+            # audit entry takes the command's time, the time the withdrawal event records.
             ctx.body.assessment = apply_review_decision(
                 ctx.body.assessment,
                 ReviewDecision(
@@ -2154,6 +2160,7 @@ class PilotService:
                     state="rejected",
                     note=f"Matter withdrawn without delivery: {text}",
                 ),
+                decided_at=ctx.now,
             )
             self._save_body(ctx)
             ctx.new_state, ctx.extra["closed_outcome"] = "closed", "withdrawn_without_delivery"
@@ -2766,7 +2773,12 @@ class PilotService:
             }
 
     def package_file(self, actor_id: str, matter_id: str) -> Path:
-        """The customer package of a delivery that stands. Refused in every other case."""
+        """The customer package of a delivery that stands. Refused in every other case.
+
+        A delivery that stands but whose file is gone from the export folder is a fault in
+        the store. It is answered as not found, with the file named, so the reader learns
+        what is missing.
+        """
 
         with self.store.reading() as connection:
             ctx = self._context(connection, actor_id, matter_id, Stamp())
@@ -2776,7 +2788,13 @@ class PilotService:
             if standing is None:
                 raise PermissionDeniedError(reason or NO_PACKAGE)
             folder = str(json.loads(standing["body"])["folder"])
-            return self.export_root / folder / "customer-package.html"
+            path = self.export_root / folder / "customer-package.html"
+            if not path.is_file():
+                raise NotFoundError(
+                    "the package file of this delivery is missing from the export folder: "
+                    f"{folder}/customer-package.html"
+                )
+            return path
 
     def version_document(self, actor_id: str, matter_id: str, version: int) -> bytes:
         with self.store.reading() as connection:

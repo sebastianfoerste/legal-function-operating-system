@@ -9,6 +9,7 @@ and its files stay for the audit trail. Everything here is synthetic.
 
 from __future__ import annotations
 
+import json
 from collections.abc import Callable
 from pathlib import Path
 from typing import Any
@@ -516,6 +517,32 @@ def test_someone_who_is_not_on_the_matter_learns_nothing_about_its_package(tmp_p
     assert (status, payload["error"]) == (404, "not_found")
 
 
+def test_a_missing_package_file_is_named_and_not_a_server_error(tmp_path) -> None:
+    # The records say the delivery stands, but its file is gone from the export folder. The
+    # route answers not found and names the file; the view still reports the records.
+    api, service, matter = _ready(tmp_path)
+    with service.store.reading() as connection:
+        body = connection.execute(
+            "SELECT body FROM deliverable_manifests WHERE matter_id = ? AND kind = "
+            "'delivery_package' ORDER BY manifest_id DESC LIMIT 1",
+            (matter,),
+        ).fetchone()["body"]
+    folder = json.loads(body)["folder"]
+    (service.export_root / folder / "customer-package.html").unlink()
+
+    missing = (
+        "the package file of this delivery is missing from the export folder: "
+        f"{folder}/customer-package.html"
+    )
+    for actor in READERS["routine"]:
+        status, answer = _package(api, actor, matter)
+        assert (status, answer["error"], answer["message"]) == (404, "not_found", missing)
+        assert _view(api, actor, matter)["package"] == {"may_open": True, "reason": None}
+    # Someone not on the matter learns nothing about the file either.
+    status, answer = _package(api, OTHER_OWNER, matter)
+    assert (status, answer["error"]) == (403, "permission_denied")
+
+
 # -- the page -----------------------------------------------------------------------
 
 
@@ -530,3 +557,13 @@ def test_the_room_takes_the_package_line_from_the_service() -> None:
     assert "view.delivery" not in REVIEW_ROOM_HTML
     assert 'm.kind === "delivery_package"' not in REVIEW_ROOM_HTML
     assert "innerHTML" not in REVIEW_ROOM_HTML
+
+
+def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened() -> None:
+    # The button follows view.package.may_open, which asks the evidence accept_delivery
+    # needs, so the room never offers to accept a delivery that has ended.
+    assert REVIEW_ROOM_HTML.count('formButton("Accept delivery"') == 1
+    assert (
+        'view.matter.state === "ready_for_delivery" && view.package.may_open ? '
+        'h("div", null, formButton("Accept delivery"'
+    ) in REVIEW_ROOM_HTML

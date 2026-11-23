@@ -281,7 +281,10 @@ are kept. The matter view (`GET /pilot/api/matters/{id}`) carries the same answe
 kinds of reader as `package`: `{"may_open": true, "reason": null}` while the package may
 be opened, `{"may_open": false, "reason": null}` when none was ever prepared, and
 `{"may_open": false, "reason": "<sentence>"}` when one was prepared and its delivery has
-ended. The review room shows the link or the sentence from that field.
+ended. The review room shows the link or the sentence from that field, and offers the
+requester "Accept delivery" only while `may_open` is true. If the delivery stands but its
+`customer-package.html` is missing from the export folder, the route answers 404
+`not_found` and names the missing file.
 
 Answers to a refused request or command:
 
@@ -291,6 +294,7 @@ Answers to a refused request or command:
 | 403 | `host_not_allowed` | The `Host` header is not this server |
 | 403 | `origin_not_allowed` | The `Origin` header names another origin |
 | 403 | `permission_denied` | Unknown actor, wrong role, not assigned to the matter, or no approved package may be opened |
+| 404 | `not_found` | Unknown route, matter, version, comment or change, or the package file of a delivery that stands is missing |
 | 409 | `stale_submission` | The matter changed; `current_revision` is returned |
 | 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |
 | 409 | `export_blocked` | The export gate refused; `checks` lists each condition |
