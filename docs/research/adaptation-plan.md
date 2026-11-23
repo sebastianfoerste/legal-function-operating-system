@@ -998,10 +998,16 @@ owner took the recommended option for each.
    for a file under `node_modules`, which git would add). In a git checkout it asks git
    for the files it tracks or would add under the agent, so a file git ignores, such as a
    developer's own `.vscode/mcp.json`, does not fail it and a tracked file does, wherever
-   it is. Where git cannot say (no checkout, no git, a command that fails or lists
-   nothing), it walks every directory except the ones a tool fills on the machine: version
-   control data, virtual environments, installed packages, tool caches and the local pilot
-   store. `tests/test_research_docs.py` searches the same way and requires its copy of the
+   it is. Where git cannot say (no checkout, no git, a command that fails, as it does when
+   git's ownership check refuses a checkout that belongs to another user, or a command
+   that lists nothing), it walks every directory except the ones a tool fills on the
+   machine: version control data, virtual environments, installed packages, tool caches
+   and the local pilot store. The walk does not find the same files: it also finds a file
+   git ignores, and it misses a tracked file inside one of those directories. So the
+   search reports which of the two answered, and a guard that finds a file says so in its
+   failure message (recorded on 2026-11-23). A walk that finds no such file passes,
+   because a copy of the agent without git is a legitimate place to run the suite.
+   `tests/test_research_docs.py` searches the same way and requires its copy of the
    search to be the same as the agent's. `test_runtime_agent.py` sends the README's two
    example requests with the headers and the body the README gives, so an example without
    its `Content-Type` header fails. `test_no_external_model.py` still checks that no
