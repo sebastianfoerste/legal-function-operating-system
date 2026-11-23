@@ -8,7 +8,8 @@ refuses, the matter view says why, and the stored manifest and its files stay fo
 trail. A matter that stays ready for delivery after its delivery ended is shown to its
 requester as "In review", not as a package to accept. The requester's view lists only the
 manifest of the package that may be opened, and their matter list shows the label of their
-status in place of the pilot state. Everything here is synthetic.
+status in place of the pilot state. The last tests hold the runbook, the API guide and the
+capability record to the sentences that describe this. Everything here is synthetic.
 """
 
 from __future__ import annotations
@@ -1203,3 +1204,136 @@ def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened() -
         'view.matter.state === "ready_for_delivery" && view.package.may_open ? '
         'h("div", null, formButton("Accept delivery"'
     ) in REVIEW_ROOM_HTML
+
+
+# -- the records --------------------------------------------------------------------
+
+DOCS = Path(__file__).resolve().parents[1] / "docs"
+ROW = 'The room shows "The package prepared earlier is no longer approved" where the link was'
+
+
+def test_the_runbook_says_what_a_requester_is_shown_once_a_delivery_has_ended() -> None:
+    # The sentences that describe the behaviour the tests above pin, held to the words
+    # those tests compare: the explanation, the next step and the two labels.
+    runbook = (DOCS / "pilot" / "RUNBOOK.md").read_text(encoding="utf-8")
+    [section_7] = [
+        paragraph
+        for paragraph in runbook.split("\n\n")
+        if paragraph.startswith("A stored manifest alone does not open a package either.")
+    ]
+    stage, label, explanation, action, _ = TOLD_ENDED
+    assert (stage, label, TOLD_READY[1]) == ("in_review", "In review", "Ready for you")
+    for sentence in (
+        # What ends a delivery, and what does not.
+        "A withdrawal, a revision request, an amendment or restore that makes a new version, "
+        "a comment written, resolved or reopened after the package was prepared (any change "
+        "to the state of a comment), and the assignment of another final approver in place of "
+        "the one who approved each end it.",
+        "An answer to a comment changes no comment's state and ends nothing.",
+        # The stage, the explanation and the next step.
+        "The requester's status goes by the same answer.",
+        "A matter that stays `ready_for_delivery` after its delivery ended, because a comment "
+        "was written, resolved or reopened after the package was prepared or because another "
+        f'final approver was assigned, is shown to its requester as "{label}", not as '
+        f'"{TOLD_READY[1]}".',
+        f'The explanation reads "{explanation}", the next step is "{action}" unless a question '
+        'to the requester is open, and the room offers no "Accept delivery" button.',
+        "The state itself does not change, and from there a reviewer requests a revision, "
+        "because `approve` and `prepare_delivery` are not open from that state.",
+        # The matter list and the delivery list.
+        "A reviewer's matter list still shows the pilot state, `ready for delivery`.",
+        "The requester's matter list shows the label of their status instead, here "
+        f'"{label}", so the list and the status say the same in every state.',
+        "The requester's view (`GET /pilot/api/matters/{id}`) lists as `delivery` only the "
+        "manifest of the package that may be opened now: one manifest while a delivery stands "
+        "and after it was accepted, and none once the delivery has ended.",
+        "A reviewer's view keeps every stored manifest under `manifests`.",
+        # The ways back, and the one change that has none.
+        "If the reviewed state the approval was given on comes back, the delivery stands "
+        f'again and the status reads "{TOLD_READY[1]}" again.',
+        "That happens when a comment is put back into the state it had when the package was "
+        "prepared (a reopened comment is resolved again, or a resolved one is reopened) or "
+        "when the earlier approver is assigned again.",
+        "A comment written after the package was prepared cannot be taken back: resolving it "
+        "does not restore the delivery.",
+        "A new package opens after a new final approval and a new `prepare_delivery`.",
+    ):
+        assert sentence in section_7, sentence
+
+    # The troubleshooting row: one row, in full.
+    [row] = [line for line in runbook.splitlines() if line.startswith(f"| {ROW} |")]
+    assert row == (
+        f"| {ROW} | The delivery ended after the package was prepared (section 7). If the "
+        "matter is still open, complete the review, obtain a new final approval and run "
+        "`prepare_delivery` again. While the matter is still `ready_for_delivery`, its "
+        f'requester reads "{label}", in the status and in their matter list; a reviewer starts '
+        "with `request_revision`. After the new final approval the requester reads "
+        f'"Approved", and "{TOLD_READY[1]}" once the new package is prepared. A withdrawn '
+        "matter stays closed. |"
+    )
+    # The row said "until then", as if the requester read "In review" up to the new package.
+    assert 'shows its requester "In review" until then' not in runbook
+
+
+def test_the_api_guide_says_what_the_views_and_the_list_carry() -> None:
+    guide = " ".join((DOCS / "API.md").read_text(encoding="utf-8").split())
+    room = guide.split("## Pilot review-room API ", 1)[1].split(" ## ", 1)[0]
+    _, label, _, action, _ = TOLD_ENDED
+    for sentence in (
+        # What ends a delivery, and the three answers of `package`.
+        "A withdrawal, a revision request, a new version, a comment written, resolved or "
+        "reopened after the package was prepared (any change to the state of a comment) or "
+        "another final approver assigned in place of the one who approved ends the delivery.",
+        'as `package`: `{"may_open": true, "reason": null}` while the package may be opened, '
+        '`{"may_open": false, "reason": null}` when none was ever prepared, and `{"may_open": '
+        'false, "reason": "<sentence>"}` when one was prepared and its delivery has ended.',
+        "The review room shows the link or the sentence from that field, and offers the "
+        'requester "Accept delivery" only while `may_open` is true.',
+        # The status.
+        "The requester's `requester_status` goes by the same answer: a matter that is "
+        "`ready_for_delivery` while `may_open` is false has the stage `in_review` and, unless "
+        f'a question to the requester is open, the next step "{action}", not `ready` and '
+        f'"{TOLD_READY[3]}".',
+        # The delivery list and the manifests.
+        "`package` is the answer to whether a package may be opened.",
+        "In a requester's view, `delivery` holds the manifest of the package that may be "
+        "opened now and nothing else: one manifest while `package.may_open` is true, and an "
+        "empty list when no package was prepared or its delivery has ended.",
+        "An earlier package of the same matter is not listed.",
+        "A reviewer's view has no `delivery`.",
+        "Its `manifests` holds every manifest stored for the matter, internal review drafts "
+        "and packages whose delivery has ended included, as the record of what was written.",
+        # The matter list.
+        "`GET /pilot/api/matters` gives each matter as "
+        + ", ".join(f"`{key}`" for key in LIST_KEYS[:-1])
+        + f" and `{LIST_KEYS[-1]}`.",
+        "`state` is the pilot state, for every role.",
+        "For a business requester each entry also carries `requester_status_label`, the "
+        "`label` of the `requester_status` in their view of that matter, for example "
+        f'"{label}" for a matter that is `ready_for_delivery` after its delivery ended and '
+        '"Closed: withdrawn without delivery" for a withdrawn one.',
+        "The review room shows a requester that label in the list and every other role the "
+        "pilot state.",
+        "No other role's entry has the key.",
+    ):
+        assert sentence in room, sentence
+
+
+def test_the_capability_record_says_when_the_package_is_opened_and_what_is_shown() -> None:
+    record = (DOCS / "pilot" / "CAPABILITY_RECORD.md").read_text(encoding="utf-8")
+    [row] = [
+        line for line in record.splitlines() if line.startswith("| The approved package is opened")
+    ]
+    capability, modules, tests = (cell.strip() for cell in row.strip("|").split("|"))
+    assert capability == (
+        "The approved package is opened only while its delivery stands (ready for delivery "
+        "with `delivery_manifest_current` passing, or delivered and accepted). The service "
+        "decides it once, for the package route, for the review room and for the requester's "
+        "status; a stored manifest alone opens nothing. A matter that stays ready for delivery "
+        f'after its delivery ended is shown to its requester as "{TOLD_ENDED[1]}", with nothing '
+        "to accept, in the status and in their matter list, which shows a requester the label "
+        "of the status and not the pilot state. The requester's view lists the manifest of a "
+        "package only while that package may be opened"
+    )
+    assert "`src/pilot/requester_status.py`" in modules and "`src/pilot/service.py`" in modules
+    assert "`tests/test_pilot_package_standing.py`" in tests

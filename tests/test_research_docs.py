@@ -256,9 +256,14 @@ CHOICES = {
         # depends on output buffering, so the plan does not say it did.
         "that started the command got no answer to `initialize`",
         "the agent ships no MCP client configuration",
-        # What the guard against a returning file looks at, and since when.
-        "The guard is about what the agent ships (corrected on 2026-11-23:",
-        "In a git checkout it asks git for the files it tracks or would add under the agent",
+        # What the guard against a returning file looks at, and since when: an ignored file
+        # does not fail it and a tracked one does, where it was the other way round.
+        "The guard is about what the agent ships (corrected on 2026-11-23: it had failed on a "
+        "developer's own ignored file and passed for a file under `node_modules`, which git "
+        "would add).",
+        "In a git checkout it asks git for the files it tracks or would add under the agent, "
+        "so a file git ignores, such as a developer's own `.vscode/mcp.json`, does not fail it "
+        "and a tracked file does, wherever it is.",
         # When the walk answers instead, the refusal of git's ownership check included, and
         # that the guard then says so and does not fail for that alone.
         "Where git cannot say (no checkout, no git, a command that fails, as it does when "
@@ -324,6 +329,71 @@ CONFIRMED = {
         "open."
     ),
 }
+# The note of 2026-11-23 in ADR 0011, on a matter that stays ready for delivery after its
+# delivery ended: each sentence that says what the requester is shown, why, how the earlier
+# status comes back and what the matter list and the view carry. The agent's suite pins the
+# behaviour (test_pilot_intake_ux.py and test_pilot_package_standing.py); these pin the
+# record of it, in the order of the note.
+ENDED_DELIVERY_NOTE = (
+    "Note (2026-11-23): one state now shows another of the six stages in one case.",
+    "A matter can stay `ready_for_delivery` after its delivery ended.",
+    "A comment written, resolved or reopened after the package was prepared does that, in "
+    "other words any change to the state of a comment, and so does another final approver "
+    "assigned in place of the one who approved.",
+    # The stage, the explanation and the next step.
+    'Such a matter is now shown as `in_review` (In review), with the explanation "The '
+    "package prepared earlier is no longer approved, because the matter changed after it was "
+    'prepared. Legal has to review the matter again before a package is ready for you." and '
+    'the next step "No action needed from you.".',
+    "An open question to the requester still replaces that next step, as it does in every "
+    "stage but `closed`.",
+    "A `ready_for_delivery` matter whose delivery stands is `ready`, as before, and every "
+    "other state shows the stage Decision 5 lists.",
+    # Why that stage: what the state machine leaves open.
+    "The state machine has two transitions from `ready_for_delivery`.",
+    "`accept_delivery` is the requester's, and its evidence `delivery_manifest_current` fails.",
+    "The other is `request_revision`, for the matter owner, a specialist reviewer or the "
+    "final approver, and it leads to `revision_requested`, which is `in_review` already.",
+    "`approve` and `prepare_delivery` are not open from `ready_for_delivery`.",
+    "`approved` would say that the review is approved and a package is being prepared, and "
+    "neither is true.",
+    "no stage is added, renamed or moved, and no pilot state is added either.",
+    # The status follows the delivery, and the ways back.
+    "`requester_status` receives it as `delivery_stands` and does not work it out again.",
+    "If legal restores the reviewed state the approval was given on, the delivery stands "
+    "again and the stage is `ready` again.",
+    "A comment has two ways back, and each puts it into the state it had when the package "
+    "was prepared: a comment that was reopened is resolved again, or a comment that was "
+    "resolved is reopened.",
+    "The approver has one: the earlier approver is assigned again.",
+    "A new comment cannot be taken back, so after one a package is offered only after a "
+    "revision request or a new version, a review and a new approval.",
+    # What the matter list shows a requester, and every other role.
+    "For a requester, each entry of `GET /pilot/api/matters` now also carries "
+    "`requester_status_label`, the label of the status in their view of that matter, and the "
+    "room shows it in the entry's pill.",
+    "One function in the service (`PilotService._requester_status`) puts the facts together "
+    "for the view and for the list, so the two cannot differ.",
+    'This holds in every state: a withdrawn matter reads "Closed: withdrawn without delivery" '
+    "in the requester's list, where it read `closed`.",
+    "The key `state` stays in the entry, every other role's list is unchanged, and their "
+    "page shows the pilot state as before.",
+    # What the requester's view lists as delivered.
+    "It now lists only the manifest of the package that may be opened now, which is the one "
+    "`PilotService._standing_package` returns, and nothing otherwise.",
+    "A reviewer's view keeps every stored manifest under `manifests`.",
+    "**Unchanged.** The stored state, the state machine, the export gate and "
+    "`legal-workflow-controls.v1`. No manifest is deleted or rewritten.",
+)
+# F3 of the plan: the stage of a matter whose delivery ended, where the spec says it and
+# where its acceptance says it.
+F3_EXCEPTION = (
+    "Since 2026-11-23 there is one exception: a matter that stays ready for delivery after "
+    'its delivery ended is shown as "In review", with its own explanation and nothing to '
+    "accept ([ADR 0011](../adr/0011-requester-vocabulary.md), note of that day).",
+    "Every pilot state maps to exactly one stage, except that `ready_for_delivery` shows "
+    '"In review" while its delivery has ended.',
+)
 # The agent ships what git tracks or would add. `git ls-files` with these options lists both,
 # by their path under the directory it runs in, and leaves out what a .gitignore or the
 # machine's own exclude file names, such as a developer's .vscode/mcp.json. NUL ends each path.
@@ -780,6 +850,40 @@ class OwnerChoicesTest(unittest.TestCase):
             self.assertEqual(
                 str(failure.exception), f"found .mcp.json, docs/mcp.json: {GIT_ANSWERED}"
             )
+
+
+class EndedDeliveryRecordsTest(unittest.TestCase):
+    """What the records of 2026-11-23 say a requester is shown once a delivery has ended."""
+
+    def test_the_vocabulary_record_says_what_the_requester_is_shown(self) -> None:
+        text = (ROOT / "docs" / "adr" / "0011-requester-vocabulary.md").read_text(encoding="utf-8")
+        # The note of that day, after the decision and its confirmation and before the
+        # alternatives. It runs to the next heading and includes its list.
+        self.assertEqual(len(re.findall(r"^Note \(2026-11-23\):", text, re.M)), 1)
+        before, after = text.split("\nNote (2026-11-23):", 1)
+        self.assertIn("\nConfirmed: 2026-11-20,", before)
+        note, rest = after.split("\n## ", 1)
+        self.assertTrue(rest.startswith("Alternatives rejected\n"), rest[:40])
+        note = _flat("Note (2026-11-23):" + note)
+        place = 0
+        for sentence in ENDED_DELIVERY_NOTE:
+            with self.subTest(sentence):
+                self.assertIn(sentence, note)
+                # In the order of the record, so no sentence is counted for another place.
+                self.assertGreaterEqual(note.find(sentence, place), place)
+                place = note.find(sentence, place) + len(sentence)
+        self.assertTrue(note.startswith(ENDED_DELIVERY_NOTE[0]))
+        # The note changes what one state shows. It adds no stage: Decision 1 stands.
+        self.assertIn("Every pilot state maps to one of the six", _flat(before))
+
+    def test_the_plan_names_the_exception_for_an_ended_delivery(self) -> None:
+        plan = (RESEARCH / "adaptation-plan.md").read_text(encoding="utf-8")
+        spec = _flat(_section(plan, "F3. Requester status (built)"))
+        for sentence in F3_EXCEPTION:
+            with self.subTest(sentence):
+                self.assertIn(sentence, spec)
+        # Without the exception the acceptance line is no longer true.
+        self.assertNotIn("Every pilot state maps to exactly one stage.", spec)
 
 
 if __name__ == "__main__":
