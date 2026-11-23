@@ -3,7 +3,7 @@
 ## Run the demo
 
 ```bash
-python -m pip install -r requirements.lock
+python -m pip install -r requirements.txt
 python master_orchestrator.py
 ```
 
@@ -50,6 +50,6 @@ Approval, rejection, revision requests and escalation require written review not
 
 ## Data boundary
 
-Use synthetic or approved public data only. External model calls remain disabled unless `LEGAL_AGENT_EXTERNAL_MODEL_ENABLED=true` is set deliberately.
+Use synthetic or approved public data only. The agent makes no model or network calls, and no setting turns one on.
 
 Source references beginning with `client:`, `candidate:`, `privileged:` or `confidential:` are treated as blockers.

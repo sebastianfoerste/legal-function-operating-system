@@ -10,7 +10,7 @@ from legal_function_os.collaboration_workspace import (
     render_portal,
     validate_workflow_definition,
 )
-
+from legal_function_os.design_tokens import PRINT_CSS, TOKENS_CSS
 
 REQUESTS = json.loads(Path("src/legal_function_os/data/sample_requests.json").read_text())
 
@@ -99,6 +99,21 @@ class CollaborationWorkspaceTests(unittest.TestCase):
             self.assertIn("Insufficient evidence in approved resources", content)
             self.assertNotIn("https://", content)
             self.assertIn('<html lang="en">', content)
+            # Shared tokens with dark mode and the light print block; every visible
+            # part of the page sits inside the one main landmark.
+            style = content.split("<style>\n", 1)[1].split("</style>", 1)[0]
+            self.assertTrue(style.startswith(TOKENS_CSS))
+            self.assertTrue(style.rstrip(" ").endswith(PRINT_CSS))
+            own = style[len(TOKENS_CSS) : style.rindex(PRINT_CSS)]
+            self.assertNotRegex(own, r"#[0-9a-fA-F]{3,6}\b")
+            self.assertIn(":focus-visible", own)
+            self.assertIn('<meta name="viewport" content="width=device-width, initial-scale=1">', content)
+            self.assertEqual(content.count("<main>"), 1)
+            body = content.split("<body>", 1)[1].split("<script>", 1)[0].strip()
+            self.assertTrue(body.startswith("<main>"))
+            self.assertTrue(body.endswith("</main>"))
+            for part in ("<h1>", "<label for=\"search\">", "<input id=\"search\"", 'id="status"', "<article>"):
+                self.assertIn(part, body)
         finally:
             output.unlink(missing_ok=True)
 

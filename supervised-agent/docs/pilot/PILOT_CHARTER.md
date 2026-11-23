@@ -44,7 +44,7 @@ A matter is eligible when all of the following hold. The software checks each co
 - Any client, candidate, privileged or confidential source material. Those source prefixes stop document processing.
 - Drafts whose relevant clauses sit in tables, text boxes, headers, footnotes or content controls, unless a person records how that content was reviewed.
 
-An excluded matter stays in triage. It can be withdrawn, or corrected by a new version that removes the cause.
+A matter excluded at triage stays in triage. The matter owner can decline it with a reason the requester sees, the requester can withdraw it, or a new version can remove the cause. A matter that an amendment after triage brings under an exclusion moves to `revised` and is held from export: it can be withdrawn or corrected by a new version, but not declined, because `decline` works only in triage. The software never declines a matter or proposes a reason; a person types it.
 
 ## Roles and responsibilities
 
@@ -53,8 +53,8 @@ The role names are those of the existing shared review room. For the trial each 
 | Role | Person in the trial | Responsible for |
 | --- | --- | --- |
 | Sponsor | to be named, General Counsel level | Agreeing scope, decision authority and stop conditions; deciding at the end whether to continue |
-| Business requester | to be named, Revenue Operations | Complete intake; answering clarifications; accepting the package |
-| Matter owner | to be named, Commercial Counsel | Triage; assigning reviewers; deciding non-specialist changes; revisions; preparing exports |
+| Business requester | to be named, Revenue Operations | Complete intake; answering clarifications and snooze questions; accepting the package |
+| Matter owner | to be named, Commercial Counsel | Triage, including declining a request, closing a duplicate and snoozing, each with a reason the requester sees; assigning reviewers; deciding non-specialist changes; revisions; preparing exports |
 | Specialist reviewer | to be named, Privacy Counsel | Deciding changes in the specialty; a sign-off bound to one version |
 | Final approver | to be named, at the tier the parent matrix requires | Approval of one exact version and reviewed state; requesting revisions |
 | Pilot lead | to be named, Legal Operations | Onboarding, the baseline, the weekly measurement report, the retrospective |

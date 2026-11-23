@@ -225,17 +225,13 @@ class PilotApi:
         }
 
     def _package(self, actor_id: str, matter_id: str) -> str:
-        """The approved customer package, served only from a stored delivery manifest."""
+        """The approved customer package, served only while its delivery stands.
 
-        view = self.service.view_matter(actor_id, matter_id)
-        manifests = view.get("delivery") or [
-            m for m in view.get("manifests", []) if m["kind"] == "delivery_package"
-        ]
-        if not manifests:
-            raise PermissionDeniedError("no approved delivery package exists for this matter")
-        latest = manifests[-1]
-        folder = self.service.export_root / latest["folder"]
-        return (folder / "customer-package.html").read_text(encoding="utf-8")
+        The service decides that, with the rule it also reports in the matter view; a
+        stored manifest alone opens nothing.
+        """
+
+        return self.service.package_file(actor_id, matter_id).read_text(encoding="utf-8")
 
 
 def _effort(body: dict[str, Any]) -> int | None:

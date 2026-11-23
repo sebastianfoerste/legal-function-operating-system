@@ -12,8 +12,10 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import sqlite3
 import time
+import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
@@ -22,7 +24,12 @@ from typing import Any
 from pydantic import BaseModel, Field, ValidationError
 
 from models import LegalOpsAssessment, ReviewDecision
-from src.docx_redline import DocumentIndex, UnsupportedDocumentError, index_docx
+from src.docx_redline import (
+    DocumentIndex,
+    UnsupportedDocumentError,
+    has_non_xml_char,
+    index_docx,
+)
 from src.export_gate import (
     ExportBlockedError,
     ExportContext,
@@ -56,9 +63,19 @@ from src.pilot.parent_bridge import (
 )
 from src.pilot.policy import is_substantive_change
 from src.pilot.requester_status import requester_status
+from src.pilot.snooze import (
+    SNOOZE_MAX_DAYS,
+    active_snooze,
+    latest_snooze,
+    matter_clock,
+    parse_time,
+    utc_text,
+)
 from src.pilot.state_machine import (
     EVIDENCE,
     REASSESSMENT_SOURCES,
+    TERMINAL_STATES,
+    TRIAGE_CLAIM_COMMANDS,
     WITHDRAWAL_ROLES,
     allowed_commands,
     find_transition,
@@ -78,6 +95,21 @@ COMMENT_STATES = frozenset(
     {"review", "revision_requested", "revised", "approved", "ready_for_delivery"}
 )
 DECISION_STATES = frozenset({"review", "revision_requested"})
+# Why no package may be opened. The package route answers with these sentences and the
+# review room shows them, so the two cannot differ.
+NO_PACKAGE = "no approved delivery package exists for this matter"
+PACKAGE_WITHDRAWN = (
+    "The package prepared earlier is no longer approved: the matter was withdrawn without "
+    "delivery."
+)
+PACKAGE_CHANGED = (
+    "The package prepared earlier is no longer approved: the matter changed after it was "
+    "prepared."
+)
+PACKAGE_NOT_THE_ACCEPTED_ONE = (
+    "The package stored for this matter cannot be opened: it is not the package whose "
+    "delivery was accepted."
+)
 
 
 class PilotError(Exception):
@@ -201,10 +233,47 @@ def compute_review_hash(
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def _days_after(moment: str, days: int) -> str | None:
+    start = parse_time(moment)
+    return utc_text(start + timedelta(days=days)) if start else None
+
+
 def _require_text(value: str | None, minimum: int, label: str) -> str:
     text = " ".join((value or "").split())
     if len(text) < minimum:
         raise InvalidCommandError(f"{label} must be at least {minimum} characters")
+    return text
+
+
+# Default-ignorable code points outside general category Cf: a combining grapheme joiner,
+# Hangul fillers, Khmer and Mongolian inherent vowels and selectors, variation selectors
+# and the reserved ones. None is drawn, or each draws a blank. A fixed list, so what counts
+# does not depend on the Unicode tables of the Python version.
+_IGNORABLE = re.compile(
+    "[\u034f\u115f\u1160\u17b4\u17b5\u180b-\u180f\u2065\u3164\ufe00-\ufe0f\uffa0"
+    "\ufff0-\ufff8\U000e0000-\U000e0fff]"
+)
+
+
+def _visible_length(text: str) -> int:
+    """The characters of ``text`` a reader sees.
+
+    Format characters (category Cf, such as a zero-width space or a word joiner) and the
+    other default-ignorable code points are not counted, and a run of whitespace counts
+    as one space.
+    """
+
+    visible = _IGNORABLE.sub("", "".join(c for c in text if unicodedata.category(c) != "Cf"))
+    return len(" ".join(visible.split()))
+
+
+def _require_visible_text(value: str | None, minimum: int, label: str) -> str:
+    """Text that someone else reads: only the characters they see count toward the
+    minimum, and the text is kept as typed, with runs of whitespace collapsed."""
+
+    text = " ".join((value or "").split())
+    if _visible_length(text) < minimum:
+        raise InvalidCommandError(f"{label} must be at least {minimum} visible characters")
     return text
 
 
@@ -236,13 +305,42 @@ class PilotService:
     # ------------------------------------------------------------------ actors
 
     def register_actor(self, actor: Actor) -> Actor:
+        """Register a synthetic actor once; refuse any later change to it.
+
+        Actors are not matter-scoped, so no event on a matter's hash chain could record a
+        change to one, and the export gate reads the author of each recorded decision as
+        stored now. Replacing an actor used to happen silently: re-registering the General
+        Counsel approver with a lower tier made a recorded approval stop counting, with no
+        event. So a registered actor's display name, role, specialty, approval tier and
+        availability stay as first registered, and a change is refused; a new synthetic
+        actor ID is the way to change any of them. No command writes ``available`` after
+        registration. Registering an identical actor again changes nothing and keeps its
+        stored onboarding, so ``pilot seed`` on an existing store does not reset it.
+        Onboarding changes only through ``complete_onboarding``.
+        """
+
         with self.store.transaction() as connection:
-            connection.execute(
-                "INSERT INTO actors (actor_id, body) VALUES (?, ?) "
-                "ON CONFLICT(actor_id) DO UPDATE SET body = excluded.body",
-                (actor.actor_id, actor.model_dump_json()),
+            row = connection.execute(
+                "SELECT body FROM actors WHERE actor_id = ?", (actor.actor_id,)
+            ).fetchone()
+            if row is None:
+                connection.execute(
+                    "INSERT INTO actors (actor_id, body) VALUES (?, ?)",
+                    (actor.actor_id, actor.model_dump_json()),
+                )
+                return actor
+            stored = Actor.model_validate_json(row["body"])
+            changed = sorted(
+                name
+                for name, value in actor.model_dump(exclude={"onboarded"}).items()
+                if getattr(stored, name) != value
             )
-        return actor
+            if changed:
+                raise InvalidCommandError(
+                    f"{actor.actor_id} is already registered; its {', '.join(changed)} "
+                    "cannot change. Register a new synthetic actor ID instead"
+                )
+            return stored
 
     def complete_onboarding(self, actor_id: str, completed_tasks: list[str]) -> Actor:
         """Mark an actor ready once every onboarding task of the role is acknowledged."""
@@ -767,12 +865,17 @@ class PilotService:
         eligibility = self._eligibility(ctx, "delivery_package")
         return (eligibility.eligible, "; ".join(eligibility.reasons()) or "eligible")
 
-    def _ev_delivery_manifest_current(self, ctx: _Ctx) -> tuple[bool, str]:
-        manifest = ctx.connection.execute(
+    @staticmethod
+    def _latest_delivery_manifest(ctx: _Ctx) -> sqlite3.Row | None:
+        row: sqlite3.Row | None = ctx.connection.execute(
             "SELECT * FROM deliverable_manifests WHERE matter_id = ? AND kind = "
             "'delivery_package' ORDER BY manifest_id DESC LIMIT 1",
             (ctx.matter_id,),
         ).fetchone()
+        return row
+
+    def _ev_delivery_manifest_current(self, ctx: _Ctx) -> tuple[bool, str]:
+        manifest = self._latest_delivery_manifest(ctx)
         if manifest is None:
             return False, "no delivery package has been prepared"
         if manifest["version"] != ctx.version or manifest["review_hash"] != self._review_hash(ctx):
@@ -788,6 +891,29 @@ class PilotService:
             len(note) >= 20,
             "acceptance note recorded" if len(note) >= 20 else "note too short",
         )
+
+    def _ev_closure_reason_recorded(self, ctx: _Ctx) -> tuple[bool, str]:
+        seen = _visible_length(str(ctx.extra.get("reason") or ""))
+        if seen < 20:
+            return False, f"the reason has {seen} visible characters; at least 20 are needed"
+        return True, "reason recorded; the requester sees it"
+
+    def _ev_duplicate_original_visible(self, ctx: _Ctx) -> tuple[bool, str]:
+        original = " ".join(str(ctx.extra.get("original_matter_id") or "").split())
+        if not original:
+            return False, "name the matter this one duplicates"
+        if original == ctx.matter_id:
+            return False, "a matter cannot be a duplicate of itself"
+        row = ctx.connection.execute(
+            "SELECT * FROM matters WHERE matter_id = ?", (original,)
+        ).fetchone()
+        # An unknown matter and one the owner may not see get the same answer, so the
+        # refusal says nothing about matters outside the owner's view.
+        if row is None or not self._can_read(ctx.connection, ctx.actor, row):
+            return False, f"no matter {original} is visible to you"
+        if row["state"] == "duplicate":
+            return False, f"{original} is itself a duplicate; name the matter it duplicates"
+        return True, f"{original} is visible to you and is not a duplicate"
 
     # ------------------------------------------------------------- eligibility
 
@@ -973,21 +1099,33 @@ class PilotService:
                     }
                 ],
             )
-        if command != "complete_triage":
-            self._require_access(ctx, transition.roles)
+        if command in TRIAGE_CLAIM_COMMANDS:
+            self._check_claim(ctx)
         else:
-            owners = self._assigned(ctx.connection, ctx.matter_id).get("matter_owner", [])
-            claimable = not owners or ctx.actor.actor_id in owners
-            if ctx.actor.role != "matter_owner" or not ctx.actor.onboarded or not claimable:
-                raise PermissionDeniedError(
-                    f"{ctx.actor.actor_id} cannot triage matter {ctx.matter_id}: only an "
-                    "onboarded matter owner may claim an unassigned matter"
-                )
+            self._require_access(ctx, transition.roles)
         ctx.new_state = transition.target
         evidence = self._evidence(ctx, transition.evidence)
         if not all(item["ok"] for item in evidence):
             raise TransitionBlockedError(command, evidence)
         return transition.target
+
+    def _check_claim(self, ctx: _Ctx) -> None:
+        """The triage verbs: an onboarded matter owner may claim an unassigned matter."""
+
+        owners = self._assigned(ctx.connection, ctx.matter_id).get("matter_owner", [])
+        claimable = not owners or ctx.actor.actor_id in owners
+        if ctx.actor.role != "matter_owner" or not ctx.actor.onboarded or not claimable:
+            raise PermissionDeniedError(
+                f"{ctx.actor.actor_id} cannot triage matter {ctx.matter_id}: only an "
+                "onboarded matter owner may claim an unassigned matter"
+            )
+
+    @staticmethod
+    def _claim(ctx: _Ctx) -> None:
+        ctx.connection.execute(
+            "INSERT OR IGNORE INTO assignments VALUES (?, 'matter_owner', ?, ?, ?)",
+            (ctx.matter_id, ctx.actor.actor_id, ctx.actor.actor_id, ctx.now),
+        )
 
     def _execute(
         self,
@@ -1001,17 +1139,23 @@ class PilotService:
         try:
             with self.store.transaction() as connection:
                 ctx = self._context(connection, actor_id, matter_id, stamp or Stamp())
-                if ctx.matter["state"] == "closed":
-                    raise TransitionBlockedError(
-                        command, [{"name": "state", "ok": False, "detail": "the matter is closed"}]
-                    )
                 assigned = self._assigned(connection, matter_id)
                 on_matter = any(ctx.actor.actor_id in ids for ids in assigned.values())
-                # Claiming an unassigned matter at triage is the only action open to
-                # someone who is not yet on the matter.
-                if not on_matter and command != "complete_triage":
+                # A triage verb on a matter in triage, which claims it, is the only action
+                # open to someone who is not yet on the matter. Outside triage, a closed
+                # matter included, they are told only that they are not on it, not which
+                # state it is in.
+                claiming = command in TRIAGE_CLAIM_COMMANDS and ctx.matter["state"] == "triage"
+                if not on_matter and not claiming:
                     raise PermissionDeniedError(
                         f"{ctx.actor.actor_id} is not assigned to matter {matter_id}"
+                    )
+                if ctx.matter["state"] in TERMINAL_STATES:
+                    detail = "the matter is closed"
+                    if ctx.matter["state"] != "closed":
+                        detail += f" ({ctx.matter['state']})"
+                    raise TransitionBlockedError(
+                        command, [{"name": "state", "ok": False, "detail": detail}]
                     )
                 if ctx.matter["revision"] != expected_revision:
                     raise StaleSubmissionError(expected_revision, ctx.matter["revision"])
@@ -1139,10 +1283,7 @@ class PilotService:
     def complete_triage(self, actor_id, matter_id, expected_revision, *, stamp=None):
         def handler(ctx: _Ctx) -> None:
             self._transition(ctx, "complete_triage")
-            ctx.connection.execute(
-                "INSERT OR IGNORE INTO assignments VALUES (?, 'matter_owner', ?, ?, ?)",
-                (ctx.matter_id, ctx.actor.actor_id, ctx.actor.actor_id, ctx.now),
-            )
+            self._claim(ctx)
             self._event(
                 ctx,
                 "triage_completed",
@@ -1157,6 +1298,146 @@ class PilotService:
         return self._execute(
             actor_id, matter_id, expected_revision, "complete_triage", handler, stamp
         )
+
+    def decline(self, actor_id, matter_id, expected_revision, *, reason, stamp=None):
+        """Close a matter in triage without review. A person types the reason."""
+
+        def handler(ctx: _Ctx) -> None:
+            ctx.extra["reason"] = reason
+            self._transition(ctx, "decline")
+            text = " ".join(str(reason).split())
+            self._claim(ctx)
+            ctx.extra["closed_outcome"] = "declined_by_legal"
+            self._decision(ctx, "decline", "declined", text)
+            self._event(ctx, "matter_declined", text)
+
+        return self._execute(actor_id, matter_id, expected_revision, "decline", handler, stamp)
+
+    def mark_duplicate(
+        self, actor_id, matter_id, expected_revision, *, original_matter_id, reason, stamp=None
+    ):
+        """Close a matter in triage as a duplicate of another matter the owner can see."""
+
+        def handler(ctx: _Ctx) -> None:
+            ctx.extra["original_matter_id"] = original_matter_id
+            ctx.extra["reason"] = reason
+            self._transition(ctx, "mark_duplicate")
+            original = " ".join(str(original_matter_id).split())
+            text = " ".join(str(reason).split())
+            self._claim(ctx)
+            ctx.extra["closed_outcome"] = "duplicate_of_another_matter"
+            self._decision(ctx, "duplicate", "duplicate", text, target_id=original)
+            self._event(ctx, "matter_marked_duplicate", text, {"original_matter_id": original})
+
+        return self._execute(
+            actor_id, matter_id, expected_revision, "mark_duplicate", handler, stamp
+        )
+
+    def _snooze_now(self, ctx: _Ctx) -> tuple[str, str, list[dict[str, Any]]]:
+        """The clock this command is timed on, its "now", and the matter's events.
+
+        The scripted time when the command carries one and the matter is on the scripted
+        clock; otherwise the time the server records, as the readers will see it.
+        """
+
+        events = self._event_rows(ctx.connection, ctx.matter_id)[1]
+        counted = [e for e in events if e["event_type"] != "command_refused"]
+        if ctx.stamp.fixture_at and all(e["fixture_at"] for e in counted):
+            return "fixture_at", ctx.stamp.fixture_at, events
+        return "occurred_at", ctx.now, events
+
+    def snooze(
+        self,
+        actor_id,
+        matter_id,
+        expected_revision,
+        *,
+        reason,
+        until=None,
+        question=None,
+        stamp=None,
+    ):
+        """Pause a matter in triage until a time or until the requester answers a question.
+
+        A recorded pause, not a state: the matter stays in triage, and nothing happens
+        when the time passes. The requester sees the reason, and the question if there is
+        one (ADR 0010).
+        """
+
+        def handler(ctx: _Ctx) -> None:
+            if ctx.matter["state"] != "triage":
+                raise TransitionBlockedError(
+                    "snooze",
+                    [
+                        {
+                            "name": "state",
+                            "ok": False,
+                            "detail": f"snooze is allowed in triage only, not in state {ctx.matter['state']}",
+                        }
+                    ],
+                )
+            self._check_claim(ctx)
+            text = _require_visible_text(str(reason or ""), 20, "snooze reason")
+            clock, now, events = self._snooze_now(ctx)
+            if active_snooze(events, clock, now):
+                raise InvalidCommandError("the matter is already snoozed; end that snooze first")
+            wanted_until = " ".join(str(until or "").split())
+            wanted_question = " ".join(str(question or "").split())
+            if bool(wanted_until) == bool(wanted_question):
+                raise InvalidCommandError(
+                    "a snooze needs exactly one of: until (a time) or question (for the requester)"
+                )
+            payload: dict[str, Any]
+            if wanted_until:
+                moment, start = parse_time(wanted_until), parse_time(now)
+                if moment is None or start is None:
+                    raise InvalidCommandError(
+                        "until must be a date and time with a time zone, for example "
+                        "2026-11-20T09:00:00+01:00"
+                    )
+                latest = start + timedelta(days=SNOOZE_MAX_DAYS)
+                if moment <= start:
+                    raise InvalidCommandError(f"until must be later than now ({utc_text(start)})")
+                if moment > latest:
+                    raise InvalidCommandError(
+                        f"a snooze lasts at most {SNOOZE_MAX_DAYS} days, until {utc_text(latest)}"
+                    )
+                payload = {"until": utc_text(moment)}
+            else:
+                payload = {"question": _require_visible_text(wanted_question, 10, "question")}
+            self._claim(ctx)
+            self._event(ctx, "matter_snoozed", text, payload)
+
+        return self._execute(actor_id, matter_id, expected_revision, "snooze", handler, stamp)
+
+    def answer_snooze(self, actor_id, matter_id, expected_revision, *, answer, stamp=None):
+        """The requester answers the question a snooze is waiting on, which ends it."""
+
+        def handler(ctx: _Ctx) -> None:
+            self._require_access(ctx, ("business_requester",))
+            clock, now, events = self._snooze_now(ctx)
+            snooze = active_snooze(events, clock, now)
+            if snooze is None or not snooze["question"]:
+                raise InvalidCommandError("no snooze question is waiting for an answer")
+            self._event(
+                ctx, "snooze_answered", _require_visible_text(str(answer or ""), 10, "answer")
+            )
+
+        return self._execute(
+            actor_id, matter_id, expected_revision, "answer_snooze", handler, stamp
+        )
+
+    def end_snooze(self, actor_id, matter_id, expected_revision, *, stamp=None):
+        """The matter owner ends a running snooze; the matter stays in triage."""
+
+        def handler(ctx: _Ctx) -> None:
+            self._require_access(ctx, ("matter_owner",))
+            clock, now, events = self._snooze_now(ctx)
+            if active_snooze(events, clock, now) is None:
+                raise InvalidCommandError("the matter is not snoozed")
+            self._event(ctx, "snooze_ended", "Snooze ended by the matter owner.")
+
+        return self._execute(actor_id, matter_id, expected_revision, "end_snooze", handler, stamp)
 
     def assign(self, actor_id, matter_id, expected_revision, *, role, assignee_id, stamp=None):
         def handler(ctx: _Ctx) -> None:
@@ -1458,9 +1739,13 @@ class PilotService:
                     raise InvalidCommandError(
                         "an amendment needs wording that differs from the proposal"
                     )
+                if has_non_xml_char(wording):
+                    raise InvalidCommandError(
+                        "the amended wording holds characters a Word document cannot hold"
+                    )
                 change.amended_text = wording
             elif outcome == "clarification_requested":
-                text = _require_text(reason, 10, "clarification question")
+                text = _require_visible_text(reason, 10, "clarification question")
             else:
                 raise InvalidCommandError(
                     "outcome must be accepted, rejected, amended or clarification_requested"
@@ -1563,6 +1848,7 @@ class PilotService:
                 ReviewDecision(
                     reviewer=ctx.actor.display_name, state="revision_requested", note=text
                 ),
+                decided_at=ctx.now,
             )
             self._save_body(ctx)
             self._decision(
@@ -1607,7 +1893,8 @@ class PilotService:
             text = _require_text(note, 30, "approval note")
             self._transition(ctx, "approve")
             # The parent assessment and the pilot decision are approved in one step,
-            # so neither can be approved without the other.
+            # so neither can be approved without the other. The assessment's audit entry
+            # takes the command's time, the time the approval event records.
             ctx.body.assessment = apply_review_decision(
                 ctx.body.assessment,
                 ReviewDecision(
@@ -1615,6 +1902,7 @@ class PilotService:
                     state="approved",
                     note=text,
                 ),
+                decided_at=ctx.now,
             )
             self._save_body(ctx)
             self._decision(
@@ -1856,8 +2144,25 @@ class PilotService:
     def withdraw(self, actor_id, matter_id, expected_revision, *, note, stamp=None):
         def handler(ctx: _Ctx) -> None:
             self._require_access(ctx, WITHDRAWAL_ROLES)
-            text = _require_text(note, 20, "withdrawal reason")
+            # The requester and the record read this reason, so only the characters a reader
+            # sees count toward the minimum, as for the triage reasons.
+            text = _require_visible_text(note, 20, "withdrawal reason")
             self._invalidate(ctx, ("specialist_signoff", "final_approval"), "matter withdrawn")
+            # A withdrawal also records a rejected review decision on the parent assessment,
+            # in the same step and whatever state the matter had reached, so the assessment
+            # is not left approved or exportable once its approval is cancelled. A review
+            # decision needs a note of 20 characters; the reason alone has that many. Its
+            # audit entry takes the command's time, the time the withdrawal event records.
+            ctx.body.assessment = apply_review_decision(
+                ctx.body.assessment,
+                ReviewDecision(
+                    reviewer=f"{ctx.actor.display_name} [{ctx.actor.actor_id}, simulated role]",
+                    state="rejected",
+                    note=f"Matter withdrawn without delivery: {text}",
+                ),
+                decided_at=ctx.now,
+            )
+            self._save_body(ctx)
             ctx.new_state, ctx.extra["closed_outcome"] = "closed", "withdrawn_without_delivery"
             self._event(ctx, "matter_withdrawn", text)
 
@@ -1884,6 +2189,11 @@ class PilotService:
         "prepare_delivery",
         "accept_delivery",
         "withdraw",
+        "decline",
+        "mark_duplicate",
+        "snooze",
+        "answer_snooze",
+        "end_snooze",
     )
 
     def execute(
@@ -1922,6 +2232,44 @@ class PilotService:
                 ctx.now,
             ),
         )
+
+    def _standing_package(self, ctx: _Ctx) -> tuple[sqlite3.Row | None, str | None]:
+        """The delivery manifest whose package may be opened now, or why none may.
+
+        A package is offered only while its delivery stands: while the matter is ready
+        for delivery and the evidence ``accept_delivery`` needs holds (asked here, not
+        restated, so the two cannot drift apart), and after the requester accepted that
+        delivery. A withdrawal, a revision request, a new version, a later comment or
+        another final approver in place of the one who approved ends it. The stored
+        manifest and its files stay where they are, for the audit trail. ``(None, None)``
+        means that no package was ever prepared.
+        """
+
+        latest = self._latest_delivery_manifest(ctx)
+        if latest is None:
+            return None, None
+        state, outcome = ctx.matter["state"], ctx.matter["closed_outcome"]
+        if state == "ready_for_delivery":
+            standing, _ = self._ev_delivery_manifest_current(ctx)
+            return (latest, None) if standing else (None, PACKAGE_CHANGED)
+        if state == "closed" and outcome == "delivered_locally_and_accepted":
+            # A closed matter accepts no command, so the latest manifest is the one the
+            # acceptance was checked against. The acceptance is recorded on a version and
+            # a content hash; the manifest that is served must carry the same two.
+            accepted = ctx.connection.execute(
+                "SELECT version, content_hash FROM decisions WHERE matter_id = ? AND "
+                "kind = 'acceptance' ORDER BY decision_id DESC LIMIT 1",
+                (ctx.matter_id,),
+            ).fetchone()
+            if accepted is not None and (latest["version"], latest["content_hash"]) == (
+                accepted["version"],
+                accepted["content_hash"],
+            ):
+                return latest, None
+            return None, PACKAGE_NOT_THE_ACCEPTED_ONE
+        if outcome == "withdrawn_without_delivery":
+            return None, PACKAGE_WITHDRAWN
+        return None, PACKAGE_CHANGED
 
     def _obligations(
         self, ctx: _Ctx, changes: list[StoredChange], names: dict[str, str]
@@ -2009,6 +2357,7 @@ class PilotService:
             chain_root=self.store.verify_chain(ctx.connection, ctx.matter_id).chain_root_hash or "",
             actor_names=names,
             generated_at=ctx.now,
+            proposed_at=ctx.version_row["created_at"],
         )
 
     def list_actors_in(self, connection: sqlite3.Connection) -> list[Actor]:
@@ -2151,7 +2500,14 @@ class PilotService:
                 "required_facts": required_fact_checklist(ctx.body.intake.facts),
                 "external_delivery_allowed": False,
             }
+            # Decided once, here: the package route gives the same answer and the room
+            # shows this field as it is. "reason" is null while a package may be opened
+            # and when none was ever prepared.
+            standing, reason = self._standing_package(ctx)
+            base["package"] = {"may_open": standing is not None, "reason": reason}
             if ctx.actor.role == "business_requester":
+                _, events, now = self._events_and_now(connection, matter_id)
+                snooze = latest_snooze(events, *matter_clock(events, now))
                 # Requesters see status, questions addressed to them and the approved package.
                 clarifications = [c for c in comments if c.addressed_to == "business_requester"]
                 base["clarifications"] = [c.model_dump() for c in clarifications]
@@ -2160,6 +2516,8 @@ class PilotService:
                     ctx.matter["state"],
                     closed_outcome=ctx.matter["closed_outcome"],
                     open_questions=sum(c.state == "open" for c in clarifications),
+                    snooze=snooze if snooze and snooze["active"] else None,
+                    closure=self._closure(connection, ctx),
                 )
                 base["view"] = "requester_summary"
                 return base
@@ -2168,7 +2526,12 @@ class PilotService:
             allowed = []
             # Evidence that depends on the caller's input, or on who the caller is, is only
             # meaningful when that caller attempts the command.
-            skipped = {"revision_reason_recorded", "acceptance_recorded"}
+            skipped = {
+                "revision_reason_recorded",
+                "acceptance_recorded",
+                "closure_reason_recorded",
+                "duplicate_original_visible",
+            }
             if ctx.actor.role != "final_approver":
                 skipped.add("approver_authorised")
             for transition in allowed_commands(ctx.matter["state"]):
@@ -2191,11 +2554,11 @@ class PilotService:
                         "evidence": self._evidence(probe, names),
                     }
                 )
-            # The chain check and the timeline cover the same rows, read once; versions and
-            # decisions are read after them, so every version an event names is present.
-            rows = connection.execute(
-                "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
-            ).fetchall()
+            # The chain check, the timeline, the timing and the snooze cover the same rows,
+            # read once; versions and decisions are read after them, so every version an
+            # event names is present.
+            rows, events, now = self._events_and_now(connection, matter_id)
+            snooze = latest_snooze(events, *matter_clock(events, now))
             verification, chain_break = self.store.check_events(rows)
             chain = verification.model_dump()
             decisions = [
@@ -2266,15 +2629,68 @@ class PilotService:
                     "timing": matter_timing(
                         matter_id,
                         ctx.body.intake,
-                        [{**dict(r), "payload": payload_object(r["payload"]) or {}} for r in rows],
-                        closed=ctx.matter["state"] == "closed",
-                        withdrawn=ctx.matter["closed_outcome"] == "withdrawn_without_delivery",
-                        # Read after the event rows, so no event shown is later than it.
-                        now=self.clock.now(),
+                        events,
+                        closed=ctx.matter["state"] in TERMINAL_STATES,
+                        # Closed without delivery: no resolution target applies.
+                        withdrawn=ctx.matter["state"] in {"declined", "duplicate"}
+                        or ctx.matter["closed_outcome"] == "withdrawn_without_delivery",
+                        now=now,
                     ),
+                    # The latest snooze, running or not, on the matter's clock. A snooze is
+                    # timed on the server's clock when the room sends it, so the bounds the
+                    # room offers come from that clock too.
+                    "snooze": snooze,
+                    "snooze_limits": {
+                        "max_days": SNOOZE_MAX_DAYS,
+                        "server_now": now,
+                        "latest_until": _days_after(now, SNOOZE_MAX_DAYS),
+                    },
                 }
             )
             return base
+
+    def _events_and_now(
+        self, connection: sqlite3.Connection, matter_id: str
+    ) -> tuple[list[Any], list[dict[str, Any]], str]:
+        """The matter's event rows, the same with parsed payloads, and the service clock.
+
+        The clock is read after the rows, so no event shown is later than it.
+        """
+
+        rows, events = self._event_rows(connection, matter_id)
+        return rows, events, self.clock.now()
+
+    @staticmethod
+    def _event_rows(
+        connection: sqlite3.Connection, matter_id: str
+    ) -> tuple[list[Any], list[dict[str, Any]]]:
+        rows = connection.execute(
+            "SELECT * FROM events WHERE matter_id = ? ORDER BY seq", (matter_id,)
+        ).fetchall()
+        return rows, [{**dict(r), "payload": payload_object(r["payload"]) or {}} for r in rows]
+
+    def _closure(self, connection: sqlite3.Connection, ctx: _Ctx) -> dict[str, Any] | None:
+        """Why legal closed the matter in triage, as the requester may see it.
+
+        The reason a person typed, and the original matter only when the requester also
+        asked for that one; otherwise its ID is withheld.
+        """
+
+        if ctx.matter["state"] not in {"declined", "duplicate"}:
+            return None
+        row = connection.execute(
+            "SELECT * FROM decisions WHERE matter_id = ? AND kind IN ('decline', 'duplicate') "
+            "ORDER BY decision_id DESC LIMIT 1",
+            (ctx.matter_id,),
+        ).fetchone()
+        if row is None:
+            return None
+        original = row["target_id"] if row["kind"] == "duplicate" else None
+        shown = None
+        if original is not None:
+            requesters = self._assigned(connection, original).get("business_requester", [])
+            shown = original if ctx.actor.actor_id in requesters else None
+        return {"reason": row["note"], "original_matter_id": shown}
 
     @staticmethod
     def _playbook_position(ctx: _Ctx, change: StoredChange) -> dict[str, str] | None:
@@ -2355,6 +2771,30 @@ class PilotService:
                 "events": events,
                 "audit_chain": self.store.check_events(rows)[0].model_dump(),
             }
+
+    def package_file(self, actor_id: str, matter_id: str) -> Path:
+        """The customer package of a delivery that stands. Refused in every other case.
+
+        A delivery that stands but whose file is gone from the export folder is a fault in
+        the store. It is answered as not found, with the file named, so the reader learns
+        what is missing.
+        """
+
+        with self.store.reading() as connection:
+            ctx = self._context(connection, actor_id, matter_id, Stamp())
+            if not self._can_read(connection, ctx.actor, ctx.matter):
+                raise PermissionDeniedError(f"{actor_id} has no access to matter {matter_id}")
+            standing, reason = self._standing_package(ctx)
+            if standing is None:
+                raise PermissionDeniedError(reason or NO_PACKAGE)
+            folder = str(json.loads(standing["body"])["folder"])
+            path = self.export_root / folder / "customer-package.html"
+            if not path.is_file():
+                raise NotFoundError(
+                    "the package file of this delivery is missing from the export folder: "
+                    f"{folder}/customer-package.html"
+                )
+            return path
 
     def version_document(self, actor_id: str, matter_id: str, version: int) -> bytes:
         with self.store.reading() as connection:

@@ -2,7 +2,9 @@
 
 Runs short Node Playwright scripts against a local server on 127.0.0.1. It is
 skipped when Node, its Playwright package or a Chromium build is not installed, so
-the gate does not depend on a browser. Everything it touches is synthetic.
+the gate does not depend on a browser. With ``REQUIRE_BROWSER_TESTS=1`` (set in CI,
+where Playwright is installed) that skip becomes a failure, so a broken browser
+install cannot pass silently. Everything it touches is synthetic.
 """
 
 from __future__ import annotations
@@ -31,6 +33,7 @@ from tests.pilot_support import (
 )
 
 UNAVAILABLE = 3
+REQUIRE_BROWSER_TESTS = "REQUIRE_BROWSER_TESTS"
 
 SCRIPT = r"""
 let chromium;
@@ -310,6 +313,253 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
+TRIAGE_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, blocked, open, OWNER, REQUESTER, REASON, PAUSE, QUESTION, ANSWER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function room(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    return page;
+  }
+  const section = (page, id) => page.locator("section", { has: page.locator("#" + id) }).innerText();
+
+  // The owner declines the matter that cannot leave triage, with a reason the requester sees.
+  let page = await room(OWNER, blocked);
+  await page.getByRole("button", { name: "mark duplicate → duplicate" }).click();
+  out.duplicateLabels = await page.locator("form.inline label").allInnerTexts();
+  await page.getByRole("button", { name: "Cancel" }).click();
+  await page.getByRole("button", { name: "decline → declined" }).click();
+  out.declineHint = await page.locator("form.inline .hint").first().innerText();
+  out.declineEmpty = await page.locator("form.inline textarea").inputValue();
+  await page.getByRole("button", { name: "Decline", exact: true }).click();
+  out.declineSummary = await page.locator(".error-summary").innerText();
+  await page.locator("form.inline textarea").fill(REASON);
+  await page.getByRole("button", { name: "Decline", exact: true }).click();
+  await page.waitForTimeout(500);
+  out.declineFlash = await page.locator("#flash").innerText();
+  out.declinedNext = await section(page, "next-h");
+  out.declinedTiming = await section(page, "timing-h");
+  page = await room(REQUESTER, blocked);
+  out.requesterDeclined = await section(page, "status-h");
+
+  // The owner snoozes the open matter until the requester answers a question.
+  page = await room(OWNER, open);
+  await page.getByRole("button", { name: "snooze", exact: true }).click();
+  out.untilShown = await page.getByLabel("Until (date, time and time zone)").isVisible();
+  out.untilHint = await page.locator("[data-field='until'] .hint").innerText();
+  await page.getByLabel("Snooze until").selectOption("question");
+  out.untilAfter = await page.getByLabel("Until (date, time and time zone)").isVisible();
+  await page.getByLabel("Reason", { exact: true }).fill(PAUSE);
+  await page.getByLabel("Question for the requester").fill(QUESTION);
+  await page.getByRole("button", { name: "Snooze", exact: true }).click();
+  await page.waitForTimeout(500);
+  out.snoozedNext = await section(page, "next-h");
+  out.endButtons = await page.getByRole("button", { name: "end snooze" }).count();
+
+  // The requester sees the pause and answers its question in the room.
+  page = await room(REQUESTER, open);
+  out.requesterPaused = await section(page, "status-h");
+  out.requesterQuestions = await section(page, "q-h");
+  await page.getByRole("button", { name: "Answer", exact: true }).click();
+  await page.getByLabel("Your answer").fill(ANSWER);
+  await page.getByRole("button", { name: "Send the answer" }).click();
+  await page.waitForTimeout(500);
+  out.answerFlash = await page.locator("#flash").innerText();
+  out.requesterAfter = await section(page, "status-h");
+  page = await room(OWNER, open);
+  out.ownerAfter = await section(page, "next-h");
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
+FRAMING_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, matter, OWNER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+
+  // The room shows the approved package in its own sandboxed srcdoc frame.
+  const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+  page.on("pageerror", (e) => errors.push(e.message));
+  await page.goto(base + "/pilot");
+  await page.waitForSelector("#actor option", { state: "attached" });
+  await page.selectOption("#actor", OWNER);
+  await page.waitForTimeout(300);
+  await page.locator("#list button", { hasText: matter }).first().click();
+  await page.waitForSelector("#matter h2.title");
+  await page.getByRole("link", { name: "Open the approved customer package" }).first().click();
+  const frame = page.frameLocator('iframe[title="Customer package"]');
+  await frame.locator("h1").waitFor();
+  out.packageHeading = await frame.locator("h1").innerText();
+  out.packageFrameSrc = await page.locator('iframe[title="Customer package"]').evaluate((f) => f.src);
+  out.errors = errors;
+
+  // A page on another origin tries to frame the room.
+  const context = await browser.newContext();
+  const requested = [];
+  context.on("request", (r) => requested.push(new URL(r.url()).pathname));
+  const foreign = await context.newPage();
+  await foreign.setContent('<iframe src="' + base + '/pilot" width="800" height="600"></iframe>');
+  await foreign.waitForTimeout(1500);
+  const child = foreign.frames().find((f) => f !== foreign.mainFrame());
+  out.framedTitle = child ? await child.title().catch(() => "") : "";
+  out.framedControls = child ? await child.locator("#actor").count().catch(() => 0) : 0;
+  out.requested = requested;
+
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
+PACKAGE_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, ready, accepted, untouched, OWNER, REQUESTER, APPROVER, REASON] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function room(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    return page;
+  }
+  const LINK = "Open the approved customer package";
+  // The requester's package line is under "Delivery package", a reviewer's under
+  // "State and next steps". "links" counts the whole page, so no second link can hide.
+  const line = async (page, heading) => ({
+    links: await page.getByRole("link", { name: LINK }).count(),
+    here: await page.locator("section", { has: page.locator("#" + heading) }).getByRole("link", { name: LINK }).count(),
+    muted: await page.locator("section", { has: page.locator("#" + heading) }).locator("p.muted").allInnerTexts(),
+  });
+  const openIt = async (page) => {
+    await page.getByRole("link", { name: LINK }).click();
+    const frame = page.frameLocator('iframe[title="Customer package"]');
+    await frame.locator("h1").waitFor();
+    return frame.locator("h1").innerText();
+  };
+
+  // Ready for delivery: the requester and a reviewer each have the link.
+  const stale = await room(REQUESTER, ready);
+  out.readyRequester = await line(stale, "d-h");
+  let page = await room(OWNER, ready);
+  out.readyOwner = await line(page, "next-h");
+
+  // The owner withdraws the matter in the room. The link goes and the reason takes its place.
+  await page.getByRole("button", { name: "withdraw matter" }).click();
+  await page.locator("form.inline textarea").fill(REASON);
+  await page.getByRole("button", { name: "Withdraw", exact: true }).click();
+  await page.locator("#flash", { hasText: "withdraw saved." }).waitFor();
+  out.withdrawnOwner = await line(page, "next-h");
+
+  // The requester's page was loaded before the withdrawal and still shows the link. The
+  // server refuses the package, and the page says why in the server's words.
+  out.staleLinks = (await line(stale, "d-h")).links;
+  await stale.getByRole("link", { name: LINK }).click();
+  await stale.locator("#flash.error").waitFor();
+  out.staleFlash = await stale.locator("#flash").innerText();
+  out.staleFrames = await stale.locator("iframe").count();
+
+  // Loaded afresh, no view of the withdrawn matter has the link.
+  page = await room(REQUESTER, ready);
+  out.withdrawnRequester = await line(page, "d-h");
+  out.withdrawnStatus = await page.locator("#status-h").innerText();
+  page = await room(APPROVER, ready);
+  out.withdrawnApprover = await line(page, "next-h");
+
+  // Delivered and accepted: the package still opens, for the requester and for a reviewer.
+  page = await room(REQUESTER, accepted);
+  out.acceptedRequester = await line(page, "d-h");
+  out.acceptedRequesterHeading = await openIt(page);
+  page = await room(OWNER, accepted);
+  out.acceptedOwner = await line(page, "next-h");
+  out.acceptedOwnerHeading = await openIt(page);
+
+  // Nothing was ever prepared: the plain sentence, and no reason.
+  page = await room(REQUESTER, untouched);
+  out.untouchedRequester = await line(page, "d-h");
+  page = await room(OWNER, untouched);
+  out.untouchedOwner = await line(page, "next-h");
+
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
+ACCEPT_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, standing, ended, REQUESTER] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  async function room(actor, matter) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    await page.selectOption("#actor", actor);
+    await page.waitForTimeout(300);
+    await page.locator("#list button", { hasText: matter }).first().click();
+    await page.waitForSelector("#matter h2.title");
+    await page.waitForTimeout(300);
+    return page;
+  }
+  // The requester's "Delivery package" section: the link, the Accept delivery button and
+  // any muted sentence. The button is counted on the whole page, so none can hide elsewhere.
+  const delivery = async (page) => {
+    const section = page.locator("section", { has: page.locator("#d-h") });
+    return {
+      links: await section.getByRole("link", { name: "Open the approved customer package" }).count(),
+      accept: await page.getByRole("button", { name: "Accept delivery" }).count(),
+      muted: await section.locator("p.muted").allInnerTexts(),
+    };
+  };
+  out.standing = await delivery(await room(REQUESTER, standing));
+  out.ended = await delivery(await room(REQUESTER, ended));
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
 def _node_env() -> dict[str, str] | None:
     node, npm = shutil.which("node"), shutil.which("npm")
     if not node or not npm:
@@ -323,12 +573,21 @@ def _node_env() -> dict[str, str] | None:
     return env
 
 
+def _browser_unavailable(reason: str) -> None:
+    """Skip, or fail when the environment promises a browser (REQUIRE_BROWSER_TESTS=1)."""
+
+    if os.environ.get(REQUIRE_BROWSER_TESTS) == "1":
+        pytest.fail(f"{reason} (REQUIRE_BROWSER_TESTS=1, so this is a failure, not a skip)")
+    pytest.skip(reason)
+
+
 def _run_node(tmp_path, monkeypatch, service, script: str, *args: str) -> dict:
     """Serve ``service`` on 127.0.0.1, run ``script`` with the base URL and ``args``."""
 
     env = _node_env()
     if env is None:
-        pytest.skip("Node.js is not installed")
+        _browser_unavailable("Node.js is not installed")
+        return {}
     import runtime_agent.app as app
 
     monkeypatch.setattr(app, "_pilot_api", PilotApi(service))
@@ -353,7 +612,7 @@ def _run_node(tmp_path, monkeypatch, service, script: str, *args: str) -> dict:
         server.shutdown()
         server.server_close()
     if result.returncode == UNAVAILABLE:
-        pytest.skip("Node Playwright or its Chromium build is not installed")
+        _browser_unavailable("Node Playwright or its Chromium build is not installed")
     assert result.returncode == 0, result.stderr
     return json.loads(result.stdout.strip().splitlines()[-1])
 
@@ -527,3 +786,133 @@ def test_time_on_the_matter_never_stops_the_room(tmp_path, monkeypatch) -> None:
     recorded = out["PM-OP-1"]["timing"]
     assert "Target 16.0 h: ✗ past target, no response yet" in recorded
     assert "Time recorded by this server, up to when this page was loaded" in recorded
+
+
+def test_room_shows_its_package_but_cannot_be_framed_by_another_page(tmp_path, monkeypatch) -> None:
+    service = make_service(tmp_path)
+    matter = run_until(service, "routine", "A12")  # ready for delivery: the package exists
+    out = _run_node(tmp_path, monkeypatch, service, FRAMING_SCRIPT, matter, OWNER)
+
+    # The room's own package frame is a srcdoc document, which the no-framing headers allow.
+    assert out["errors"] == []
+    assert out["packageHeading"].startswith("Customer package")
+    assert out["packageFrameSrc"] == ""
+    # Another origin's frame asked for /pilot, and the browser refused to show it: the room
+    # never ran, so it never fetched its actors.
+    assert "/pilot" in out["requested"]
+    assert out["framedTitle"] != "Pilot review room" and out["framedControls"] == 0
+    assert "/pilot/api/actors" not in out["requested"]
+
+
+def test_the_room_offers_the_package_only_while_its_delivery_stands(tmp_path, monkeypatch) -> None:
+    service = make_service(tmp_path)
+    ready = run_until(service, "routine", "A12")  # ready for delivery: the package exists
+    accepted = run_until(service, "specialist-revision", "B45")  # delivered and accepted
+    untouched = run_until(service, "blocked", "C02")  # in triage: nothing was ever prepared
+    reason = "Customer paused the deal; closing without delivery."
+    out = _run_node(
+        tmp_path, monkeypatch, service, PACKAGE_SCRIPT, ready, accepted, untouched, OWNER,
+        REQUESTER, APPROVER_LEAD, reason,
+    )  # fmt: skip
+    withdrawn = (
+        "The package prepared earlier is no longer approved: the matter was withdrawn "
+        "without delivery."
+    )
+    never = "No approved package yet."
+
+    assert out["errors"] == []
+    # While the delivery stands, each view has exactly one link, in its own section.
+    assert out["readyRequester"] == {"links": 1, "here": 1, "muted": []}
+    assert (out["readyOwner"]["links"], out["readyOwner"]["here"]) == (1, 1)
+    assert withdrawn not in out["readyOwner"]["muted"] and never not in out["readyOwner"]["muted"]
+    # Withdrawn after the package was prepared: no link for anyone, and the reason is shown.
+    for view in ("withdrawnOwner", "withdrawnApprover"):
+        assert (out[view]["links"], out[view]["here"]) == (0, 0), view
+        assert withdrawn in out[view]["muted"] and never not in out[view]["muted"], view
+    assert out["withdrawnRequester"] == {"links": 0, "here": 0, "muted": [withdrawn]}
+    assert out["withdrawnStatus"] == "Status: Closed: withdrawn without delivery"
+    # A page loaded before the withdrawal: the route refuses, and the page shows its sentence.
+    assert out["staleLinks"] == 1
+    assert out["staleFlash"] == withdrawn and out["staleFrames"] == 0
+    # A delivered and accepted matter keeps its package.
+    assert out["acceptedRequester"] == {"links": 1, "here": 1, "muted": []}
+    assert (out["acceptedOwner"]["links"], out["acceptedOwner"]["here"]) == (1, 1)
+    assert out["acceptedRequesterHeading"].startswith("Customer package")
+    assert out["acceptedOwnerHeading"] == out["acceptedRequesterHeading"]
+    # No package was ever prepared: the plain sentence, in both views.
+    assert out["untouchedRequester"] == {"links": 0, "here": 0, "muted": [never]}
+    assert (out["untouchedOwner"]["links"], out["untouchedOwner"]["here"]) == (0, 0)
+    assert never in out["untouchedOwner"]["muted"]
+
+
+def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
+    tmp_path, monkeypatch
+) -> None:
+    service = make_service(tmp_path)
+    standing = run_until(service, "routine", "A12")  # ready for delivery: the package stands
+    ended = run_until(service, "specialist-revision", "B44")  # ready for delivery as well
+    # A note written after the package was prepared ends that delivery; the matter stays
+    # ready for delivery, where the room used to keep offering the button.
+    service.comment(
+        OWNER,
+        ended,
+        revision(service, ended),
+        anchor_kind="deliverable_section",
+        anchor_id="accepted_exceptions",
+        body="A late note on this section, written after the package was prepared.",
+    )
+    out = _run_node(tmp_path, monkeypatch, service, ACCEPT_SCRIPT, standing, ended, REQUESTER)
+    changed = (
+        "The package prepared earlier is no longer approved: the matter changed after it was "
+        "prepared."
+    )
+
+    assert out["errors"] == []
+    assert out["standing"] == {"links": 1, "accept": 1, "muted": []}
+    assert out["ended"] == {"links": 0, "accept": 0, "muted": [changed]}
+
+
+def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:
+    clock = _SetClock("2026-11-02T08:00:00Z")
+    service = PilotService(
+        PilotStore(tmp_path / "pilot.sqlite3"), export_root=tmp_path / "exports", clock=clock
+    )
+    seed_actors(service)
+    blocked = run_until(service, "blocked", "C02")  # in triage; it can never leave it
+    made = PilotApi(service).handle(
+        "POST",
+        "/pilot/api/matters",
+        {"X-Pilot-Actor": REQUESTER},
+        {"scenario_id": "routine", "matter_id": "PM-OP-1"},
+    )
+    assert made[0] == 201, made
+    service.submit_intake(REQUESTER, "PM-OP-1", made[1]["matter"]["revision"])
+    reason = "Outside the pilot charter: uncapped liability was requested."
+    pause = "Waiting for the signed order form from the sales team."
+    question = "Which order form does this draft belong to?"
+    answer = "Order form OF-2026-118, signed on 1 November."
+    out = _run_node(
+        tmp_path, monkeypatch, service, TRIAGE_SCRIPT, blocked, "PM-OP-1", OWNER, REQUESTER,
+        reason, pause, question, answer,
+    )  # fmt: skip
+
+    assert out["errors"] == []
+    assert out["duplicateLabels"][0] == "Matter this request duplicates"
+    # Nothing is proposed: the reason starts empty and must be typed.
+    assert out["declineEmpty"] == "" and "The requester sees this reason." in out["declineHint"]
+    assert "There is a problem" in out["declineSummary"] and "Enter reason" in out["declineSummary"]
+    assert "decline saved." in out["declineFlash"]
+    assert "declined" in out["declinedNext"] and "decline → declined" not in out["declinedNext"]
+    assert "not applicable, declined" in out["declinedTiming"]
+    assert "Status: Closed: declined by legal" in out["requesterDeclined"]
+    assert reason in out["requesterDeclined"]
+    assert (out["untilShown"], out["untilAfter"]) == (True, False)
+    assert "2026-11-02T08:00:00Z" in out["untilHint"] and "2026-12-02T08:00:00Z" in out["untilHint"]
+    assert "Snoozed since" in out["snoozedNext"] and question in out["snoozedNext"]
+    assert out["endButtons"] == 1
+    assert "Paused by legal" in out["requesterPaused"] and pause in out["requesterPaused"]
+    assert question in out["requesterQuestions"]
+    assert "answer snooze saved." in out["answerFlash"]
+    assert "Paused by legal" not in out["requesterAfter"]
+    assert "Last snooze" in out["ownerAfter"] and "the requester answered" in out["ownerAfter"]
+    assert answer in out["ownerAfter"]

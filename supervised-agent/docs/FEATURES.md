@@ -24,11 +24,14 @@ Implementation:
 
 Exposes controlled local tools for assessment, review decisions, review packets, trust cockpit evidence, source listing and source verification.
 
+The runtime canary serves them over HTTP on a loopback address: `GET /mcp/manifest` lists the tools and `POST /tools/call` runs one. The agent has no MCP stdio server, so it ships no MCP client configuration (no `mcp.json` or `.mcp.json`).
+
 Implementation:
 
 1. `src/mcp_tools.py`
-2. `mcp.json`
+2. `runtime_agent/app.py`
 3. `tests/test_mcp_tools.py`
+4. `tests/test_runtime_agent.py`
 
 ## LegalOps Trust Cockpit
 

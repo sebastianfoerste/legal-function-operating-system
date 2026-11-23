@@ -7,13 +7,13 @@ dist/
 .DS_Store
 
 .pytest_cache/
+.coverage
 .gstack/
 site/
 
-# Environment files. Real values stay local; only example files are tracked.
+# Environment files stay local.
 .env
 .env.*
-!.env.example
 
 # Competitive research screenshots stay local (clean-room rule).
 research/_captures/

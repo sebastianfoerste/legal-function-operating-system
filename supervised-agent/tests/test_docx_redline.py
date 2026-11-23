@@ -1,3 +1,4 @@
+import hashlib
 import io
 import zipfile
 from xml.etree import ElementTree
@@ -11,10 +12,12 @@ from src.docx_redline import (
     RevisionMark,
     UnsupportedDocumentError,
     apply_tracked_changes,
+    has_non_xml_char,
     index_docx,
     list_tracked_changes,
     read_paragraph_texts,
     resolve_edit,
+    revision_label,
 )
 from src.pilot.fixtures import build_synthetic_msa
 from src.playbook import Playbook, load_playbook, propose_changes
@@ -29,9 +32,30 @@ def _edits(data: bytes):
     ]
 
 
+def _local_name(tag: str) -> str:
+    return tag.rsplit("}", 1)[-1]
+
+
 def _document_xml(data: bytes) -> bytes:
     with zipfile.ZipFile(io.BytesIO(data)) as package:
         return package.read(DOCUMENT_PART)
+
+
+def _revision_text(node) -> str:
+    parts = []
+    for child in node.iter():
+        if child.tag in {f"{W}t", f"{W}delText"}:
+            parts.append(child.text or "")
+        elif child.tag == f"{W}tab":
+            parts.append("\t")
+    return "".join(parts)
+
+
+def _distinct_marks(edits) -> dict[str, RevisionMark]:
+    return {
+        edit.change_id: RevisionMark(f"Simulated role {n}", f"2026-02-0{n}T09:30:0{n}Z")
+        for n, edit in enumerate(edits, start=1)
+    }
 
 
 def _repackage(data: bytes, transform) -> bytes:
@@ -132,6 +156,120 @@ def test_tracked_changes_carry_author_and_date() -> None:
     changes = list_tracked_changes(reviewed)
     assert {(c.author, c.date) for c in changes} == {(MARK.author, MARK.date)}
     assert [c.kind for c in changes].count("insertion") == 2
+
+
+# SHA-256 of word/document.xml from one mark for the whole file, as the writer gave it
+# before per-change marks (ADR 0004). The XML is pinned, not the zip, whose deflate output
+# can vary with the zlib version.
+SINGLE_MARK_DOCUMENT_XML = {
+    "routine": "c66c16599026db56e370d23698f77c8c24ea83dc4b2a30ea776f56f7646a33df",
+    "specialist": "685727ca69e586234454f930be97ad09fca80ba6f66fc251a0327b5b830e9503",
+}
+
+
+@pytest.mark.parametrize("variant", sorted(SINGLE_MARK_DOCUMENT_XML))
+def test_per_change_marks_default_to_the_single_mark_byte_for_byte(variant) -> None:
+    source = build_synthetic_msa(variant)
+    edits = _edits(source)
+    single, _ = apply_tracked_changes(source, edits, MARK)
+    digest = hashlib.sha256(_document_xml(single)).hexdigest()
+    assert digest == SINGLE_MARK_DOCUMENT_XML[variant]
+    for marks in (None, {}, {edit.change_id: MARK for edit in edits}):
+        assert apply_tracked_changes(source, edits, MARK, marks=marks)[0] == single
+
+
+def test_each_tracked_change_carries_the_mark_of_its_own_change() -> None:
+    source = build_synthetic_msa("specialist")
+    edits = _edits(source)
+    marks = _distinct_marks(edits)
+    reviewed, index = apply_tracked_changes(source, edits, MARK, marks=marks)
+    root = ElementTree.fromstring(_document_xml(reviewed))
+    wrappers = [node for node in root.iter() if node.tag in {f"{W}ins", f"{W}del"}]
+    ids = [int(node.attrib[f"{W}id"]) for node in wrappers]
+    assert len(ids) == len(set(ids)) and min(ids) > index.max_annotation_id
+    by_mark: dict[tuple[str, str], list] = {}
+    for node in wrappers:
+        by_mark.setdefault((node.attrib[f"{W}author"], node.attrib[f"{W}date"]), []).append(node)
+    assert set(by_mark) == {(mark.author, mark.date) for mark in marks.values()}
+    for edit in edits:
+        own = by_mark[(marks[edit.change_id].author, marks[edit.change_id].date)]
+        deleted = "".join(_revision_text(node) for node in own if node.tag == f"{W}del")
+        inserted = "".join(_revision_text(node) for node in own if node.tag == f"{W}ins")
+        assert deleted == ("" if edit.operation == "insert_paragraph_after" else edit.original_text)
+        assert inserted == ("" if edit.operation == "delete_paragraph" else edit.new_text)
+
+    # The paragraph mark of an inserted or deleted clause belongs to that clause's change.
+    inserted_clause = next(e for e in edits if e.operation == "insert_paragraph_after")
+    deleted_clause = next(e for e in edits if e.operation == "delete_paragraph")
+    assert inserted_clause.change_id.startswith("chg-liability-exclusions")
+    assert deleted_clause.change_id.startswith("chg-most-favoured-customer")
+    paragraph_marks = sorted(
+        (_local_name(node.tag), node.get(f"{W}author"), node.get(f"{W}date"))
+        for node in root.iterfind(f".//{W}pPr/{W}rPr/*")
+        if node.tag in {f"{W}ins", f"{W}del"}
+    )
+    assert paragraph_marks == sorted(
+        [
+            ("del", marks[deleted_clause.change_id].author, marks[deleted_clause.change_id].date),
+            ("ins", marks[inserted_clause.change_id].author, marks[inserted_clause.change_id].date),
+        ]
+    )
+
+    single, _ = apply_tracked_changes(source, edits, MARK)
+    assert read_paragraph_texts(reviewed, "rejected") == read_paragraph_texts(source, "accepted")
+    assert read_paragraph_texts(reviewed, "accepted") == read_paragraph_texts(single, "accepted")
+
+
+@pytest.mark.parametrize("per_change", [False, True])
+def test_tracked_change_markup_uses_ins_del_and_deltext(per_change) -> None:
+    source = build_synthetic_msa("specialist")
+    edits = _edits(source)
+    marks = _distinct_marks(edits) if per_change else None
+    reviewed, _ = apply_tracked_changes(source, edits, MARK, marks=marks)
+    root = ElementTree.fromstring(_document_xml(reviewed))
+    in_text: list = []
+    paragraph_marks: list = []
+    for paragraph in root.iter(f"{W}p"):
+        in_text += paragraph.findall(f"{W}ins") + paragraph.findall(f"{W}del")
+        paragraph_marks += paragraph.findall(f"{W}pPr/{W}rPr/{W}ins")
+        paragraph_marks += paragraph.findall(f"{W}pPr/{W}rPr/{W}del")
+    every = [node for node in root.iter() if node.tag in {f"{W}ins", f"{W}del"}]
+    assert len(every) == len(in_text) + len(paragraph_marks) and len(paragraph_marks) == 2
+    for wrapper in in_text:
+        assert wrapper.get(f"{W}id") and wrapper.get(f"{W}author") and wrapper.get(f"{W}date")
+        runs = list(wrapper)
+        assert runs and all(run.tag == f"{W}r" for run in runs)
+        kept, dropped = (
+            (f"{W}delText", f"{W}t") if wrapper.tag == f"{W}del" else (f"{W}t", f"{W}delText")
+        )
+        assert all(run.find(kept) is not None and run.find(dropped) is None for run in runs)
+    assert all(len(node) == 0 and node.get(f"{W}author") for node in paragraph_marks)
+
+
+def test_revision_marks_are_checked_and_made_xml_safe() -> None:
+    source = build_synthetic_msa("routine")
+    edits = _edits(source)
+    first = edits[0].change_id
+    with pytest.raises(ValueError, match="revision marks name no edit: chg-unknown"):
+        apply_tracked_changes(source, edits, MARK, marks={"chg-unknown": MARK})
+
+    unsafe = RevisionMark("A\x01B\x00 \n  C\ufffe", MARK.date)
+    reviewed, _ = apply_tracked_changes(source, edits, MARK, marks={first: unsafe})
+    ElementTree.fromstring(_document_xml(reviewed))  # still well-formed
+    assert {c.author for c in list_tracked_changes(reviewed)} == {"AB C", MARK.author}
+    assert revision_label("x" * 300) == "x" * 255
+
+    for bad in (
+        RevisionMark("\x01\x02 \t", MARK.date),
+        RevisionMark("Reviewer", "2026-01-01"),
+        RevisionMark("Reviewer", "2026-01-01T00:00:00Z\n"),
+        RevisionMark("Reviewer", "2026-13-01T00:00:00Z"),
+        RevisionMark("Reviewer", "2026-01-01T00:00:00.123456Z"),
+    ):
+        with pytest.raises(ValueError, match="revision mark"):
+            apply_tracked_changes(source, edits, MARK, marks={first: bad})
+        with pytest.raises(ValueError, match="revision mark"):
+            apply_tracked_changes(source, edits, bad)
 
 
 def test_locator_survives_a_moved_paragraph_but_not_changed_wording() -> None:
@@ -237,3 +375,15 @@ def test_non_docx_and_multiline_insertions_are_refused() -> None:
     multiline = RedlineEdit(**{**edit.__dict__, "new_text": "thirty\n(30) days"})
     with pytest.raises(UnsupportedDocumentError, match="single-line"):
         apply_tracked_changes(source, [multiline], MARK)
+
+
+def test_inserted_text_a_word_document_cannot_hold_is_refused() -> None:
+    # Written as is into w:t, such a character would leave word/document.xml malformed.
+    source = build_synthetic_msa("routine")
+    edit = next(e for e in _edits(source) if e.change_id.startswith("chg-payment-terms"))
+    for text in ("thirty (30) days\x01", "thirty\x0b(30) days", "thirty days\ufffe", "\ud800"):
+        unsafe = RedlineEdit(**{**edit.__dict__, "new_text": text})
+        with pytest.raises(UnsupportedDocumentError, match="a Word document cannot hold"):
+            apply_tracked_changes(source, [unsafe], MARK)
+        assert has_non_xml_char(text)
+    assert not has_non_xml_char("forty-five (45) days, \u00a7 3 \u20ac\t\U0001f600")

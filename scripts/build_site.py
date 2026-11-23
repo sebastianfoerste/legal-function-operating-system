@@ -9,8 +9,10 @@ where they already render, and are linked rather than copied.
 from __future__ import annotations
 
 import argparse
+import os
 import shutil
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -26,6 +28,7 @@ BLOB = f"{REPO}/blob/main"
 HOSTED = (
     (ROOT / "examples" / "legal-outcome-control-tower.html", "legal-outcome-control-tower.html"),
     (ROOT / "examples" / "approval-matrix.html", "approval-matrix.html"),
+    (ROOT / "examples" / "intake-page.html", "intake-page.html"),
     (ROOT / "examples" / "raas-deal-room.html", "raas-deal-room.html"),
     (ROOT / "examples" / "raas-deal-desk.svg", "raas-deal-desk.svg"),
     (ROOT / "docs" / "architecture.svg", "architecture.svg"),
@@ -53,6 +56,13 @@ CARDS = (
         "approval-matrix.html",
         "Who must sign off for each value band and risk level, read from the rules and the "
         "default policy, with each sample request placed in its cell.",
+        "Hosted",
+    ),
+    (
+        "Request intake page",
+        "intake-page.html",
+        "Prepare a synthetic legal request in the browser and save it as a request file. "
+        "Nothing is sent and nothing is decided; legal reviews the file.",
         "Hosted",
     ),
     (
@@ -104,6 +114,7 @@ PAGE = """<!doctype html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="description" content="Reviewer artifacts of a deterministic legal operating model: intake, risk, routing, service levels, approvals, external-counsel decisions, board reporting and an Art. 28(3) GDPR DPA check. Synthetic data only; not legal advice.">
 <title>Legal Function Operating System</title>
 <style>
 {tokens}* {{ box-sizing:border-box; }}
@@ -168,6 +179,7 @@ code {{
   <footer>
     <p>Source, tests and known limitations: <a href="{repo}">{repo}</a>.
     Run the full gate with <code>make check</code>.</p>
+    <p>{build}</p>
   </footer>
 </main>
 </body>
@@ -179,6 +191,16 @@ CARD = """    <a class="card" href="{href}">
       <h2>{title}</h2>
       <p>{blurb}</p>
     </a>"""
+
+
+def build_stamp(now: datetime | None = None) -> str:
+    """The commit and date the site was built from: GITHUB_SHA in CI, else a local build."""
+
+    date = (now or datetime.now(timezone.utc)).strftime("%Y-%m-%d")
+    sha = os.environ.get("GITHUB_SHA", "").strip()
+    if sha:
+        return f'Built from commit <a href="{REPO}/commit/{sha}"><code>{sha[:12]}</code></a> on {date}.'
+    return f"Local build on {date}."
 
 
 def build(site: Path = SITE) -> None:
@@ -198,7 +220,8 @@ def build(site: Path = SITE) -> None:
         for title, href, blurb, kind in CARDS
     )
     (site / "index.html").write_text(
-        PAGE.format(cards=cards, repo=REPO, tokens=TOKENS_CSS), encoding="utf-8"
+        PAGE.format(cards=cards, repo=REPO, tokens=TOKENS_CSS, build=build_stamp()),
+        encoding="utf-8",
     )
     (site / ".nojekyll").write_text("", encoding="utf-8")
 

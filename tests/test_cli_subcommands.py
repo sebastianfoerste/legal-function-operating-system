@@ -49,6 +49,12 @@ class HelpAndVersion(unittest.TestCase):
             self.assertIn(name, stdout)
         self.assertIn("original all-in-one flags", stdout)
 
+    def test_cli_reference_lists_every_command(self):
+        reference = (ROOT / "docs" / "CLI.md").read_text(encoding="utf-8")
+        for name in COMMANDS:
+            with self.subTest(command=name):
+                self.assertIn(f"| `{name}` |", reference)
+
     def test_version(self):
         code, stdout, _ = run_cli(["--version"])
         self.assertEqual((code, stdout.strip()), (0, f"legal-function-os {__version__}"))
@@ -90,7 +96,7 @@ class Triage(unittest.TestCase):
         self.assertIn(
             "**Approval chain** Reviewer → Legal Ops Lead → General Counsel → Board note", stdout
         )
-        self.assertLess(stdout.index("**Risk** HIGH"), stdout.index("- Contract value above €1m."))
+        self.assertLess(stdout.index("**Risk** HIGH"), stdout.index("- Value over EUR 1 million."))
         self.assertIn("not legal advice", stdout)
         self.assertNotIn("REQ-1002", stdout)
 
@@ -307,6 +313,15 @@ class CapacityAndControlTower(unittest.TestCase):
         )
         self.assertEqual(code, 2)
         self.assertIn("cannot read service event ledger /nonexistent.json", stderr)
+        with tempfile.TemporaryDirectory() as tmp:
+            latin = Path(tmp) / "events.json"
+            latin.write_bytes('{"approvals": "Gepr\u00fcft"}'.encode("latin-1"))
+            code, _, stderr = run_cli(["control-tower", "--input", str(SAMPLE), "--events", str(latin), "--config", str(latin)])
+        self.assertEqual(code, 2)
+        self.assertIn(
+            f"cannot read service event ledger {latin}: it is not UTF-8 text (byte 0xfc at position 19); save it as UTF-8",
+            stderr,
+        )
 
 
 class LegacyFlags(unittest.TestCase):
@@ -332,6 +347,65 @@ class LegacyFlags(unittest.TestCase):
                 self.assertEqual(
                     (Path(tmp) / name).read_bytes(), (EXAMPLES / name).read_bytes(), name
                 )
+
+    def test_an_unreadable_approvals_file_stops_before_anything_is_written(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out_dir, space = Path(tmp) / "out", Path(tmp) / "shared-space.json"
+            broken = Path(tmp) / "approvals.json"
+            broken.write_text("{", encoding="utf-8")
+            listed, shaped = Path(tmp) / "listed.json", Path(tmp) / "shaped.json"
+            listed.write_text('[{"request_id": "REQ-1001"}]', encoding="utf-8")
+            shaped.write_text('{"REQ-1001": "yes"}', encoding="utf-8")
+            shape = "expected an object that maps a request id to an approval object"
+            for path, message in (
+                (Path(tmp) / "missing.json", "cannot read approvals"),
+                (broken, f"approvals {broken} is not valid JSON"),
+                (listed, f"approvals {listed}: {shape}"),
+                (shaped, f"approvals {shaped}: {shape}"),
+            ):
+                code, _, stderr = run_cli(
+                    ["--quiet", "--out", str(out_dir), "--shared-space-output", str(space), "--approvals", str(path)]
+                )
+                self.assertEqual(code, 2, path)
+                self.assertIn(message, stderr)
+                self.assertFalse(out_dir.exists() or space.exists())
+            # An empty entry still means no approval.
+            approvals = Path(tmp) / "approvals-ok.json"
+            approvals.write_text(
+                json.dumps({"REQ-1001": {"approved_by": "Legal Ops", "note": "Checked against the policy today."}, "REQ-1002": None, "REQ-1003": ""}),
+                encoding="utf-8",
+            )
+            code, _, stderr = run_cli(["--quiet", "--shared-space-output", str(space), "--approvals", str(approvals)])
+            self.assertEqual(code, 0, stderr)
+            entries = {e["request_id"]: e["shared"] for e in json.loads(space.read_text(encoding="utf-8"))["entries"]}
+            self.assertEqual((entries["REQ-1001"], entries["REQ-1002"], entries["REQ-1003"]), (True, False, False))
+
+    def test_legacy_side_files_that_are_not_utf8_are_named(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            latin = Path(tmp) / "latin.json"
+            latin.write_bytes('{"name": "Pr\u00fcfung"}'.encode("latin-1"))
+            not_utf8 = "it is not UTF-8 text (byte 0xfc at position 12); save it as UTF-8"
+            code, _, stderr = run_cli(["--quiet", "--capacity-scenarios", str(latin), "--capacity-output", tmp])
+            self.assertEqual(code, 2)
+            self.assertIn(f"Invalid capacity simulation input: {latin}: {not_utf8}", stderr)
+            events = str(DATA / "service_events.json")
+            code, _, stderr = run_cli(
+                ["--quiet", "--events-input", events, "--outcome-config", str(latin), "--outcome-output", tmp]
+            )
+            self.assertEqual(code, 2)
+            self.assertIn(f"Invalid outcome control tower input: {latin}: {not_utf8}", stderr)
+            # A byte order mark is accepted here too, as in every other JSON input.
+            marked = Path(tmp) / "scenarios.json"
+            marked.write_bytes(b"\xef\xbb\xbf" + (DATA / "capacity_scenarios.json").read_bytes())
+            code, _, stderr = run_cli(["--quiet", "--capacity-scenarios", str(marked), "--capacity-output", tmp])
+            self.assertEqual(code, 0, stderr)
+
+    def test_approvals_are_read_only_for_the_shared_space(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            broken = Path(tmp) / "approvals.json"
+            broken.write_text("{", encoding="utf-8")
+            code, _, stderr = run_cli(["--quiet", "--approvals", str(broken)])
+            self.assertEqual(code, 0, stderr)
 
     def test_dpa_input_error_points_at_the_subcommand(self):
         code, _, stderr = run_cli(["--quiet", "--dpa-input", str(DATA / "dpa_documents.json")])

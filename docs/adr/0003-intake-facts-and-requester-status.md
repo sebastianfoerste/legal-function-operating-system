@@ -2,6 +2,8 @@
 
 - Status: Accepted
 - Date: 2026-10-20
+- Follow-up: [ADR 0011](0011-requester-vocabulary.md), 2026-11-19, settles the German labels
+  and the core shared space named under Consequences.
 
 ## Context
 

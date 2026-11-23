@@ -11,12 +11,14 @@ from __future__ import annotations
 import hashlib
 import html
 import json
+import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from src.docx_redline import RevisionMark, apply_tracked_changes, list_tracked_changes
 from src.export_gate import ExportBlockedError, ExportEligibility
+from src.pilot.design_tokens import PRINT_CSS, TOKENS_CSS
 from src.pilot.models import Comment, Finding, ParentRouting, PilotIntake
 from src.playbook import DocumentChange
 
@@ -30,6 +32,28 @@ DRAFT_NOTICE = (
     "the review team."
 )
 Block = tuple[Any, ...]
+
+# The package page: shared tokens, a stacked table under 640px so a phone never
+# scrolls sideways, and the light print block. ``_print_rules`` adds the page rules.
+PACKAGE_CSS = (
+    TOKENS_CSS + "body{font:15px/1.5 var(--font);margin:0;color:var(--ink);background:var(--bg)}"
+    "main{max-width:1080px;margin:32px auto;padding:0 20px;overflow-wrap:break-word}"
+    "h1{font-size:26px;font-family:var(--font-head)}"
+    "h2{font-size:19px;margin-top:32px;border-bottom:1px solid var(--line);padding-bottom:6px}"
+    "table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}"
+    "th,td{border:1px solid var(--line);padding:7px 9px;text-align:left;vertical-align:top}"
+    "th{background:var(--panel)}"
+    ".notice{border-left:4px solid var(--warn);background:var(--warn-bg);padding:10px 14px;"
+    "margin:16px 0}.notice p{margin:2px 0}\n"
+    "@media (max-width:640px){table,tbody,tr,td{display:block;width:100%}thead{display:none}"
+    "tr{margin:0 0 12px;border:1px solid var(--line);border-radius:8px;overflow:hidden}"
+    "td{border:0;border-top:1px solid var(--line)}td:first-child{border-top:0}"
+    "td[data-label]::before{content:attr(data-label);display:block;font-weight:700;"
+    "font-size:12px;color:var(--muted)}}\n" + PRINT_CSS
+)
+# A page margin box is outside the document, so it cannot read the tokens; it takes the
+# light --muted value (the first one in TOKENS_CSS) from them instead.
+_PAGE_FOOT_COLOUR = re.findall(r"--muted:(#[0-9a-f]{6})", TOKENS_CSS)[0]
 
 
 @dataclass(frozen=True)
@@ -56,6 +80,8 @@ class PackageData:
     chain_root: str
     actor_names: dict[str, str]
     generated_at: str
+    # When this matter version was recorded: the date of a change nobody has decided yet.
+    proposed_at: str
 
 
 _OUTCOME = {
@@ -207,7 +233,15 @@ def _sections(data: PackageData, *, draft: bool) -> list[tuple[str, list[Block]]
                     + ("proposed" if draft else "approved")
                     + " change as a tracked change against the unmodified customer draft "
                     f"(SHA-256 {hashlib.sha256(data.document).hexdigest()}). Rejecting all tracked "
-                    "changes in Word restores the customer draft exactly.",
+                    "changes in Word restores the customer draft exactly. Each tracked change "
+                    "names the simulated local role that decided it and the time that decision "
+                    "was recorded"
+                    + (
+                        "; a change not yet decided is marked as a playbook proposal"
+                        if draft
+                        else ""
+                    )
+                    + ". These names are not authenticated identities.",
                 )
             ],
         ),
@@ -352,20 +386,39 @@ def render_markdown(data: PackageData, *, draft: bool) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _css_string(text: str) -> str:
+    """The body of a double-quoted CSS string; a line break is refused, not escaped.
+
+    CSS counts a line feed, a carriage return and a form feed as line breaks.
+    """
+    if "\n" in text or "\r" in text or "\f" in text:
+        raise ValueError("a CSS string must be one line")
+    return text.replace("\\", "\\\\").replace('"', '\\"').replace("<", "\\3c ")
+
+
+def _print_rules(notice: str) -> str:
+    """D3: each numbered section starts a new printed page, and every printed page
+    carries the notice and its page number at the foot."""
+    return (
+        '@page{margin:18mm 16mm 20mm;@bottom-center{content:"'
+        + _css_string(notice)
+        + ' Page " counter(page) " of " counter(pages);'
+        + f"font:8pt sans-serif;color:{_PAGE_FOOT_COLOUR}}}}}\n"
+        "@media print{main{max-width:none;margin:0;padding:0}section+section{break-before:page}}\n"
+    )
+
+
 def render_html(data: PackageData, *, draft: bool) -> str:
     esc = html.escape
     title = ("Internal review export: " if draft else "Customer package: ") + data.title
+    header = _header(data, draft=draft)
     parts = [
         "<!doctype html><html lang='en'><head><meta charset='utf-8'>",
+        "<meta name='viewport' content='width=device-width, initial-scale=1'>",
         f"<title>{esc(title)}</title>",
-        "<style>body{font:15px/1.5 system-ui,sans-serif;max-width:1080px;margin:32px auto;padding:0 20px;color:#172033}"
-        "h1{font-size:26px}h2{font-size:19px;margin-top:32px;border-bottom:1px solid #d9dee8;padding-bottom:6px}"
-        "table{width:100%;border-collapse:collapse;margin:12px 0;font-size:13.5px}"
-        "th,td{border:1px solid #d9dee8;padding:7px 9px;text-align:left;vertical-align:top}th{background:#f3f5f9}"
-        ".notice{border-left:4px solid #9a3412;background:#fff7ed;padding:10px 14px;margin:16px 0}"
-        ".notice p{margin:2px 0}@media print{body{margin:0}}</style></head><body>",
+        f"<style>{PACKAGE_CSS}{_print_rules(header[0])}</style></head><body><main>",
         f"<h1>{esc(title)}</h1><div class='notice'>",
-        *[f"<p>{esc(line)}</p>" for line in _header(data, draft=draft)],
+        *[f"<p>{esc(line)}</p>" for line in header],
         "</div>",
     ]
     for heading, blocks in _sections(data, draft=draft):
@@ -377,14 +430,51 @@ def render_html(data: PackageData, *, draft: bool) -> str:
                 parts.append("<ul>" + "".join(f"<li>{esc(i)}</li>" for i in block[1]) + "</ul>")
             else:
                 head = "".join(f"<th>{esc(h)}</th>" for h in block[1])
+                # Each cell carries its column header, shown above it on a phone.
+                labels = [esc(h) for h in block[1]]
                 rows = "".join(
-                    "<tr>" + "".join(f"<td>{esc(str(c))}</td>" for c in row) + "</tr>"
+                    "<tr>"
+                    + "".join(
+                        f"<td data-label='{labels[i] if i < len(labels) else ''}'>"
+                        f"{esc(str(c))}</td>"
+                        for i, c in enumerate(row)
+                    )
+                    + "</tr>"
                     for row in block[2]
                 )
                 parts.append(f"<table><thead><tr>{head}</tr></thead><tbody>{rows}</tbody></table>")
         parts.append("</section>")
-    parts.append("</body></html>")
+    parts.append("</main></body></html>")
     return "".join(parts) + "\n"
+
+
+def _recorded_second(recorded: str) -> str:
+    return recorded[:19] + "Z"
+
+
+def _revision_mark(data: PackageData, change: Any, *, draft: bool) -> RevisionMark:
+    """The Word author and date of one tracked change: who decided it and when.
+
+    The times are the recorded ones, so the document does not change with the export
+    time. The names are simulated local roles, not authenticated identities.
+    """
+
+    prefix = "DRAFT, not approved. " if draft else ""
+    if change.decision in {"accepted", "amended"}:
+        decided_by = getattr(change, "decided_by", None)
+        decided_at = getattr(change, "decided_at", None)
+        if not decided_by or not decided_at:
+            raise ValueError(
+                f"{change.id}: a decided change has no recorded decider or decision time"
+            )
+        return RevisionMark(
+            author=f"{prefix}Simulated local role: {data.actor_names.get(decided_by, decided_by)}",
+            date=_recorded_second(decided_at),
+        )
+    return RevisionMark(
+        author=f"{prefix}Playbook proposal, no reviewer decision yet",
+        date=_recorded_second(data.proposed_at),
+    )
 
 
 def _redline(data: PackageData, *, draft: bool) -> bytes:
@@ -400,11 +490,17 @@ def _redline(data: PackageData, *, draft: bool) -> bytes:
             else {"accepted", "amended"}
         )
     ]
+    # Fallback only: every applicable change has its own mark below, so this is never written.
     mark = RevisionMark(
         author="DRAFT proposal, not approved" if draft else "Approved review (synthetic pilot)",
-        date=data.generated_at[:19] + "Z",
+        date=_recorded_second(data.generated_at),
     )
-    reviewed, _ = apply_tracked_changes(data.document, [c.to_edit() for c in applicable], mark)
+    reviewed, _ = apply_tracked_changes(
+        data.document,
+        [c.to_edit() for c in applicable],
+        mark,
+        marks={c.id: _revision_mark(data, c, draft=draft) for c in applicable},
+    )
     return reviewed
 
 

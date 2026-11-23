@@ -28,6 +28,9 @@ and in the SDK's migration guide
 Keep the pin. The 1.x line is maintained and still released, and this server needs
 nothing from 2.x: it is a local stdio server with four read-only tools.
 
+Note (2026-10-31): the floor is now `mcp>=1.30,<2`. pip-audit lists seven advisories
+against 1.9.0 that 1.30.0 fixes; the `<2` ceiling and the Dependabot ignore stay.
+
 The path to 2.x, to be taken as one change when the 1.x line stops getting releases or
 a client requires protocol 2026-07-28:
 
@@ -39,6 +42,9 @@ a client requires protocol 2026-07-28:
    job on the lowest and highest supported versions.
 4. Keep the server local over stdio. Remote HTTP transport and authentication are out
    of scope (owner decision; see `docs/research/adaptation-plan.md`).
+
+   Note (2026-11-18): owner decision 6 settled this step; see
+   [ADR 0007](0007-mcp-local-stdio-only.md).
 
 ## Consequences
 

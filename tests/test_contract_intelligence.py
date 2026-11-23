@@ -2,7 +2,11 @@ import json
 import unittest
 from importlib import resources
 
-from legal_function_os.contract_intelligence import DPA_PLAYBOOK, build_dpa_review, render_dpa_markdown
+from legal_function_os.contract_intelligence import (
+    DPA_PLAYBOOK,
+    build_dpa_review,
+    render_dpa_markdown,
+)
 
 
 def document(clauses):

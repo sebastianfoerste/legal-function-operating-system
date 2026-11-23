@@ -24,8 +24,8 @@ Portfolio requests are in brackets in the cell they land in.
 | none | Reviewer | Reviewer (REQ-1008) | Reviewer → General Counsel (REQ-1004) |
 | <50k | Reviewer (REQ-1003) | Reviewer | Reviewer → General Counsel |
 | 50k-250k | Reviewer → Legal Ops Lead | Reviewer → Legal Ops Lead (REQ-1006) | Reviewer → Legal Ops Lead → General Counsel (REQ-1002) |
-| 250k-1m | Not reachable | Reviewer → Legal Ops Lead → General Counsel | Reviewer → Legal Ops Lead → General Counsel (REQ-1007) |
-| >1m | Not reachable | Not reachable | Reviewer → Legal Ops Lead → General Counsel → Board note (REQ-1001, REQ-1005) |
+| 250k-1m | Not reachable. Every request in this band is at least MEDIUM risk. | Reviewer → Legal Ops Lead → General Counsel | Reviewer → Legal Ops Lead → General Counsel (REQ-1007) |
+| >1m | Not reachable. Every request in this band is HIGH risk. | Not reachable. Every request in this band is HIGH risk. | Reviewer → Legal Ops Lead → General Counsel → Board note (REQ-1001, REQ-1005) |
 
 ## Portfolio requests
 

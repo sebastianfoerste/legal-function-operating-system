@@ -4,6 +4,8 @@
     legal-function-os triage --input requests.csv
     legal-function-os board-pack --input requests.json --out reports
     legal-function-os validate --input requests.csv --format json
+    legal-function-os intake-page --out reports  writes a page that saves a request file
+    legal-function-os message-drafts --input export.jsonl --out drafts  request drafts for legal
     legal-function-os dpa-review --input agreements.json
     legal-function-os capacity --input requests.json --scenarios scenarios.json
     legal-function-os control-tower --input requests.json --events events.json --config config.json
@@ -37,7 +39,7 @@ from legal_function_os.approval_matrix import (
     write_approval_matrix,
 )
 from legal_function_os.board_pack import build_board_pack, render_markdown, render_triage_markdown
-from legal_function_os.bundled import bundled_path
+from legal_function_os.bundled import bundled_path, not_utf8, read_utf8
 from legal_function_os.capacity_simulator import (
     build_capacity_simulation,
     render_capacity_markdown,
@@ -49,6 +51,26 @@ from legal_function_os.contract_intelligence import (
     render_dpa_markdown,
 )
 from legal_function_os.intake import InputError, load_requests
+from legal_function_os.intake_page import (
+    IntakeGuidanceError,
+    IntakeQuestionsError,
+    add_guidance,
+    build_intake_form,
+    load_intake_guidance,
+    load_intake_questions,
+    render_intake_markdown,
+    write_intake_page,
+)
+from legal_function_os.message_drafts import (
+    MessageExportError,
+    build_message_drafts,
+    load_message_export,
+    read_messages,
+    render_message_drafts_json,
+    render_message_drafts_markdown,
+    summary_line,
+    write_message_drafts,
+)
 from legal_function_os.outcome_control_tower import (
     build_outcome_control_tower,
     render_outcome_markdown,
@@ -80,6 +102,10 @@ INPUT_HELP = (
     "docs/INPUT_FORMAT.md); - reads JSON from standard input. Default: the bundled "
     "synthetic requests."
 )
+MESSAGES_HELP = (
+    "A message export: JSON lines, one message per line, every sender a syn- handle (see "
+    "docs/INPUT_FORMAT.md). Default: the bundled synthetic export."
+)
 
 
 class _Failure(Exception):
@@ -101,9 +127,11 @@ def _json(payload: Any) -> str:
 
 def _read_json(path: str, what: str) -> Any:
     try:
-        return json.loads(Path(path).read_text(encoding="utf-8-sig"))
+        return json.loads(read_utf8(path))
     except OSError as exc:
         raise _error(f"cannot read {what} {path}: {exc.strerror or exc}") from None
+    except UnicodeDecodeError as exc:
+        raise _error(f"cannot read {what} {path}: {not_utf8(exc)}") from None
     except json.JSONDecodeError as exc:
         raise _error(f"{what} {path} is not valid JSON: {exc}") from None
 
@@ -202,6 +230,67 @@ def _board_pack(args: argparse.Namespace) -> int:
         _emit(payload if args.format == "json" else markdown)
     if args.fail_on_breach and pack.totals["sla_breaches"] > 0:
         return 1
+    return 0
+
+
+def _intake_page(args: argparse.Namespace) -> int:
+    policy = _load_policy(args.policy)
+    try:
+        questions, source = load_intake_questions(args.questions)
+        form = build_intake_form(questions, policy, source)
+    except IntakeQuestionsError as exc:
+        for problem in exc.problems:
+            print(f"error: {exc.source}: {problem}", file=sys.stderr)
+        print("The intake questions cannot be used. Nothing was written.", file=sys.stderr)
+        raise _Failure(2) from None
+    except PolicyError as exc:
+        for problem in exc.problems:
+            print(f"error: {exc.source}: {problem}", file=sys.stderr)
+        print("The policy cannot be used for the intake page. Nothing was written.", file=sys.stderr)
+        raise _Failure(2) from None
+    if args.guidance is not None:
+        try:
+            guidance, source = load_intake_guidance(args.guidance)
+            form = add_guidance(form, guidance, source)
+        except IntakeGuidanceError as exc:
+            for problem in exc.problems:
+                print(f"error: {exc.source}: {problem}", file=sys.stderr)
+            print("The intake guidance cannot be used. Nothing was written.", file=sys.stderr)
+            raise _Failure(2) from None
+    for note in form["notes"]:
+        print(f"note: {note}", file=sys.stderr)
+    if args.out:
+        for path in write_intake_page(form, Path(args.out)).values():
+            print(f"wrote {path}", file=sys.stderr)
+    else:
+        _emit(_json(form) if args.format == "json" else render_intake_markdown(form))
+    return 0
+
+
+def _message_drafts(args: argparse.Namespace) -> int:
+    policy = _load_policy(args.policy)
+    try:
+        text, source = load_message_export(args.input)
+        messages = read_messages(text, source)
+    except MessageExportError as exc:
+        for problem in exc.problems:
+            print(f"error: {exc.source}: {problem}", file=sys.stderr)
+        print("The message export cannot be read. Nothing was written.", file=sys.stderr)
+        raise _Failure(2) from None
+    result = build_message_drafts(messages, policy, source)
+    for note in result["notes"]:
+        print(f"note: {note}", file=sys.stderr)
+    for entry in result["messages"]:
+        for note in entry["notes"]:
+            print(f"note: {entry['draft_id']}: {note}", file=sys.stderr)
+    if args.out:
+        for path in write_message_drafts(result, Path(args.out)).values():
+            print(f"wrote {path}", file=sys.stderr)
+    elif args.format == "json":
+        _emit(render_message_drafts_json(result))
+    else:
+        _emit(render_message_drafts_markdown(result))
+    print(summary_line(result), file=sys.stderr)
     return 0
 
 
@@ -307,6 +396,9 @@ def _control_tower(args: argparse.Namespace) -> int:
     return 0
 
 
+NOT_UTF8_ANSWERS = "the answers on standard input are not UTF-8 text; save them as UTF-8. Nothing was written."
+
+
 def _init(args: argparse.Namespace) -> int:
     target = Path(args.out)
     if target.exists() and not args.force:
@@ -317,19 +409,28 @@ def _init(args: argparse.Namespace) -> int:
 
         def ask(prompt: str) -> str:
             try:
-                return input(prompt)
+                answer = input(prompt)
             except EOFError:
                 raise _error(
                     f"the interview needs an answer on standard input; run '{PROG} init "
                     "--defaults' to write the bundled default values instead"
                 ) from None
+            except UnicodeDecodeError:
+                raise _error(NOT_UTF8_ANSWERS) from None
+            # Under a C or UTF-8-mode locale, bytes that are not UTF-8 arrive as surrogates.
+            if any("\ud800" <= c <= "\udfff" for c in answer):
+                raise _error(NOT_UTF8_ANSWERS)
+            return answer
 
         try:
             policy = run_interview(ask, print)
         except InterviewError as exc:
             raise _error(f"{exc}. Nothing was written.") from None
+    # Encoded before the file is opened, so a policy that cannot be written leaves no
+    # empty file behind (a second init would then refuse to overwrite it).
+    data = render_policy_json(policy).encode("utf-8")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render_policy_json(policy), encoding="utf-8")
+    target.write_bytes(data)
     print(f"wrote {target}", file=sys.stderr)
     print(
         f"Next: {PROG} validate --policy {target} --input requests.csv, then "
@@ -346,7 +447,13 @@ Handler = Callable[[argparse.Namespace], int]
 
 def _approval_matrix(args: argparse.Namespace) -> int:
     policy = _load_policy(args.policy)
-    requests, _ = _load_valid_requests(args.input, policy)
+    if args.input is None and args.policy is not None:
+        # The matrix depends only on the policy; the bundled sample requests use the
+        # default value bands, so they are not placed in another policy's matrix.
+        print("note: no --input given, so no request is placed in the matrix", file=sys.stderr)
+        requests: list[dict[str, Any]] = []
+    else:
+        requests, _ = _load_valid_requests(args.input, policy)
     matrix = build_approval_matrix(requests, policy)
     if args.out:
         for path in write_approval_matrix(matrix, Path(args.out)).values():
@@ -368,6 +475,14 @@ COMMANDS: dict[str, tuple[str, Handler]] = {
     "validate": (
         "Check requests against the request format without deciding anything.",
         _validate,
+    ),
+    "intake-page": (
+        "Write a page that helps a requester prepare a request file; it sends and decides nothing.",
+        _intake_page,
+    ),
+    "message-drafts": (
+        "Turn a synthetic message export into request drafts for legal to complete; it sends and decides nothing.",
+        _message_drafts,
     ),
     "dpa-review": (
         "Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses.",
@@ -392,8 +507,8 @@ COMMANDS: dict[str, tuple[str, Handler]] = {
 }
 
 
-def _add_input(parser: argparse.ArgumentParser) -> None:
-    parser.add_argument("--input", metavar="PATH", help=INPUT_HELP)
+def _add_input(parser: argparse.ArgumentParser, input_help: str = INPUT_HELP) -> None:
+    parser.add_argument("--input", metavar="PATH", help=input_help)
     parser.add_argument("--policy", metavar="PATH", help=POLICY_HELP)
 
 
@@ -458,6 +573,27 @@ def command_parser() -> argparse.ArgumentParser:
     _add_input(validate)
     _add_format(validate, out=None)
 
+    intake = parsers["intake-page"]
+    intake.add_argument("--policy", metavar="PATH", help=POLICY_HELP)
+    intake.add_argument(
+        "--questions",
+        metavar="PATH",
+        help="Intake questions JSON (see docs/CUSTOMIZE.md). Default: the bundled synthetic questions.",
+    )
+    intake.add_argument(
+        "--guidance",
+        metavar="PATH",
+        help=(
+            "Guidance from legal per request type, each text with a record of who reviewed it "
+            "(see docs/CUSTOMIZE.md). Default: none; no guidance is bundled."
+        ),
+    )
+    _add_format(intake, out="intake-page.html")
+
+    drafts = parsers["message-drafts"]
+    _add_input(drafts, MESSAGES_HELP)
+    _add_format(drafts, out="message-drafts.json and message-drafts.md")
+
     dpa = parsers["dpa-review"]
     dpa.add_argument(
         "--input",
@@ -497,7 +633,7 @@ def command_parser() -> argparse.ArgumentParser:
     _add_format(tower, out="legal-outcome-control-tower.md, .json and .html")
 
     matrix = parsers["approval-matrix"]
-    _add_input(matrix)
+    _add_input(matrix, INPUT_HELP.removesuffix(".") + ", or none with --policy.")
     _add_format(matrix, out="approval-matrix.md, .json and .html")
 
     init = parsers["init"]
@@ -631,11 +767,20 @@ def _legacy_main(argv: list[str]) -> int:
         )
         return 2
     dpa_documents: list[dict[str, Any]] = []
-    if args.dpa_input:
-        try:
+    approvals: Any = {}
+    # Read before anything is written, so a file that cannot be read leaves no outputs.
+    try:
+        if args.dpa_input:
             dpa_documents = _load_dpa_documents(args.dpa_input)
-        except _Failure as failure:
-            return failure.status
+        if args.approvals and args.shared_space_output:
+            approvals = _read_json(args.approvals, "approvals")
+            # An empty entry means no approval; anything else must be an approval object.
+            if not isinstance(approvals, dict) or any(v and not isinstance(v, dict) for v in approvals.values()):
+                raise _error(
+                    f"approvals {args.approvals}: expected an object that maps a request id to an approval object"
+                )
+    except _Failure as failure:
+        return failure.status
 
     pack = build_board_pack(requests, period=args.period, policy=policy)
     markdown = render_markdown(pack)
@@ -681,10 +826,11 @@ def _legacy_main(argv: list[str]) -> int:
             )
             return 2
         try:
-            scenario_payloads = json.loads(
-                Path(args.capacity_scenarios).read_text(encoding="utf-8")
-            )
+            scenario_payloads = json.loads(read_utf8(args.capacity_scenarios))
             simulation = build_capacity_simulation(requests, scenario_payloads, policy)
+        except UnicodeDecodeError as exc:
+            print(f"Invalid capacity simulation input: {args.capacity_scenarios}: {not_utf8(exc)}", file=sys.stderr)
+            return 2
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"Invalid capacity simulation input: {exc}", file=sys.stderr)
             return 2
@@ -708,10 +854,15 @@ def _legacy_main(argv: list[str]) -> int:
             )
             return 2
         try:
-            event_ledger = json.loads(Path(args.events_input).read_text(encoding="utf-8"))
-            outcome_config = json.loads(Path(args.outcome_config).read_text(encoding="utf-8"))
+            reading = args.events_input
+            event_ledger = json.loads(read_utf8(reading))
+            reading = args.outcome_config
+            outcome_config = json.loads(read_utf8(reading))
             tower = build_outcome_control_tower(requests, event_ledger, outcome_config, policy)
             write_outcome_artifacts(tower, Path(args.outcome_output))
+        except UnicodeDecodeError as exc:
+            print(f"Invalid outcome control tower input: {reading}: {not_utf8(exc)}", file=sys.stderr)
+            return 2
         except (OSError, ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
             print(f"Invalid outcome control tower input: {exc}", file=sys.stderr)
             return 2
@@ -733,9 +884,6 @@ def _legacy_main(argv: list[str]) -> int:
         )
 
     if args.shared_space_output:
-        approvals = {}
-        if args.approvals:
-            approvals = json.loads(Path(args.approvals).read_text(encoding="utf-8"))
         Path(args.shared_space_output).write_text(
             json.dumps(
                 build_shared_space(requests, approvals, period=args.period, policy=policy),

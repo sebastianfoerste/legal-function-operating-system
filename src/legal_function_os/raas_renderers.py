@@ -7,6 +7,7 @@ import json
 from pathlib import Path
 from typing import Any, Iterable
 
+from legal_function_os.design_tokens import PRINT_CSS, TOKENS_CSS
 from legal_function_os.raas_models import RaaSDealPack
 
 
@@ -77,16 +78,16 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
         "| Rule | Category | Severity | Issue | Standard position | Fallback | Approvals |",
         "| --- | --- | --- | --- | --- | --- | --- |",
     ]
-    for item in pack.clause_reviews:
+    for review in pack.clause_reviews:
         lines.append(
             _table_row(
-                item.rule_id,
-                item.category,
-                item.severity,
-                item.issue,
-                item.standard_position,
-                item.fallback_position,
-                ", ".join(item.required_approvals),
+                review.rule_id,
+                review.category,
+                review.severity,
+                review.issue,
+                review.standard_position,
+                review.fallback_position,
+                ", ".join(review.required_approvals),
             )
         )
 
@@ -101,15 +102,15 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
             "| --- | --- | --- | --- | --- | --- |",
         ]
     )
-    for item in pack.finance_handoff:
+    for finance_issue in pack.finance_handoff:
         lines.append(
             _table_row(
-                item.issue_id,
-                item.topic,
-                item.status,
-                item.question,
-                item.legal_action,
-                item.framework,
+                finance_issue.issue_id,
+                finance_issue.topic,
+                finance_issue.status,
+                finance_issue.question,
+                finance_issue.legal_action,
+                finance_issue.framework,
             )
         )
 
@@ -122,18 +123,18 @@ def render_raas_markdown(pack: RaaSDealPack) -> str:
             "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
         ]
     )
-    for item in pack.regulatory_readiness:
+    for control in pack.regulatory_readiness:
         lines.append(
             _table_row(
-                item.control_id,
-                item.regime,
-                item.actor,
-                item.status,
-                item.gate_effect,
-                item.obligation_or_question,
-                item.owner,
-                item.target_date,
-                f"[{item.source_id}]({item.source_url})",
+                control.control_id,
+                control.regime,
+                control.actor,
+                control.status,
+                control.gate_effect,
+                control.obligation_or_question,
+                control.owner,
+                control.target_date,
+                f"[{control.source_id}]({control.source_url})",
             )
         )
 
@@ -259,40 +260,43 @@ def render_raas_html(pack: RaaSDealPack) -> str:
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>{html.escape(pack.title)}</title>
   <style>
-    :root {{ color-scheme: light; --ink: #17202b; --muted: #64717d; --line: #d7dee4; --panel: #fff; --bg: #f3f6f7; --teal: #10383b; --danger: #a72e31; }}
-    * {{ box-sizing: border-box; }}
-    body {{ margin: 0; font: 15px/1.5 system-ui, sans-serif; color: var(--ink); background: var(--bg); }}
-    header {{ padding: 36px max(24px, calc((100% - 1120px) / 2)); color: white; background: var(--teal); }}
-    header p {{ max-width: 820px; color: #c9e0e0; }}
+{TOKENS_CSS}    * {{ box-sizing: border-box; }}
+    body {{ margin: 0; font: 15px/1.5 var(--font); color: var(--ink); background: var(--bg); }}
+    header {{ padding: 36px max(24px, calc((100% - 1120px) / 2)); color: var(--ink); background: var(--panel); border-bottom: 3px solid var(--accent); }}
+    header h1 {{ font-family: var(--font-head); }}
+    header p {{ max-width: 820px; color: var(--muted); }}
     main {{ max-width: 1120px; margin: 0 auto; padding: 24px; }}
-    section {{ margin: 18px 0; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--panel); }}
-    .offline {{ margin: 0; padding: 10px 14px; border-radius: 8px; color: #355; background: #dceeee; }}
+    section {{ margin: 18px 0; padding: 22px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }}
+    .offline {{ margin: 0; padding: 10px 14px; border-radius: 8px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); }}
     .metrics {{ display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }}
-    .metric {{ padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: white; }}
+    .metric {{ padding: 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }}
     .metric span {{ display: block; color: var(--muted); font-size: 12px; text-transform: uppercase; }}
     .metric strong {{ display: block; margin-top: 5px; font-size: 28px; }}
-    .blocked strong {{ color: var(--danger); }}
+    .blocked strong {{ color: var(--bad); }}
     .issues {{ display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }}
     .issue {{ padding: 14px; border: 1px solid var(--line); border-radius: 10px; }}
-    .issue span {{ color: var(--danger); font: 12px ui-monospace, monospace; }}
+    .issue span {{ color: var(--bad); font: 12px var(--font-mono); }}
     .issue h3 {{ margin: 5px 0; font-size: 15px; }}
     .issue p {{ margin: 0; color: var(--muted); }}
     .delay-grid {{ display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }}
+    .table-scroll {{ overflow-x: auto; }}
     table {{ width: 100%; border-collapse: collapse; }}
     th, td {{ padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }}
     th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; }}
-    .badge {{ padding: 3px 7px; border-radius: 999px; background: #edf1f3; font-size: 12px; }}
-    .nonstarter {{ color: var(--danger); background: #f9e1e1; }}
+    code {{ font-family: var(--font-mono); }}
+    .badge {{ padding: 3px 7px; border-radius: 999px; border: 1px solid var(--pill-line); background: var(--panel); font-size: 12px; }}
+    .nonstarter {{ color: var(--bad); background: var(--bad-bg); }}
     .note {{ color: var(--muted); }}
-    a {{ color: #176b72; }}
+    a {{ color: var(--accent); }}
+    :focus-visible {{ outline: 3px solid var(--focus); outline-offset: 2px; }}
     @media (max-width: 760px) {{
       header {{ padding: 26px 18px; }}
       main {{ padding: 14px; }}
-      section {{ padding: 16px; overflow-x: auto; }}
+      section {{ padding: 16px; }}
       .metrics, .issues, .delay-grid {{ grid-template-columns: 1fr; }}
       table {{ min-width: 720px; }}
     }}
-  </style>
+{PRINT_CSS}  </style>
 </head>
 <body>
   <header>
@@ -317,17 +321,17 @@ def render_raas_html(pack: RaaSDealPack) -> str:
       <div><h2>What could delay revenue?</h2>{_html_list(gate['revenue_delay_drivers'])}</div>
     </section>
     <section>
-      <h2>Negotiation playbook</h2>
-      <table><thead><tr><th>Rule</th><th>Category</th><th>Severity</th><th>Issue</th><th>Approvers</th></tr></thead><tbody>{playbook_rows}</tbody></table>
+      <h2 id="playbook-h">Negotiation playbook</h2>
+      <div class="table-scroll" role="region" aria-labelledby="playbook-h" tabindex="0"><table><thead><tr><th>Rule</th><th>Category</th><th>Severity</th><th>Issue</th><th>Approvers</th></tr></thead><tbody>{playbook_rows}</tbody></table></div>
     </section>
     <section>
-      <h2>Finance handoff</h2>
+      <h2 id="finance-h">Finance handoff</h2>
       <p class="note">Questions for Finance under IFRS 15, ASC 606, and the applicable lease framework. No accounting conclusion is automated.</p>
-      <table><thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Question</th></tr></thead><tbody>{finance_rows}</tbody></table>
+      <div class="table-scroll" role="region" aria-labelledby="finance-h" tabindex="0"><table><thead><tr><th>ID</th><th>Topic</th><th>Status</th><th>Question</th></tr></thead><tbody>{finance_rows}</tbody></table></div>
     </section>
     <section>
-      <h2>Regulatory readiness</h2>
-      <table><thead><tr><th>Control</th><th>Regime</th><th>Gate effect</th><th>Owner</th><th>Source</th></tr></thead><tbody>{regulatory_rows}</tbody></table>
+      <h2 id="regulatory-h">Regulatory readiness</h2>
+      <div class="table-scroll" role="region" aria-labelledby="regulatory-h" tabindex="0"><table><thead><tr><th>Control</th><th>Regime</th><th>Gate effect</th><th>Owner</th><th>Source</th></tr></thead><tbody>{regulatory_rows}</tbody></table></div>
     </section>
     <section><h2>Review boundary</h2><p>{html.escape(pack.disclaimer)}</p></section>
   </main>
