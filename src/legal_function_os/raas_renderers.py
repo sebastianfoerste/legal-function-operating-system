@@ -286,6 +286,7 @@ def render_raas_html(pack: RaaSDealPack) -> str:
     th, td {{ padding: 10px; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }}
     th {{ color: var(--muted); font-size: 12px; text-transform: uppercase; }}
     code {{ font-family: var(--font-mono); }}
+    .note code, .sources code {{ overflow-wrap: anywhere; }}
     .badge {{ padding: 3px 7px; border-radius: 999px; border: 1px solid var(--pill-line); background: var(--panel); font-size: 12px; }}
     .nonstarter {{ color: var(--bad); background: var(--bad-bg); }}
     .note {{ color: var(--muted); }}
