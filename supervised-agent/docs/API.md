@@ -252,7 +252,13 @@ Output schema:
 
 Served by `runtime_agent/app.py` under `/pilot` on `127.0.0.1`. Every data route needs the
 `X-Pilot-Actor` header naming a registered synthetic actor. The header selects a simulated
-local role. It is not authentication; see `docs/pilot/IDENTITY_CONTROLS.md`.
+local role. It is not authentication; see `docs/pilot/IDENTITY_CONTROLS.md`. A request
+whose `Origin` header is not this server's own is refused: the header, when sent, must be
+`http://` with the host and port of the `Host` header. Browsers send it on every POST and
+every CORS-mode fetch, but not on a GET navigation or an image or script load, so such a
+GET from another origin is still answered. That origin can neither read nor embed the response
+(same-origin policy, `Cross-Origin-Resource-Policy`, no framing), and a data route also
+needs `X-Pilot-Actor`.
 
 | Method and path | Purpose |
 | --- | --- |
@@ -262,15 +268,33 @@ local role. It is not authentication; see `docs/pilot/IDENTITY_CONTROLS.md`.
 | `POST /pilot/api/matters` | Open a matter from `{"scenario_id"}` or from `{"intake", "document_name", "document_base64"}` |
 | `GET /pilot/api/matters/{id}` | The matter as that role may see it |
 | `GET /pilot/api/matters/{id}/history` | Versions, events and chain verification |
-| `GET /pilot/api/matters/{id}/package` | The approved customer package, if a delivery manifest exists |
+| `GET /pilot/api/matters/{id}/package` | The approved customer package, while its delivery stands |
 | `POST /pilot/api/matters/{id}/commands` | `{"command", "expected_revision", "args", "effort_minutes"}` |
 
-Answers to a refused command:
+The package is served only while its delivery stands: the matter is `ready_for_delivery`
+and the evidence `delivery_manifest_current` passes, or the matter is `closed` with the
+outcome `delivered_locally_and_accepted`. A withdrawal, a revision request, a new version,
+a comment written after the package was prepared or another final approver assigned in
+place of the one who approved ends the delivery. The route then answers 403
+`permission_denied` with a sentence that says why, and the stored manifest and its files
+are kept. The matter view (`GET /pilot/api/matters/{id}`) carries the same answer for both
+kinds of reader as `package`: `{"may_open": true, "reason": null}` while the package may
+be opened, `{"may_open": false, "reason": null}` when none was ever prepared, and
+`{"may_open": false, "reason": "<sentence>"}` when one was prepared and its delivery has
+ended. The review room shows the link or the sentence from that field, and offers the
+requester "Accept delivery" only while `may_open` is true. If the delivery stands but its
+`customer-package.html` is missing from the export folder, the route answers 404
+`not_found` and names the missing file.
+
+Answers to a refused request or command:
 
 | Status | `error` | Meaning |
 | --- | --- | --- |
 | 401 | `actor_required` | No actor header |
-| 403 | `permission_denied` | Unknown actor, wrong role, or not assigned to the matter |
+| 403 | `host_not_allowed` | The `Host` header is not this server |
+| 403 | `origin_not_allowed` | The `Origin` header names another origin |
+| 403 | `permission_denied` | Unknown actor, wrong role, not assigned to the matter, or no approved package may be opened |
+| 404 | `not_found` | Unknown route, matter, version, comment or change, or the package file of a delivery that stands is missing |
 | 409 | `stale_submission` | The matter changed; `current_revision` is returned |
 | 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |
 | 409 | `export_blocked` | The export gate refused; `checks` lists each condition |

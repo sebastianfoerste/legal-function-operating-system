@@ -15,8 +15,10 @@ from pathlib import Path
 from typing import Any
 
 from src.pilot.ledger import matter_ledger
-from src.pilot.parent_bridge import CONTRACT_REVIEW_STATE, parent_module, parent_request
+from src.pilot.parent_bridge import contract_review_state, parent_module, parent_request
 from src.pilot.service import StoredChange, VersionBody
+from src.pilot.snooze import parse_time, snooze_windows
+from src.pilot.state_machine import TERMINAL_STATES
 from src.pilot.store import PilotStore
 from src.pilot.timeline import payload_object
 
@@ -34,6 +36,8 @@ _STATE_AFTER = {
     "delivery_package_prepared": "ready_for_delivery",
     "delivery_accepted": "closed",
     "matter_withdrawn": "closed",
+    "matter_declined": "declined",
+    "matter_marked_duplicate": "duplicate",
 }
 _WAITING_ON = {
     "business_requester": "requester_or_missing_facts",
@@ -94,6 +98,23 @@ def _load(store: PilotStore) -> list[dict[str, Any]]:
     return matters
 
 
+def _snoozed_minutes(start: str, end: str, windows: list[dict[str, Any]]) -> float:
+    """Minutes of the gap from ``start`` to ``end`` that fall inside a snooze."""
+
+    begin, finish = parse_time(start), parse_time(end)
+    if begin is None or finish is None:
+        return 0.0
+    total = 0.0
+    for window in windows:
+        since = parse_time(window["since"])
+        ended = parse_time(window["ended_at"]) if window["ended_at"] else finish
+        if since is None or ended is None:
+            continue
+        overlap = (min(finish, ended) - max(begin, since)).total_seconds() / 60
+        total += max(0.0, overlap)
+    return round(total, 1)
+
+
 def _first(events: list[dict[str, Any]], event_type: str, key: str) -> str | None:
     return next((e[key] for e in events if e["event_type"] == event_type and e[key]), None)
 
@@ -112,16 +133,24 @@ def _matter_metrics(matter: dict[str, Any], key: str) -> dict[str, Any]:
     effort = {"intake": 0, "review": 0, "correction": 0}
     state = "intake"
     reviewed = False
+    # A snooze is time waiting on the requester, whoever acts next (ADR 0010).
+    snoozes = snooze_windows(done, key)
     for index, event in enumerate(done):
         if index:
             gap = _minutes(done[index - 1][key], event[key]) or 0.0
+            paused = (
+                min(gap, _snoozed_minutes(done[index - 1][key], event[key], snoozes))
+                if snoozes
+                else 0.0
+            )
             # The gap before an event is time spent waiting for whoever acted next.
             cause = (
                 "requester_acceptance"
                 if event["event_type"] == "delivery_accepted"
                 else _WAITING_ON.get(event["role"], "matter_owner_availability")
             )
-            waiting[cause] += gap
+            waiting[cause] += gap - paused
+            waiting["requester_or_missing_facts"] += paused
         minutes = event["effort_minutes"] or 0
         comment_id = event["payload"].get("comment_id", "")
         if event["event_type"] == "comment_reopened":
@@ -195,7 +224,7 @@ def _override_records(matters: list[dict[str, Any]], key: str) -> list[dict[str,
 
     records = []
     for matter in matters:
-        if matter["row"]["state"] != "closed":
+        if matter["row"]["state"] not in TERMINAL_STATES:
             continue
         for change in matter["changes"]:
             if change.decision not in _OVERRIDES:
@@ -445,6 +474,9 @@ def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str,
 
     The parent lifecycle has no revision loop, so revision cycles are folded into
     the working state and the approval request is reported once, at final approval.
+    A matter is a request here only once it has a ledger entry, and the first entry is
+    its scripted submission to legal. A draft still in intake, or withdrawn there, is
+    left out: legal never received it, so there is no service event to measure.
     """
 
     requests: list[dict[str, Any]] = []
@@ -456,8 +488,16 @@ def to_parent_ledger(store: PilotStore) -> tuple[list[dict[str, Any]], dict[str,
         ]
         if not events:
             continue
+        # The scripted clock's "now" is the matter's latest scripted step, refusals included.
+        scripted = [(parse_time(e["fixture_at"]), e["fixture_at"]) for e in matter["events"]]
+        now = max(((m, t) for m, t in scripted if m is not None), default=(None, None))[1]
+        entries = matter_ledger(matter_id, events, as_of=now)
+        if not entries:
+            # The parent tower refuses a request without an event, and one such request
+            # would stop the view for every other matter in the store.
+            continue
         requests.append(parent_request(matter_id, matter["body"].intake))
-        ledger_events.extend(matter_ledger(matter_id, events))
+        ledger_events.extend(entries)
     latest = max((e["occurred_at_utc"] for e in ledger_events), default=None)
     as_of = (
         (_parse(latest) + timedelta(hours=1)).isoformat().replace("+00:00", "Z") if latest else ""
@@ -480,6 +520,18 @@ def build_parent_outcome_view(store: PilotStore) -> dict[str, Any]:
     return tower.build_outcome_control_tower(requests, ledger, config)
 
 
+def _withdrawal_note(events: list[dict[str, Any]]) -> str | None:
+    """Who withdrew the matter and the reason they typed, from the matter's events."""
+
+    event = next((e for e in reversed(events) if e["event_type"] == "matter_withdrawn"), None)
+    if event is None:
+        return None
+    return (
+        f"{event['actor_id']} [{event['role']}, simulated role] withdrew the matter: "
+        f"{event['note']}"
+    )
+
+
 def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict[str, Any]:
     """One matter in the shared ``legal-workflow-controls.v1`` contract."""
 
@@ -487,9 +539,21 @@ def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict
     held = bool(version["scope_exclusions"]) or any(
         s["status"] == "blocker" for s in view["assessment"]["source_verifications"]
     )
+    matter = view["matter"]
+    review_state = contract_review_state(matter["state"], matter["closed_outcome"])
+    # A matter closed without delivery (withdrawn, declined or a duplicate) is rejected,
+    # even when a charter exclusion held it: nothing about it is pending any more.
+    if held and review_state != "rejected":
+        review_state = "blocked"
+    review_note = view["assessment"].get("review_note")
+    if matter["closed_outcome"] == "withdrawn_without_delivery":
+        # The withdrawal cancelled any approval, so that approval's note no longer stands.
+        # The note is read from the withdrawal event, not from the stored assessment: a
+        # store written before 2026-11-20 still holds the approved assessment there.
+        review_note = _withdrawal_note(events)
     return {
         "schema": "legal-workflow-controls.v1",
-        "review_state": "blocked" if held else CONTRACT_REVIEW_STATE[view["matter"]["state"]],
+        "review_state": review_state,
         "approval_gate": {
             "human_review_required": True,
             "export_allowed": bool(eligibility["eligible"]),
@@ -498,7 +562,7 @@ def control_contract(view: dict[str, Any], events: list[dict[str, Any]]) -> dict
                 *[f"specialist_reviewer:{s}" for s in version["required_specialties"]],
                 f"final_approver:{version['required_final_tier']}",
             ],
-            "review_note": view["assessment"].get("review_note"),
+            "review_note": review_note,
         },
         "source_boundary": {
             "mode": "synthetic_only",

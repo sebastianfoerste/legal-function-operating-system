@@ -23,8 +23,8 @@ Companion files:
 
 ## Method
 
-- **Evidence tags.** Every claim carries a source URL, the access date (2026-10-20 for all)
-  and one tag:
+- **Evidence tags.** Every claim carries a source URL, the access date (2026-10-20, or
+  2026-11-18 for the [German follow-up](#german-follow-up-2026-11-18)) and one tag:
   - **Observed**: public source code or a repository page read directly.
   - **Claimed**: vendor or third-party statement, here always seen in a search snippet.
   - **Inferred**: our reasoning.
@@ -38,16 +38,18 @@ Companion files:
   without reviewer identities.
 - **Coverage.**
   - 43 vendor searches (39 English, 1 German, 1 mixed German and English, 2 French) and
-    one English preflight search. German coverage is thin for a DSGVO-focused product;
-    more German queries are listed as a follow-up in the adaptation plan.
+    one English preflight search on 2026-10-20, and 12 German follow-up searches (7
+    German, 5 mixed German and English) on 2026-11-18; see the
+    [German follow-up](#german-follow-up-2026-11-18).
   - 17 open-source repositories cloned and read, with no code run.
   - Five curated lists from the repository owner.
   - Review-mining for Ironclad, Checkbox, Juro, LawVu, Streamline AI and Agiloft.
 
 ## Search log
 
-All searches ran on 2026-10-20 through the WebSearch tool in standard mode. "Results used"
-lists the sources the matrix and teardowns cite.
+All searches in this table ran on 2026-10-20 through the WebSearch tool in standard mode.
+"Results used" lists the sources the matrix and teardowns cite. The
+[German follow-up](#german-follow-up-2026-11-18) of 2026-11-18 has its own table.
 
 | # | Query | Lang | Results used |
 | --- | --- | --- | --- |
@@ -102,12 +104,12 @@ Repository discovery (Observed, 2026-10-20):
   through the REST search API. The research agent then listed them through the GitHub MCP
   search tool. That tool reached beyond this session's repository scope, which the session
   rules do not allow, and it is not one of the fallbacks the brief names. The access was
-  read-only. No matrix row comes from it; only the `legal-operations` count in the next
-  bullet relies on it. Whether to keep that count is an owner decision, and later runs use
-  only the named fallbacks.
-- `legal-operations` has 22 repositories, all small, which confirms the brief's
-  observation: there is little open-source competition for a deterministic legal front
-  door.
+  read-only. Nothing from that listing is used: the topic count it gave was removed on
+  2026-11-18 (owner decision 11), and no matrix row came from it. Later runs use only the
+  named fallbacks.
+- The open-source picture rests on the 17 repositories cloned for this research and the
+  curated lists below. They suggest little open-source competition for a deterministic
+  legal front door. Inferred, and weak evidence: it is not a count.
 - The repository owner's lists (`awesome-eu-fintech-regulation`, `awesome-legal-tech`,
   `awesome-in-house-legal`, `awesome-legal-nlp` on `master`, `Awesome-LegalAI-Resources`)
   were read via raw.githubusercontent.com. `awesome-in-house-legal` states that no
@@ -115,10 +117,12 @@ Repository discovery (Observed, 2026-10-20):
 
 ## Products
 
-65 products and projects are in the matrix: 17 direct, 33 adjacent and 15 pattern donors.
-Four rows hold no capability data and carry evidence `unknown`, so 61 rows hold data.
-Brightflag, Onit and HighQ were not found in any search. GitHub pull request reviews was
-not researched this run, because no source for it was reachable.
+67 products and projects are in the matrix: 20 direct, 32 adjacent and 15 pattern donors.
+In 15 rows every capability cell is `unknown`: three carry evidence `unknown`, and twelve
+hold Claimed product facts only. So 52 rows hold capability data.
+Brightflag and HighQ were not found in any search; Onit surfaced only in the German
+follow-up. GitHub pull request reviews was not researched this run, because no source for
+it was reachable.
 These are the findings that matter for this repository.
 
 ### Direct competitors
@@ -145,19 +149,24 @@ These are the findings that matter for this repository.
   - The Escalation Router only drafts; a person sends.
   - The playbook monitor proposes a change after 5 deviations within 12 months and
     writes only after the lawyer accepts an exact diff.
-- **Flank** markets autonomous legal agents that work "embedded, invisible" in Slack,
-  Teams and email. That is the anti-pattern this repository is built against. Claimed:
-  <https://insightpartners.com/ideas/flank-raises-10m-to-scale-autonomous-legal-agents-embedded-invisible-and-built-for-the-enterprise>
 - **Wordsmith** takes requests in Slack, Teams, email and Salesforce, pulls context from
   CRM and CLM, and answers in the same channel. Claimed: <https://wordsmith.ai/integrations>
-- **Streamline AI, Xakia, Tonkean, Josef, Bryter (now presenting BEAMON AI), Mitratech,
-  ServiceNow Legal Service Delivery, Sandstone, Eudia, GC AI, DISCO Request, Bigle,
-  Autologyx and the Norton Rose Fulbright front door** cover parts of intake, routing and
-  reporting. Snippets show conditional forms, FAQ deflection and dashboards, but little
-  about how decisions are explained. Claimed; per-row sources are in the matrix.
+- **Streamline AI, Xakia, Tonkean, Bryter (now presenting BEAMON AI), Mitratech,
+  ServiceNow Legal Service Delivery, Sandstone, DISCO Request, Bigle, Autologyx and the
+  Norton Rose Fulbright front door** cover parts of intake, routing and reporting.
+  Snippets show conditional forms, FAQ deflection and dashboards, but little about how
+  decisions are explained. Claimed; per-row sources are in the matrix.
+- **Wolters Kluwer (Legisway), otris, DEPLAW and Onit** are in the
+  [German follow-up](#german-follow-up-2026-11-18) below.
 
 ### Adjacent products
 
+- **Flank** markets autonomous legal agents that work "embedded, invisible" in Slack,
+  Teams and email. That is the anti-pattern this repository is built against. Claimed:
+  <https://insightpartners.com/ideas/flank-raises-10m-to-scale-autonomous-legal-agents-embedded-invisible-and-built-for-the-enterprise>
+- **Josef** offers no-code legal automation for guidance, documents and emails, **Eudia**
+  governed AI agents for in-house legal, and **GC AI** an AI workspace for in-house
+  contracts and compliance. Claimed; per-row sources are in the matrix.
 - **Ironclad** gives each clause a preferred position, fallbacks and an approver. A
   deviation goes to a "Needs Review" section, and skipping a change can require an extra
   approver. Claimed:
@@ -228,7 +237,60 @@ These are the findings that matter for this repository.
   - Approvals bound to a version.
   - No model in the decision path. None of the snippet-visible vendors documents how a
     routing or risk decision is explained or reproduced. Inferred from the absence of such
-    material in 43 searches, which is weak evidence.
+    material in 43 searches and the 12 German follow-up searches, which is weak evidence.
+
+## German follow-up, 2026-11-18
+
+Owner decision 12 asked for German queries. Twelve ran on 2026-11-18 through the WebSearch
+tool, eleven in standard mode and #54 in extended mode. The three vendor pages tried were
+still not reachable (see [Not reachable](#not-reachable)), so every vendor fact here is
+**Claimed** from search results.
+
+| # | Query | Lang | Results used |
+| --- | --- | --- | --- |
+| 44 | Legal Request Management Rechtsabteilung | DE/EN | none new (ServiceNow docs already cited) |
+| 45 | Vertragsprüfung Playbook | DE | none (playbook explainers only) |
+| 46 | Mandatsannahme Software Unternehmensjurist | DE | none (law-firm intake only) |
+| 47 | Legal Operations Software Rechtsabteilung Intake Anfragen | DE/EN | onit.com (intake blog) |
+| 48 | Vertragsmanagement KI Rechtsabteilung DSGVO Hosting Deutschland | DE | none (directories and law-firm guides) |
+| 49 | Legal Tech Mittelstand Rechtsabteilung Anfragenmanagement Self-Service Portal | DE/EN | wolterskluwer.com/de-de (Legisway) |
+| 50 | Legal Front Door Rechtsabteilung Software Triage Fachbereich Anfragen | DE/EN | none new |
+| 51 | otris legal sapiens RSM App4Matter DiliTrust Rechtsabteilung Anfragen Workflow Freigabe Reporting | DE | omr.com/de (otris reviews); shyft.ai (otris legal SUITE) |
+| 52 | Legisway Ticketing Portal Rechtsabteilung Anfragen Fachbereiche Dashboard | DE | wolterskluwer.com (legal ticketing; the case for legal ticketing) |
+| 53 | KI Rechtsabteilung Software Deutschland Libra Noxtua Legal Playbook Vertragsprüfung Unternehmen | DE | none (contract review, no intake) |
+| 54 | Rechtsabteilung Anfragemanagement Software Anbieter Deutschland Legal Front Door Triage Freigabe Workflow Reporting | DE | otris.de (two pages); legaldata.tech (DEPLAW); deloittelegal.de (designing a legal front door) |
+| 55 | BRYTER Legal Front Door Rechtsabteilung Intake Triage Anfragen 2026 | DE/EN | bryter.com (in-house legal; intake tools); deloittelegal.de (works council) |
+
+Findings, all Claimed; per-row sources are in the matrix:
+
+- **otris** (legal SUITE) has a legal front door where business units submit requests or
+  upload contracts, and a request can become a matter directly. User reviews list
+  approvals, workflows and reporting dashboards. New matrix row.
+- **DEPLAW** (legaldata.tech) presents a self-service portal as the department's front
+  door. Requests are classified on arrival and answered directly where possible, with
+  hosting in Germany. How it classifies is not stated. New matrix row.
+- **Legisway** (Wolters Kluwer) has a Legal Ticketing Portal for contract, advice and
+  template requests. The asking department sees each request's status, and tickets and
+  contracts feed KPI reporting. Row updated.
+- **BRYTER** markets an AI legal front door for corporate legal: intake, triage, request
+  tracking, self-service answers and risk flags. Row updated, and moved to direct, where
+  the prose above already lists it.
+- **Onit** surfaced for the first time. Deloitte Legal names it among suites that usually
+  include a legal front door module. Row updated.
+- Named without usable product detail, so not added: RSM App4Matter, DiliTrust, Septeo
+  Legal Suite, stp.one Knowliah and Libra (an AI workspace for lawyers with contract
+  review). JUPUS for Kleos takes in law-firm mandates, which is out of scope.
+- No German source documents how a routing or risk decision is explained or reproduced.
+  Inferred from absence, which is weak evidence.
+
+No hypothesis verdict in the [adaptation plan](adaptation-plan.md#hypothesis-verdicts)
+changed.
+
+Logged for the owner, not used: a Deloitte Legal article says that introducing a legal
+front door in Germany usually needs the works council's co-determination, and that AI
+answers raise further questions. Nothing in this repository relies on it. Claimed, and not
+checked against the statute:
+<https://www.deloittelegal.de/dl/en/services/legal/perspectives/legal-front-door-betriebsrat.html>
 
 ## AI Act timing (logged for the owner, not used)
 
@@ -260,6 +322,10 @@ the EUR-Lex consolidated texts. The snippets above stay Claimed and were not use
 | sebastianfoerste/legal-ai-design-system | `git clone` asked for credentials: private or not present |
 | raw.githubusercontent.com …/awesome-legal-nlp/main | 404; the `master` branch worked |
 | G2 review text for Checkbox and LawVu; Reddit | No usable results in search |
+
+On 2026-11-18, WebFetch of mitratech.com, www.wolterskluwer.com and fynk.com failed the
+same way (`getaddrinfo ENOTFOUND`): the research environment's network settings do not
+allow these hosts. No other vendor site was tried.
 
 Network access for vendor documentation and EUR-Lex can be widened in the environment's
 network settings for a follow-up run.

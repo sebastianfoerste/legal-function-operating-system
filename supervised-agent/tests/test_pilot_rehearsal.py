@@ -10,7 +10,13 @@ from src.pilot.cli import DOCUMENT_FIXTURES, SCENARIO_DOCS
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.metrics import build_parent_outcome_view, build_pilot_metrics, to_parent_ledger
 from src.pilot.onboarding import ONBOARDING_TASKS
-from src.pilot.parent_bridge import CONTRACT_REVIEW_STATE, route, tier_covers
+from src.pilot.parent_bridge import (
+    CLOSED_OUTCOME_REVIEW_STATE,
+    CONTRACT_REVIEW_STATE,
+    contract_review_state,
+    route,
+    tier_covers,
+)
 from src.pilot.scenario_runner import (
     load_scenario,
     render_scenario_markdown,
@@ -174,8 +180,13 @@ def test_shared_control_contract_export_matches_the_schema(rehearsal) -> None:
     assert contracts["PM-BLOCKED-003"]["review_state"] == "blocked"
     assert contracts["PM-BLOCKED-003"]["approval_gate"]["export_allowed"] is False
     assert contracts["PM-ROUTINE-001"]["review_state"] == "approved"
-    assert set(CONTRACT_REVIEW_STATE) == set(STATES)
-    assert set(CONTRACT_REVIEW_STATE.values()) <= set(schema["properties"]["review_state"]["enum"])
+    # Every state but closed maps by itself; a closed matter maps by how it closed.
+    assert set(CONTRACT_REVIEW_STATE) == set(STATES) - {"closed"}
+    allowed = set(schema["properties"]["review_state"]["enum"])
+    assert (
+        set(CONTRACT_REVIEW_STATE.values()) | set(CLOSED_OUTCOME_REVIEW_STATE.values()) <= allowed
+    )
+    assert {contract_review_state(state, None) for state in STATES} <= allowed
 
 
 def test_parent_rules_route_the_pilot_and_parent_tower_reads_its_events(tmp_path) -> None:

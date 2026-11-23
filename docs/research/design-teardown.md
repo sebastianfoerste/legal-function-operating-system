@@ -80,9 +80,9 @@ Sources: <https://help.lawvu.com/en/articles/6824391-conditional-intake-forms>,
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adopt | Forward-only conditions, if branching is added | Specced as F9 |
+  | Adopt | Forward-only conditions, if branching is added | Built as F9: `show_if` in `src/legal_function_os/data/intake_questions.json`, checked by `intake_page.py` |
   | Adapt | A requester list of own matters with plain stages | `src/pilot/requester_status.py`, built |
-  | Reject | An MCP write surface | Rule 4 |
+  | Reject | An MCP write surface | The MCP tools stay read-only and take data, never file paths ([ADR 0007](../adr/0007-mcp-local-stdio-only.md)) |
 
 ### 4. Ironclad
 
@@ -162,7 +162,7 @@ Sources:
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | Triage verbs as new pilot commands, each a hash-chained event; Duplicate and Snooze need new states | `state_machine.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (F10, from H3; specced, Effort L) |
+  | Adapt | Triage verbs as new pilot commands, each a hash-chained event. Built (ADR 0010): decline and duplicate are new final states; a snooze is a recorded pause, not a state | `state_machine.py`, `snooze.py`, `parent_bridge.CONTRACT_REVIEW_STATE`, `scripts/check_shared_contracts.py` (F10, from H3; built, Effort L) |
   | Reject | Snooze that silently pauses an SLA | Pause needs a typed reason |
 
 ### 8. Wordsmith and Flank (channel intake)
@@ -182,8 +182,8 @@ All Claimed.
 
   | Verdict | Pattern | Where |
   | --- | --- | --- |
-  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Specced as F11 |
-  | Reject | Posting back to the channel; invisible completion | Rule 4 and rule 1 |
+  | Adapt | A local, inbound-only adapter that parses a synthetic message export into `legal-request.v1` drafts, with every unknown field left blank and named | Built as F11: `message_drafts.py` and the `message-drafts` command ([ADR 0009](../adr/0009-message-drafts.md)) |
+  | Reject | Posting back to the channel; invisible completion | "Do not add external delivery, publication, filing or outreach actions", and "Every consequential decision requires human review" |
 
 ## Design donors read in source (Observed)
 
@@ -226,7 +226,7 @@ a verdict, and the file the verdict would change.
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
 | Opening a scenario created a matter at once; a missing fact surfaced only as a refusal after submit | Observed | `baseline/room-requester-1280.png` | Adapt, built: the intake form with five required facts and an error summary, in `src/pilot/review_room.py` (after: `after/room-intake-form-1280.png`) |
-| Core request schema requires only `id` and `title`, with no branching | Observed (`contracts/legal-request.v1.schema.json`) | — | Adapt, specced (F9): a per-`type` question file and a static intake page that emits JSON for download only |
+| Core request schema requires only `id` and `title`, with no branching | Observed (`contracts/legal-request.v1.schema.json`) | — | Adapt, built (F9): per-type questions in `src/legal_function_os/data/intake_questions.json` and a static intake page, `src/legal_function_os/intake_page.py`, that saves JSON for download only |
 
 ### Triage
 
@@ -267,7 +267,7 @@ a verdict, and the file the verdict would change.
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Board pack is Markdown and JSON only | Observed | — | Keep; a print stylesheet is specced as D3 |
+| Board pack is Markdown and JSON only | Observed | — | Keep. D3 was built for the customer package only: the board pack has no HTML page to print, and an HTML board pack would be a new candidate (decision 10) |
 | Portal abstains with "insufficient evidence" | Observed | `baseline/knowledge-portal-1280.png` | Keep |
 | Portal had no `lang` attribute (axe serious) | Observed | — | Fixed |
 
@@ -276,13 +276,13 @@ a verdict, and the file the verdict would change.
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
 | Requester saw the raw state name (`triage`) | Observed | `baseline/room-requester-1280.png` | Adopt, built: six plain stages, a next step and a withheld line (`src/pilot/requester_status.py`) |
-| German labels exist only in the core shared space | Observed (`shared_space.py`) | — | Specced: align both |
+| German labels exist only in the core shared space | Observed (`shared_space.py`) | — | Decided in ADR 0011: no German stage labels; the core keeps its two German sentences, pinned by `tests/test_requester_vocabulary.py` |
 
 ### Cross-artifact
 
 | Observation | Tag | Capture | Verdict and file |
 | --- | --- | --- | --- |
-| Seven palettes; only the Pages index had dark mode; "Public Sans" named but never loaded | Observed | all baseline captures | Adopt, partly built: shared tokens in the index and the review room (ADR 0001) |
+| Seven palettes; only the Pages index had dark mode; "Public Sans" named but never loaded | Observed | all baseline captures | Adopt, built: shared tokens in the index and the review room (D2), then in the control tower, deal room, portal, snapshot and customer package, one renderer per commit (D4, ADR 0001 amended 2026-11-18) |
 | The "simulated roles" banner is present on every room view | Observed | — | Keep |
 
 ### MCP and CLI

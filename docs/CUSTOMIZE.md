@@ -73,7 +73,7 @@ The file format is published as
 
 The three `risk` thresholds and `escalation.board_awareness_from` also carry the
 sentence a decision gives when they apply (`reason` or `message`), for example
-`"Contract value above €1m."`. These sentences appear in the rationale and the
+`"Value over EUR 1 million."`. These sentences appear in the rationale and the
 escalations, so change them together with the band. `init` writes them for you.
 
 A policy changes numbers and names, not the shape of the rules. The following stay
@@ -117,12 +117,116 @@ they will not pass a policy with different ones.
 
 ## Where a policy applies
 
-`--policy` works with `triage`, `board-pack`, `validate`, `capacity` and
-`control-tower`, and with the original all-in-one flags (`legal-function-os --policy
-policy.json --input requests.json --out reports`), where it applies to every output
-they write. Run `legal-function-os --help` for every command.
+`--policy` works with `triage`, `board-pack`, `validate`, `capacity`,
+`control-tower`, `approval-matrix` and `intake-page`, and with the original all-in-one flags
+(`legal-function-os --policy policy.json --input requests.json --out reports`), where
+it applies to every output they write. `legal-function-os approval-matrix --policy
+policy.json --out reports` shows who must sign off under your thresholds; without
+`--input` it places no request. Run `legal-function-os --help` for every command.
 
 Treat the file like code. Keep it under version control, review a change before it
 is applied, and record who approved the thresholds in an `x_` field. A CI job can
 run `legal-function-os validate --policy policy.json --input requests.csv` to stop a
 broken policy or request log before a report is built.
+
+## Your own intake questions
+
+`legal-function-os intake-page --policy policy.json --out reports` writes
+`reports/intake-page.html`: a page a business requester opens in a browser to prepare
+a request. It asks the request fields, offers your value bands and request types, and
+asks a few more questions for the chosen type. It checks the answers, shows the exact
+file, and saves it on the requester's device as a request file that `validate` and
+`triage` read. It sends nothing and decides nothing: the requester gives the file to
+legal. Every file has the id `REQ-DRAFT`, so give each one a register number before you
+combine files; `validate` reports a duplicate id otherwise.
+
+The questions come from
+[`intake_questions.json`](../src/legal_function_os/data/intake_questions.json). Copy it,
+change it and pass it with `--questions questions.json`. Run `legal-function-os
+intake-page --questions questions.json` without `--out` to print the question sheet,
+which is easier to review than the JSON. The format is described in
+[ADR 0006](adr/0006-intake-question-files.md):
+
+- `fields` words the request fields: `label`, `hint` and `error` for each. The decision
+  fields (title, type, value band, the three flags and urgency) are always asked and
+  required. `counterparty`, `requested_by`, `description` and `deadline` are asked when
+  you word them, and `"required": true` makes one required. `value_band` and `urgency`
+  take `options`, a label for each value. `type` needs `not_sure`, the label of the
+  answer that leaves the type out.
+- `types` has one entry per request type of your policy: a `label`, an optional
+  `also_required` list (for example `["counterparty"]` for contracts) and `questions`.
+- A question has a `key` (lower case, digits and `_`), a `label`, a `kind` (`text`,
+  `textarea`, `yes_no` or `choice` with `options`), and optionally `hint`, `error` and
+  `"required": false` (questions are required by default). The answers are saved in
+  `facts` as `"key: value"`.
+- `"show_if": {"field": "non_eea_transfer", "in": [true]}` shows a question only for some
+  answers. It can name the value band, one of the three yes/no flags, the urgency, or a
+  yes/no or choice question earlier in the same type, never a later one and never the
+  request type (put the question under the type instead). A value-band condition must
+  use your policy's bands.
+
+Every problem in the file is reported with its place, for example
+`types.dpa.questions[1].show_if.field: "sub_processors" is asked later (questions[3])`,
+and nothing is written. A type your policy does not have, or a policy type with no
+questions, is a note. Keys that start with `x_` are ignored.
+
+## Guidance from legal on the intake page
+
+The page can show short guidance from legal for a request type, such as where to find
+the template for that kind of request, above that type's questions. None is bundled,
+so without a guidance file the page shows none. Pass your own with `--guidance`:
+
+```bash
+legal-function-os intake-page --policy policy.json --guidance guidance.json --out reports
+```
+
+A guidance file looks like this (synthetic names; the digest is the one the check
+names, see below):
+
+```json
+{
+  "schema": "legal-function-os.intake-guidance.v1",
+  "name": "Contracts team guidance",
+  "resources": [
+    {
+      "id": "dpa-template",
+      "type": "dpa",
+      "title": "Start from the DPA template",
+      "passage": "Use the DPA template from the contracts page and mark every change you need.",
+      "source_ref": "Contracts playbook, section 4",
+      "prepared_by": "Alex Example",
+      "approval": {"by": "Sam Example", "on": "2026-11-19", "text_sha256": "<the digest>"}
+    }
+  ]
+}
+```
+
+- `type` is a request type of your policy. A resource without one, or with a type your
+  policy does not have, is a note and is not shown. A type takes at most three
+  resources, a passage is at most 800 characters, and no text may hold a link.
+- `prepared_by` names who wrote the text, and `approval` records who reviewed it for
+  requesters (`by`) and when (`on`, as `YYYY-MM-DD`). They must be different people;
+  the names are compared ignoring case, spacing and invisible characters.
+- `approval.text_sha256` ties the review to the text. Leave it out at first and run
+  `legal-function-os intake-page --guidance guidance.json`: the check names the digest
+  of the text as it stands (`resources[0].approval.text_sha256: missing; the text now
+  has the digest …`). The reviewer reads that text and records the digest. When the
+  `type`, `title`, `passage` or `source_ref` changes, the digest no longer matches, the
+  check names the new one, and nothing is written until a review of the new text is
+  recorded. `id`, `prepared_by` and keys starting with `x_` can change without one.
+
+A requester who chooses the type sees, at the top of its questions, "Guidance from
+legal for this kind of request", the line "General information, not legal advice about
+your request. Reading it is optional: you can still answer the questions and save a
+request file for legal.", and each text with "Source: … Legal's guidance file records
+that … reviewed this text for requesters on …". The guidance has no link or control.
+The page never matches it against the requester's answers, and the file the requester
+saves is the same with and without it. Without `--out`, the command prints the question
+sheet with each type's guidance under its questions, for review in one place.
+
+A review record is a line in a file, not authentication: anyone who can edit the file
+can type a name and copy a digest. Keep the file under version control and review each
+change, as you would a policy. The page shows the review date but does not judge its
+age, so decide when your team reviews its guidance again. The format and its rules are
+[ADR 0012](adr/0012-intake-guidance.md). Every problem is reported with its place, and
+nothing is written.

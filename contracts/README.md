@@ -12,8 +12,11 @@
 | Supervised agent | `approved`, `rejected`, `revision_requested`, `escalated` | Same value |
 | Supervised-agent pilot | `intake`, `triage`, `assignment`, `review`, `revised` | `pending_review` |
 | Supervised-agent pilot | `revision_requested` | `revision_requested` |
-| Supervised-agent pilot | `approved`, `ready_for_delivery`, `closed` | `approved` |
-| Supervised-agent pilot | any state while a charter exclusion or blocked source holds the matter | `blocked` |
+| Supervised-agent pilot | `approved`, `ready_for_delivery`; `closed` after the requester accepted delivery | `approved` |
+| Supervised-agent pilot | `declined`, `duplicate`; `closed` after a withdrawal | `rejected` |
+| Supervised-agent pilot | any state but `declined`, `duplicate` and `closed` after a withdrawal, while a charter exclusion or blocked source holds the matter | `blocked` |
+
+In the pilot, `rejected` means a person closed the matter without delivery and no approval stands: legal declined it, legal closed it as a duplicate, or the requester or the matter owner withdrew it. It does not say that a reviewer rejected a draft. A withdrawal cancels every sign-off and approval on the matter, and it records a rejected review decision on the assessment stored in the matter version, so a matter withdrawn after its final approval is `rejected` too and keeps no approved or exportable assessment. The review note of a withdrawn matter is the withdrawal reason and the actor recorded for it, and `export_allowed` is false for every closed matter. A closed matter is reported `approved` only when the requester accepted the delivery of the approved package.
 
 The contract keeps external actions disabled. Export can become allowed only after an approved human decision, a documented review note and any component-specific integrity checks. Source references remain synthetic or explicitly approved public sources. Audit events may use the supervised agent's hash chain, while the base legal function workflow can emit unhashed events until it adopts the same integrity mechanism.
 

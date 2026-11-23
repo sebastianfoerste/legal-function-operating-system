@@ -1,11 +1,11 @@
 # Command-line reference
 
 Three entry points ship with the package. All of them read synthetic or your own
-JSON and write files locally. They make no network or model calls.
+files and write files locally. They make no network or model calls.
 
 | Command | What it does |
 | --- | --- |
-| `legal-function-os` | Request triage, board pack, DPA review, capacity, control tower, approval matrix and policy interview |
+| `legal-function-os` | Request triage, board pack, DPA review, capacity, control tower, approval matrix, intake page, message drafts and policy interview |
 | `raas-deal-desk` | The industrial RaaS deal decision pack |
 | `legal-function-os-mcp` | The same rules as a local stdio MCP server (optional `mcp` extra) |
 
@@ -29,10 +29,12 @@ Without `--input`, the bundled synthetic requests are used.
 | `triage` | Risk, priority, queue, SLA, approval chain and external counsel per request, with the reasons | `--id ID` (repeatable) shows only those requests |
 | `board-pack` | Roll the decisions up into a board operations pack | `--period LABEL`, `--out DIR`, `--fail-on-breach` |
 | `validate` | Check requests against the request contract without deciding anything | none |
+| `intake-page` | Write a page that helps a requester prepare a request file and saves it on their device; it sends and decides nothing ([ADR 0006](adr/0006-intake-question-files.md)) | `--questions PATH` (default: the bundled questions), `--guidance PATH` (a team's guidance per request type, each text with a review record; default: none, none is bundled; [ADR 0012](adr/0012-intake-guidance.md)), `--out DIR` (writes `intake-page.html`); no `--input`. Without `--out` it prints the question sheet, or the resolved form with `--format json` |
+| `message-drafts` | Turn a synthetic message export into request drafts for legal to complete. Values are copied only from labelled lines such as `Value band: <50k`, and every decision field a message does not state is left blank. `validate` and `triage` refuse a draft with any blank but `type` until legal fills it; a blank `type` is only a warning, and `triage` then decides the draft without the type's own rules, so legal fills it before triage. It sends and decides nothing, and it is not an MCP tool ([ADR 0009](adr/0009-message-drafts.md)) | `--input` takes a message export (JSON lines, every sender a `syn-` handle; [format](INPUT_FORMAT.md#from-a-message-export-drafts)), not requests, and not standard input; `--policy` only changes which copied values the drafts' check flags; `--out DIR` writes `message-drafts.json` and `message-drafts.md`. Without `--out` it prints the Markdown, or the drafts array with `--format json` |
 | `dpa-review` | Check data processing agreements for the Art. 28(3) GDPR (DSGVO) clauses | `--out DIR`; `--input` takes agreements, not requests; no `--policy` |
 | `capacity` | Compare capacity scenarios and name the binding constraint | `--scenarios PATH` (required with `--input`), `--out DIR` |
 | `control-tower` | Business-time SLAs, waiting time and value from a service-event ledger | `--events PATH` and `--config PATH` (both required with `--input`), `--out DIR` |
-| `approval-matrix` | Who must sign off for each value band and risk level, from the rules and the policy, with each request placed in its cell | `--out DIR` (writes `approval-matrix.md`, `.json` and `.html`) |
+| `approval-matrix` | Who must sign off for each value band and risk level, from the rules and the policy, with each request placed in its cell. With `--policy` and no `--input`, no request is placed | `--out DIR` (writes `approval-matrix.md`, `.json` and `.html`) |
 | `init` | Write a policy file from a short interview | `--out PATH` (default `policy.json`), `--defaults`, `--force`; no `--input` |
 
 Examples:
@@ -43,6 +45,10 @@ legal-function-os validate --input requests.csv --format json
 legal-function-os board-pack --input requests.json --out reports --fail-on-breach
 legal-function-os init --defaults --out policy.json
 legal-function-os approval-matrix --policy policy.json --out reports
+legal-function-os intake-page --policy policy.json --questions questions.json --out reports
+legal-function-os intake-page --policy policy.json --guidance guidance.json  # the question sheet with the guidance
+legal-function-os message-drafts --input export.jsonl --out drafts
+legal-function-os validate --input drafts/message-drafts.json  # names every blank until legal fills it
 legal-function-os triage --policy policy.json --input requests.csv --id REQ-1001
 ```
 
@@ -84,10 +90,22 @@ external action stays blocked until a named human approval is recorded.
 
 ## legal-function-os-mcp
 
+```text
+legal-function-os-mcp [--policy PATH]
+```
+
 A local stdio MCP server with four read-only tools: `triage_requests`, `board_pack`,
-`dpa_review` and `legal_request_schema`. Input that breaks the request contract is rejected
-rather than decided. It needs the optional extra (`pip install "legal-function-os[mcp]"`),
-which is pinned to `mcp>=1.9,<2`; [ADR 0002](adr/0002-mcp-2x-path.md) records why.
+`dpa_review` and `legal_request_schema`. It runs only over stdio, as a process the MCP
+client starts, and offers no HTTP transport ([ADR 0007](adr/0007-mcp-local-stdio-only.md)).
+Input that breaks the request contract is rejected
+rather than decided. The tools take data, never file paths: the model calling the server
+does not choose what the process reads. Your own policy applies either to every call, with
+`--policy PATH` read once at start, or per call as an inline `policy` object in the format
+`legal-function-os init` writes; an inline policy wins, and one that cannot be applied is
+rejected like any other bad input. It needs the optional extra, which is pinned to
+`mcp>=1.30,<2`; [ADR 0002](adr/0002-mcp-2x-path.md) records why. The package is not on
+PyPI: in a clone, install the extra with `pip install -e ".[mcp]"`; without a clone, run
+the server with the `uvx` command in the [README](../README.md#mcp-server-and-claude-code-plugin).
 
 ## Related
 

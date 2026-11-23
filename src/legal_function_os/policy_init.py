@@ -249,10 +249,10 @@ def run_interview(ask: Ask, say: Say, base: Policy | None = None) -> Policy:
         general_counsel_from=counsel,
         board_note_from=board,
         high_risk_from=_threshold(
-            base.high_risk_from, changed, board, "Contract value in band {band} or above."
+            base.high_risk_from, changed, board, "Value in band {band} or above."
         ),
         medium_risk_from=_threshold(
-            base.medium_risk_from, changed, counsel, "Contract value in band {band} or above."
+            base.medium_risk_from, changed, counsel, "Value in band {band} or above."
         ),
         dispute_high_risk_from=_threshold(
             base.dispute_high_risk_from, changed, dispute, "Dispute in value band {band} or above."

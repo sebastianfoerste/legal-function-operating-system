@@ -118,6 +118,10 @@ def _kv_table(title: str, data: dict[str, Any]) -> list[str]:
     return lines
 
 
+def _plural(count: int, singular: str, plural: str | None = None) -> str:
+    return singular if count == 1 else (plural or singular + "s")
+
+
 def render_markdown(pack: BoardPack) -> str:
     t = pack.totals
     lines: list[str] = []
@@ -128,15 +132,17 @@ def render_markdown(pack: BoardPack) -> str:
     lines.append("## Executive summary")
     lines.append("")
     lines.append(
-        f"- **{t['requests']}** legal requests handled · **{t['high_risk']}** high-risk"
+        f"- **{t['requests']}** legal {_plural(t['requests'], 'request')} handled · "
+        f"**{t['high_risk']}** high-risk"
     )
     lines.append(
         f"- **{t['gc_approvals_required']}** require GC sign-off · "
         f"**{t['board_attention_items']}** flagged for board attention"
     )
     lines.append(
-        f"- **{t['external_referrals']}** external-counsel referrals · "
-        f"**{t['sla_breaches']}** SLA breaches"
+        f"- **{t['external_referrals']}** external-counsel "
+        f"{_plural(t['external_referrals'], 'referral')} · "
+        f"**{t['sla_breaches']}** SLA {_plural(t['sla_breaches'], 'breach', 'breaches')}"
     )
     lines.append("")
 

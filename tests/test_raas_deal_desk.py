@@ -1,5 +1,6 @@
 """Tests for the deterministic industrial robotics RaaS deal-desk pack."""
 
+import html
 import io
 import json
 import re
@@ -9,6 +10,7 @@ from contextlib import redirect_stderr
 from dataclasses import replace
 from pathlib import Path
 
+from legal_function_os.design_tokens import PRINT_CSS, TOKENS_CSS
 from legal_function_os.raas_cli import main as raas_cli_main
 from legal_function_os.raas_deal_desk import (
     LAST_VERIFIED_ON,
@@ -209,7 +211,7 @@ class RaaSDealDeskTests(unittest.TestCase):
                 document,
             )
         self.assertIn(f"Scenario date: requested signing {DEAL['requested_signing_date']} (synthetic)", document)
-        self.assertIn('<h2 id="sources">Legal sources</h2>', document)
+        self.assertIn('<h2 id="sources-h">Legal sources</h2>', document)
         for source in SOURCE_MANIFEST:
             self.assertIn(f'<a href="{source["url"]}">{source["id"]}</a>', document)
             self.assertIn(f"Verified on {source['verified_on']}.", document)
@@ -222,10 +224,11 @@ class RaaSDealDeskTests(unittest.TestCase):
         header_cells = re.findall(r"<th[ >]", document)
         self.assertTrue(header_cells)
         self.assertEqual(len(header_cells), document.count('<th scope="col">'))
-        self.assertEqual(document.count("<table"), document.count("<table aria-labelledby="))
-        for heading_id in ("playbook", "finance", "regulatory"):
+        # Each table is named by its heading through the scrolling region around it,
+        # as test_reviewer_room_uses_shared_tokens_and_keeps_sources checks in full.
+        for heading_id in ("playbook-h", "finance-h", "regulatory-h"):
             self.assertIn(f'<h2 id="{heading_id}">', document)
-            self.assertIn(f'<table aria-labelledby="{heading_id}">', document)
+            self.assertIn(f'aria-labelledby="{heading_id}" tabindex="0"><table>', document)
 
     def test_each_source_carries_a_verification_date_not_before_its_law(self):
         for source in SOURCE_MANIFEST:
@@ -340,6 +343,42 @@ class RaaSDealDeskTests(unittest.TestCase):
         # The page is published on GitHub Pages; the old "open locally" banner is gone.
         self.assertNotIn("Offline local reviewer artifact", document)
 
+    def test_reviewer_room_uses_shared_tokens_and_keeps_sources(self):
+        document = render_raas_html(self.pack)
+        style = document.split("<style>\n", 1)[1].split("</style>", 1)[0]
+        self.assertTrue(style.startswith(TOKENS_CSS))
+        self.assertTrue(style.rstrip(" ").endswith(PRINT_CSS))
+        own = style[len(TOKENS_CSS) : style.rindex(PRINT_CSS)]
+        self.assertNotRegex(own, r"#[0-9a-fA-F]{3,6}\b")
+        self.assertNotRegex(own, r"(?<![-\w])white(?![-\w])")
+        for retired in ("--teal", "--danger"):
+            self.assertNotIn(retired, own)
+        self.assertIn(":focus-visible", own)
+        # Each table scrolls inside a keyboard-reachable region named by its heading.
+        wrappers = re.findall(r"(<div[^>]*>)<table>", document)
+        self.assertEqual(len(wrappers), document.count("<table>"))
+        self.assertEqual(len(wrappers), 3)
+        for wrapper in wrappers:
+            label = re.fullmatch(
+                r'<div class="table-scroll" role="region" aria-labelledby="([a-z-]+)" tabindex="0">',
+                wrapper,
+            )
+            assert label is not None, wrapper
+            self.assertIn(f'<h2 id="{label.group(1)}">', document)
+        # The EUR-Lex source links are the cited sources, unchanged, in the
+        # rendered page and in the committed example: the regulatory table's
+        # links, then each listed legal source's Official Journal text and,
+        # where given, its consolidated text.
+        expected = [html.escape(item.source_url) for item in self.pack.regulatory_readiness]
+        self.assertEqual(len(expected), 7)
+        for source in self.pack.source_manifest:
+            expected.append(html.escape(source["url"]))
+            if source.get("consolidated_url"):
+                expected.append(html.escape(source["consolidated_url"]))
+        self.assertEqual(re.findall(r'href="([^"]+)"', document), expected)
+        committed = (ROOT / "examples" / "raas-deal-room.html").read_text(encoding="utf-8")
+        self.assertEqual(re.findall(r'href="([^"]+)"', committed), expected)
+
     def test_outputs_include_machine_readable_sources_and_reviewer_room(self):
         with tempfile.TemporaryDirectory() as tmp_dir:
             outputs = write_raas_outputs(self.pack, Path(tmp_dir))
@@ -429,6 +468,15 @@ class RaaSDealDeskTests(unittest.TestCase):
                     raas_cli_main(["--input", str(bad_input), "--quiet"]),
                     2,
                 )
+            latin = Path(tmp_dir) / "latin.json"
+            latin.write_bytes('{"deal": "Pr\u00fcfung"}'.encode("latin-1"))
+            err = io.StringIO()
+            with redirect_stderr(err):
+                self.assertEqual(raas_cli_main(["--input", str(latin), "--quiet"]), 2)
+            self.assertEqual(
+                err.getvalue(),
+                f"cannot read {latin}: it is not UTF-8 text (byte 0xfc at position 12); save it as UTF-8\n",
+            )
 
 
 if __name__ == "__main__":

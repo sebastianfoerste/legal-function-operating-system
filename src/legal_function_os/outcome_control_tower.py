@@ -13,6 +13,7 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 from legal_function_os.capacity_simulator import _effort_points
+from legal_function_os.design_tokens import PRINT_CSS, TOKENS_CSS
 from legal_function_os.policy import Policy
 from legal_function_os.rules import decide
 
@@ -787,16 +788,15 @@ def render_outcome_html(tower: dict[str, Any]) -> str:
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Legal Function Outcome Control Tower</title>
 <style>
-:root {{ color-scheme: light; --ink:#17202a; --muted:#5c6773; --line:#dfe5ea; --panel:#f7f9fa; --accent:#134e4a; --ok:#2f6b3a; --bad:#a12622; }}
-* {{ box-sizing:border-box; }}
-body {{ margin:0; font:15px/1.5 Inter, ui-sans-serif, system-ui, sans-serif; color:var(--ink); background:#eef2f3; }}
+{TOKENS_CSS}* {{ box-sizing:border-box; }}
+body {{ margin:0; font:15px/1.5 var(--font); color:var(--ink); background:var(--bg); }}
 main {{ max-width:1180px; margin:0 auto; padding:42px 24px 64px; }}
-h1 {{ margin:0; font:700 35px/1.15 Georgia, serif; }}
+h1 {{ margin:0; font:700 35px/1.15 var(--font-head); }}
 h2 {{ margin:34px 0 14px; font-size:19px; }}
 .eyebrow {{ color:var(--accent); font-weight:700; letter-spacing:.08em; text-transform:uppercase; font-size:12px; }}
 .muted {{ color:var(--muted); }}
 .metrics {{ display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin:24px 0; }}
-.metric, section {{ background:white; border:1px solid var(--line); border-radius:10px; box-shadow:0 8px 24px rgba(20,40,50,.05); }}
+.metric, section {{ background:var(--surface); border:1px solid var(--line); border-radius:10px; }}
 .metric {{ padding:18px; min-width:0; overflow-wrap:anywhere; }}
 .metric strong {{ display:block; font-size:28px; }}
 .metric span {{ color:var(--muted); }}
@@ -805,17 +805,20 @@ h2 {{ margin:34px 0 14px; font-size:19px; }}
 .metric .kpi-status.on {{ color:var(--ok); }}
 .metric .kpi-status.off {{ color:var(--bad); }}
 .metric .kpi-meta {{ display:block; margin-top:6px; font-size:12.5px; }}
-section {{ padding:22px; margin-top:18px; overflow:auto; }}
+section {{ padding:22px; margin-top:18px; }}
+.table-scroll {{ overflow-x:auto; }}
 table {{ width:100%; border-collapse:collapse; min-width:760px; }}
 th, td {{ padding:10px 9px; border-bottom:1px solid var(--line); text-align:left; }}
 th {{ color:var(--muted); font-size:12px; text-transform:uppercase; letter-spacing:.04em; }}
 ul {{ padding-left:20px; }}
 li {{ margin:12px 0; }}
-code {{ background:var(--panel); padding:2px 5px; border-radius:4px; }}
+code {{ font-family:var(--font-mono); background:var(--panel); padding:2px 5px; border-radius:4px; }}
 details {{ margin-top:24px; }}
+pre {{ font-family:var(--font-mono); white-space:pre-wrap; overflow-wrap:anywhere; }}
+:focus-visible {{ outline:3px solid var(--focus); outline-offset:2px; }}
 @media (max-width:900px) {{ .metrics {{ grid-template-columns:repeat(2,minmax(0,1fr)); }} }}
 @media (max-width:480px) {{ .metrics {{ grid-template-columns:1fr; }} }}
-</style>
+{PRINT_CSS}</style>
 </head>
 <body>
 <main>
@@ -826,10 +829,10 @@ details {{ margin-top:24px; }}
 {"".join(_tile_html(tile) for tile in tower["kpi_tiles"])}
 </div>
 <section><h2>Stalled action queue</h2><ul>{actions}</ul></section>
-<section><h2>Queue calibration</h2><table><thead><tr><th>Queue</th><th>Requests</th><th>Open</th><th>Stalled</th><th>Planned points</th><th>Observed minutes</th><th>Minutes / point</th></tr></thead><tbody>{queue_rows}</tbody></table></section>
+<section><h2 id="calibration-h">Queue calibration</h2><div class="table-scroll" role="region" aria-labelledby="calibration-h" tabindex="0"><table><thead><tr><th>Queue</th><th>Requests</th><th>Open</th><th>Stalled</th><th>Planned points</th><th>Observed minutes</th><th>Minutes / point</th></tr></thead><tbody>{queue_rows}</tbody></table></div></section>
 <section><h2>Value proxies</h2><p>{html.escape(str(value['assumption_notice']))}</p>
 <p><strong>EUR {value['estimated_labour_efficiency_value_eur']:.2f}</strong> estimated labour-efficiency value · <strong>EUR {value['estimated_external_spend_avoidance_eur']:.2f}</strong> estimated external-spend avoidance</p></section>
-<section><h2>Request outcomes</h2><table><thead><tr><th>Request</th><th>Queue</th><th>State</th><th>Gross h</th><th>Business wait h</th><th>Controlled h</th><th>Response SLA</th><th>Resolution SLA</th></tr></thead><tbody>{request_rows}</tbody></table></section>
+<section><h2 id="outcomes-h">Request outcomes</h2><div class="table-scroll" role="region" aria-labelledby="outcomes-h" tabindex="0"><table><thead><tr><th>Request</th><th>Queue</th><th>State</th><th>Gross h</th><th>Business wait h</th><th>Controlled h</th><th>Response SLA</th><th>Resolution SLA</th></tr></thead><tbody>{request_rows}</tbody></table></div></section>
 <section><h2>Review gate</h2><p>{html.escape(str(tower['review_gate']))}</p></section>
 <details><summary>Machine-readable snapshot</summary><pre>{embedded}</pre></details>
 </main>

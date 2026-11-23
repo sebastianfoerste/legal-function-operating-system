@@ -7,7 +7,7 @@ import json
 import sys
 from pathlib import Path
 
-from legal_function_os.bundled import bundled_path
+from legal_function_os.bundled import bundled_path, not_utf8, read_utf8
 from legal_function_os.raas_deal_desk import (
     build_raas_deal_pack,
     render_raas_markdown,
@@ -35,10 +35,13 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         source = Path(args.input) if args.input else bundled_path("raas_deal.json")
-        deal = json.loads(source.read_text(encoding="utf-8"))
+        deal = json.loads(read_utf8(source))
         if not isinstance(deal, dict):
             raise ValueError("RaaS deal input must be one JSON object")
         pack = build_raas_deal_pack(deal)
+    except UnicodeDecodeError as exc:
+        print(f"cannot read {source}: {not_utf8(exc)}", file=sys.stderr)
+        return 2
     except (OSError, json.JSONDecodeError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
         return 2

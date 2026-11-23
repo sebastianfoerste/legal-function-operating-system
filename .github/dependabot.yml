@@ -13,11 +13,15 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    # The agent has its own entry below. Without this, the root job also reads
+    # supervised-agent/requirements.txt and opens the same updates twice.
+    exclude-paths: ["supervised-agent/**"]
     ignore:
       # The optional MCP server is built on the 1.x SDK; pyproject pins mcp<2.
       - dependency-name: mcp
         update-types: ["version-update:semver-major"]
-  # The supervised agent's locked runtime dependencies.
+  # The supervised agent's runtime lockfile (requirements.in compiled to requirements.txt)
+  # and its pinned dev tools (requirements-dev.txt).
   - package-ecosystem: pip
     directory: /supervised-agent
     schedule:

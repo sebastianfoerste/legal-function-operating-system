@@ -63,6 +63,21 @@ def test_every_data_route_needs_an_actor_and_the_actor_list_says_what_it_is(tmp_
     assert (status, payload["error"]) == (403, "permission_denied")
 
 
+def test_no_route_registers_or_changes_an_actor(tmp_path) -> None:
+    # Roles and approval tiers are set by whoever runs the service, never over HTTP.
+    api = _api(tmp_path)
+    before = api.service.list_actors()
+    body = {"actor_id": "syn-x", "display_name": "Synthetic X", "role": "final_approver"}
+    promote = {**body, "actor_id": REQUESTER, "approval_tier": "General Counsel"}
+    assert _call(api, "POST", "/actors", body=body)[0] == 401
+    for actor in (REQUESTER, OWNER, APPROVER_GC):
+        for path in ("/actors", f"/actors/{REQUESTER}"):
+            for payload in (body, promote):
+                status, answer = _call(api, "POST", path, actor, payload)
+                assert (status, answer["error"]) == (404, "not_found"), (actor, path)
+    assert api.service.list_actors() == before
+
+
 def test_complete_journey_through_the_api(tmp_path) -> None:
     api = _api(tmp_path)
     status, view = _call(

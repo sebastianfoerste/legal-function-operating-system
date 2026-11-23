@@ -21,10 +21,29 @@ from pydantic import BaseModel, ConfigDict, Field
 from models import LegalOpsAssessment, compute_audit_event_hash
 from src.docx_redline import RevisionMark, index_docx, write_reviewed_docx
 from src.export_gate import ExportContext, require_export_eligibility
+from src.pilot.design_tokens import PRINT_CSS, TOKENS_CSS
 from src.playbook import DocumentChange, DocumentChangeSet, Playbook, load_playbook, propose_changes
 from src.source_verification import verify_source_refs
 
 __all__ = ["DocumentChange", "DocumentChangeSet"]
+
+# The snapshot's look: the shared tokens (the agent's own copy), a stacked table under
+# 640px so a phone never scrolls sideways, and the light print block last.
+SNAPSHOT_CSS = (
+    TOKENS_CSS + "body{font:15px var(--font);margin:0;color:var(--ink);background:var(--bg)}"
+    "main{max-width:1100px;margin:40px auto;padding:0 16px}h1{font-family:var(--font-head)}"
+    "section{border:1px solid var(--line);border-radius:10px;padding:18px;margin:16px 0;"
+    "background:var(--surface);overflow-wrap:break-word}"
+    "table{width:100%;border-collapse:collapse}"
+    "td,th{border:1px solid var(--line);padding:8px;text-align:left}"
+    "th{background:var(--panel)}.gate{color:var(--warn)}\n"
+    "@media (max-width:640px){table,tbody,tr,td{display:block;width:100%}thead{display:none}"
+    "tr{margin:0 0 12px;border:1px solid var(--line);border-radius:8px;overflow:hidden}"
+    "td{border:0;border-top:1px solid var(--line)}td:first-child{border-top:0}"
+    "td[data-label]::before{content:attr(data-label);display:block;font-weight:700;"
+    "font-size:12px;color:var(--muted)}}\n" + PRINT_CSS
+)
+SNAPSHOT_COLUMNS = ("Locator", "Original text", "Proposed text", "Decision")
 
 
 class MatterListItem(BaseModel):
@@ -277,15 +296,24 @@ def render_review_room(
         for source in assessment.source_verifications
     )
     changes = "".join(
-        f"<tr><td>{html.escape(change.locator)}</td><td>{html.escape(change.original_text)}</td>"
-        f"<td>{html.escape(change.proposed_text)}</td><td>{html.escape(change.decision)}</td></tr>"
+        "<tr>"
+        + "".join(
+            f"<td data-label='{label}'>{html.escape(value)}</td>"
+            for label, value in zip(
+                SNAPSHOT_COLUMNS,
+                (change.locator, change.original_text, change.proposed_text, change.decision),
+                strict=True,
+            )
+        )
+        + "</tr>"
         for change in change_set.changes
     )
+    head = "".join(f"<th scope='col'>{label}</th>" for label in SNAPSHOT_COLUMNS)
     tasks = "".join(
         f"<li><strong>{html.escape(item.title)}</strong>, {html.escape(item.owner)}, {item.status}</li>"
         for item in matter_list.items
     )
-    document = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'><title>{html.escape(assessment.matter.title)}</title><style>body{{font:15px system-ui;max-width:1100px;margin:40px auto;color:#172033}}section{{border:1px solid #d9dee8;border-radius:10px;padding:18px;margin:16px 0}}table{{width:100%;border-collapse:collapse}}td,th{{border:1px solid #d9dee8;padding:8px;text-align:left}}.gate{{color:#9a3412}}</style></head><body><h1>{html.escape(assessment.matter.title)}</h1><p class='gate'>Static snapshot for reading. Nothing on this page is saved. External access and delivery are disabled.</p><section><h2>Source verification</h2><ul>{sources}</ul></section><section><h2>Document changes</h2><table><tr><th>Locator</th><th>Original text</th><th>Proposed text</th><th>Decision</th></tr>{changes}</table></section><section><h2>Matter List</h2><ul>{tasks}</ul></section></body></html>"""
+    document = f"""<!doctype html><html lang='en'><head><meta charset='utf-8'><meta name='viewport' content='width=device-width, initial-scale=1'><title>{html.escape(assessment.matter.title)}</title><style>{SNAPSHOT_CSS}</style></head><body><main><h1>{html.escape(assessment.matter.title)}</h1><p class='gate'>Static snapshot for reading. Nothing on this page is saved. External access and delivery are disabled.</p><section><h2>Source verification</h2><ul>{sources}</ul></section><section><h2>Document changes</h2><table><thead><tr>{head}</tr></thead><tbody>{changes}</tbody></table></section><section><h2>Matter List</h2><ul>{tasks}</ul></section></main></body></html>"""
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(document, encoding="utf-8")
     return output
@@ -322,6 +350,6 @@ def render_annotated_docx(
     )
     change_timestamp = _reproducible_now().replace(microsecond=0).isoformat().replace("+00:00", "Z")
     edits = [change.to_edit() for change in change_set.changes if change.decision == "accepted"]
-    return write_reviewed_docx(
-        source, output, edits, RevisionMark(author="Legal reviewer", date=change_timestamp)
-    )
+    # No reviewer decision is recorded on this path, so the label says who it is not.
+    mark = RevisionMark(author="Legal reviewer (not authenticated)", date=change_timestamp)
+    return write_reviewed_docx(source, output, edits, mark)

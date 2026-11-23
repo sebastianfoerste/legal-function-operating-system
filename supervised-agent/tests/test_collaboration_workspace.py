@@ -1,4 +1,5 @@
 import hashlib
+import re
 import zipfile
 
 import pytest
@@ -17,6 +18,7 @@ from src.collaboration_workspace import (
 from src.docx_redline import list_tracked_changes, read_paragraph_texts
 from src.export_gate import ExportBlockedError
 from src.legal_ops import apply_review_decision, assess_matter, build_sample_matter
+from src.pilot.design_tokens import PRINT_CSS, TOKENS_CSS
 from src.pilot.fixtures import build_synthetic_msa
 
 APPROVAL_NOTE = "Approved after commercial counsel review of the synthetic MSA deviation."
@@ -63,7 +65,8 @@ def test_change_set_is_bound_to_its_assessment(tmp_path) -> None:
         )
 
 
-def test_document_specific_changes_are_tracked_at_their_locator(tmp_path) -> None:
+def test_document_specific_changes_are_tracked_at_their_locator(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("SOURCE_DATE_EPOCH", "1767225600")
     assessment = assess_matter(build_sample_matter())
     source = tmp_path / "source.docx"
     source.write_bytes(build_synthetic_msa("routine"))
@@ -97,6 +100,10 @@ def test_document_specific_changes_are_tracked_at_their_locator(tmp_path) -> Non
         ("deletion", "ninety (90) days"),
         ("insertion", "thirty (30) days"),
     ]
+    # A stateless call has no recorded reviewer, so the label says it is not authenticated.
+    assert {(c.author, c.date) for c in list_tracked_changes(reviewed)} == {
+        ("Legal reviewer (not authenticated)", "2026-01-01T00:00:00Z")
+    }
 
 
 def test_changed_source_document_is_refused(tmp_path) -> None:
@@ -171,3 +178,29 @@ def test_static_review_room_snapshot_offers_no_unsaved_controls(tmp_path) -> Non
     assert "ninety (90) days" in content
     assert "http://" not in content and "https://" not in content
     assert "<html lang='en'>" in content
+
+
+def test_static_review_room_snapshot_uses_shared_tokens_and_fits_a_phone(tmp_path) -> None:
+    assessment = assess_matter(build_sample_matter())
+    source = tmp_path / "source.docx"
+    source.write_bytes(build_synthetic_msa("routine"))
+    content = render_review_room(
+        assessment,
+        build_change_set(assessment, source),
+        build_matter_list(assessment),
+        tmp_path / "review-room.html",
+    ).read_text()
+    style = content.split("<style>", 1)[1].split("</style>", 1)[0]
+    assert style.startswith(TOKENS_CSS) and style.endswith(PRINT_CSS)
+    own = style[len(TOKENS_CSS) : -len(PRINT_CSS)]
+    assert not re.search(r"#[0-9a-fA-F]{3,6}\b", own)
+    assert "<meta name='viewport' content='width=device-width, initial-scale=1'>" in content
+    body = content.split("<body>", 1)[1]
+    assert body.startswith("<main>") and body.endswith("</main></body></html>")
+    assert "<thead><tr><th scope='col'>Locator</th>" in content
+    cells = re.findall(r"<td( data-label='[^']*')?>", content)
+    assert cells and all(cells)
+    labels = {label[len(" data-label='") : -1] for label in cells}
+    assert labels == {"Locator", "Original text", "Proposed text", "Decision"}
+    narrow = own.split("@media (max-width:640px){", 1)[1]
+    assert "thead{display:none}" in narrow and "td[data-label]::before" in narrow

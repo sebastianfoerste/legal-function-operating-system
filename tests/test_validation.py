@@ -5,6 +5,9 @@ from __future__ import annotations
 import contextlib
 import io
 import json
+import os
+import subprocess
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -238,6 +241,46 @@ class WholeInput(unittest.TestCase):
             code, _, stderr = run_cli(["--input", str(Path(tmp) / "missing.json")])
             self.assertEqual(code, 2)
             self.assertIn("cannot read", stderr)
+            # A JSON file or standard input in another encoding is reported, not a traceback.
+            latin_bytes = '[{"id": "REQ-1", "title": "Pr\u00fcfung"}]'.encode("latin-1")
+            latin = Path(tmp) / "latin.json"
+            latin.write_bytes(latin_bytes)
+            not_utf8 = "it is not UTF-8 text (byte 0xfc at position 29); save it as UTF-8"
+            code, _, stderr = run_cli(["--input", str(latin)])
+            self.assertEqual(code, 2)
+            self.assertIn(f"cannot read {latin}: {not_utf8}", stderr)
+            # Standard input is judged by its bytes, whatever the locale makes of them: a C
+            # or UTF-8-mode locale turns bad bytes into surrogates, a Windows pipe uses cp1252.
+            for errors in ("strict", "surrogateescape"):
+                code, err = self.validate_stdin(io.TextIOWrapper(io.BytesIO(latin_bytes), encoding="utf-8", errors=errors))
+                self.assertEqual(code, 2, errors)
+                self.assertIn(f"cannot read standard input: {not_utf8}", err)
+            good = '[{"id": "REQ-1", "title": "\u00c1lvarez review"}]'.encode("utf-8")
+            code, err = self.validate_stdin(io.TextIOWrapper(io.BytesIO(good), encoding="cp1252"))
+            self.assertEqual(code, 0, err)
+            code, err = self.validate_stdin(io.TextIOWrapper(io.BytesIO(b"\xef\xbb\xbf" + good), encoding="utf-8"))
+            self.assertEqual(code, 0, err)
+
+    @staticmethod
+    def validate_stdin(stdin) -> tuple[int, str]:
+        out, err = io.StringIO(), io.StringIO()
+        with mock.patch("sys.stdin", stdin), contextlib.redirect_stdout(out), contextlib.redirect_stderr(err):
+            code = cli_main(["validate", "--input", "-"])
+        return code, err.getvalue()
+
+    def test_a_process_reports_standard_input_that_is_not_utf8(self):
+        env = {**os.environ, "PYTHONPATH": str(ROOT / "src"), "LC_ALL": "C.UTF-8"}
+        env.pop("PYTHONIOENCODING", None)
+        completed = subprocess.run(
+            [sys.executable, "-m", "legal_function_os", "validate", "--input", "-"],
+            input='[{"id": "REQ-1", "title": "Pr\u00fcfung"}]'.encode("latin-1"),
+            capture_output=True,
+            env=env,
+            check=False,
+        )
+        self.assertEqual(completed.returncode, 2, completed.stderr)
+        self.assertEqual(completed.stdout, b"")
+        self.assertIn(b"cannot read standard input: it is not UTF-8 text (byte 0xfc at position 29)", completed.stderr)
 
 
 class Suggestions(unittest.TestCase):

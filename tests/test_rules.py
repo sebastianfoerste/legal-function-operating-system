@@ -5,9 +5,9 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from legal_function_os.rules import decide, assess_risk, approval_chain, external_counsel
 from legal_function_os.board_pack import build_board_pack, render_markdown
 from legal_function_os.cli import main as cli_main
+from legal_function_os.rules import approval_chain, assess_risk, decide, external_counsel
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUESTS = json.loads((ROOT / "src" / "legal_function_os" / "data" / "sample_requests.json").read_text(encoding="utf-8"))

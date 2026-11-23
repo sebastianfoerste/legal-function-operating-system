@@ -1,6 +1,7 @@
 """One colour and type token set for the generated HTML pages.
 
-Plain CSS custom properties, light and dark, with no font to load. The supervised
+Plain CSS custom properties, light and dark, with no font to load, and a print block
+that restates the light tokens so every page prints in the light palette. The supervised
 agent keeps a byte-identical copy in ``supervised-agent/src/pilot/design_tokens.py``
 because it may not import this package outside the pilot bridge; ``tests/
 test_design_tokens.py`` fails when the two drift. See docs/adr/0001-design-tokens.md.
@@ -23,3 +24,16 @@ TOKENS_CSS = """:root{color-scheme:light dark;
 --ok:#7ccf8e;--ok-bg:#1d2a20;--warn:#e8b06a;--warn-bg:#2e2416;--bad:#f08a84;--bad-bg:#33201f;
 --focus:#e8a09a}}
 """
+
+# The print block: the light tokens again, inside @media print, so a page viewed in
+# dark mode still prints dark ink on a light page. Derived from TOKENS_CSS so the two
+# cannot drift. Pages append it after their own rules; it also repeats table headers on
+# each printed page and keeps rows, list items and cards whole.
+_LIGHT = TOKENS_CSS.split("@media", 1)[0]
+_LIGHT = _LIGHT.replace("color-scheme:light dark;", "color-scheme:light;", 1)
+PRINT_CSS = (
+    "@media print{"
+    + _LIGHT.strip()
+    + "\n*{box-shadow:none!important}thead{display:table-header-group}"
+    "tr,li,article,.metric,.issue{break-inside:avoid}h1,h2,h3{break-after:avoid}}\n"
+)

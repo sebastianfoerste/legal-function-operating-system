@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from legal_function_os.board_pack import build_board_pack
+from legal_function_os.design_tokens import PRINT_CSS, TOKENS_CSS
 from legal_function_os.policy import Policy
 
 ALLOWED_STEPS = {"validate_intake", "risk_triage", "assign_owner", "check_sla", "collect_evidence", "human_approval", "board_pack"}
@@ -143,21 +144,27 @@ def render_portal(portal: dict[str, Any], output: Path) -> Path:
 <html lang="en">
 <head>
   <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Legal Function Knowledge Portal</title>
   <style>
-    body {{ font: 15px system-ui; max-width: 1000px; margin: 40px auto; color: #172033; }}
-    article {{ border: 1px solid #d9dee8; border-radius: 10px; padding: 16px; margin: 12px 0; }}
-    code {{ font-size: 12px; }}
-    input {{ width: 100%; padding: 10px; box-sizing: border-box; }}
-  </style>
+{TOKENS_CSS}    body {{ font: 15px var(--font); margin: 0; color: var(--ink); background: var(--bg); }}
+    main {{ max-width: 1000px; margin: 40px auto; padding: 0 16px; }}
+    h1 {{ font-family: var(--font-head); }}
+    article {{ border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin: 12px 0; background: var(--surface); overflow-wrap: break-word; }}
+    code {{ font-family: var(--font-mono); font-size: 12px; }}
+    input {{ width: 100%; padding: 10px; box-sizing: border-box; border: 1px solid var(--pill-line); border-radius: 4px; color: var(--ink); background: var(--surface); font: inherit; }}
+    :focus-visible {{ outline: 3px solid var(--focus); outline-offset: 2px; }}
+{PRINT_CSS}  </style>
 </head>
 <body>
+  <main>
   <h1>Legal Function Knowledge Portal</h1>
   <p>Local approved knowledge only. Human review remains required.</p>
   <label for="search">Search approved passages</label>
   <input id="search" type="search" autocomplete="off">
   <p id="status" aria-live="polite"></p>
-  <main>{cards}</main>
+  <div id="results">{cards}</div>
+  </main>
   <script>
     const query = document.getElementById("search");
     const cards = [...document.querySelectorAll("article")];

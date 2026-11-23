@@ -3,19 +3,21 @@ PYTHON := $(shell if [ -x .venv/bin/python ]; then echo .venv/bin/python; else e
 .PHONY: lock install check test lint format compile
 
 lock:
-	uv pip compile requirements.in -o requirements.lock
+	uv pip compile requirements.in -o requirements.txt --python-version 3.13
 
 install:
 	$(PYTHON) -m pip install --upgrade pip
-	$(PYTHON) -m pip install -r requirements.lock
+	$(PYTHON) -m pip install -r requirements.txt -r requirements-dev.txt
 
 lint:
 	$(PYTHON) -m ruff check .
 	$(PYTHON) -m black --check .
 	$(PYTHON) -m mypy .
 
+PYTEST_ARGS ?=
+
 test:
-	$(PYTHON) -m pytest -q
+	$(PYTHON) -m pytest -q $(PYTEST_ARGS)
 
 compile:
 	$(PYTHON) -m compileall master_orchestrator.py models.py src runtime_agent tests
