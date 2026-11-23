@@ -437,10 +437,10 @@ MACHINE_LOCAL_DIRECTORIES = frozenset(
 # So the search says which of them answered, and a guard that finds a file passes that on.
 GIT_ANSWERED = "git listed the files it tracks or would add here"
 GIT_NOT_ASKED = (
-    "git could not be asked here (it is not installed, this is no checkout, or it refused, "
-    "as its ownership check does for a checkout that belongs to another user), so every "
-    "directory outside the machine-local ones was walked; a file that git ignores is found "
-    "that way too"
+    "git could not be asked here (it is not installed, this is no checkout, or its command "
+    "failed, as it does when its ownership check refuses a checkout that belongs to another "
+    "user), so every directory outside the machine-local ones was walked; a file that git "
+    "ignores is found that way too"
 )
 GIT_LISTED_NOTHING = (
     "git listed no file here, so every directory outside the machine-local ones was walked; "
