@@ -128,8 +128,9 @@ def test_a_standing_delivery_is_ready_for_the_requester_as_before() -> None:
 
 
 def test_an_ended_delivery_in_ready_for_delivery_is_shown_in_review() -> None:
-    # The matter stayed ready for delivery, but a later comment or another final approver
-    # ended the delivery. No approved package is ready and there is nothing to accept.
+    # The matter stayed ready for delivery, but a comment written, resolved or reopened
+    # later, or another final approver, ended the delivery. No approved package is ready
+    # and there is nothing to accept.
     status = requester_status("ready_for_delivery", delivery_stands=False)
     assert (status["stage"], status["label"]) == ("in_review", "In review")
     assert status["explanation"] == DELIVERY_ENDED

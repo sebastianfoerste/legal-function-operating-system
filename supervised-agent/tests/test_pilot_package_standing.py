@@ -2,11 +2,11 @@
 
 It stands while the matter is ready for delivery and the evidence ``accept_delivery`` needs
 holds, and after the requester accepted that delivery. A withdrawal, a revision request, a
-new version, a later comment or another final approver in place of the one who approved
-ends it. The package route then refuses, the matter view says why, and the stored manifest
-and its files stay for the audit trail. A matter that stays ready for delivery after its
-delivery ended is shown to its requester as "In review", not as a package to accept.
-Everything here is synthetic.
+new version, a comment written, resolved or reopened after the package was prepared, or
+another final approver in place of the one who approved ends it. The package route then
+refuses, the matter view says why, and the stored manifest and its files stay for the audit
+trail. A matter that stays ready for delivery after its delivery ended is shown to its
+requester as "In review", not as a package to accept. Everything here is synthetic.
 """
 
 from __future__ import annotations
@@ -557,6 +557,65 @@ def test_the_requester_status_follows_the_delivery_while_the_matter_stays_ready(
         "No action needed from you.",
         False,
     )
+
+
+def test_resolving_a_note_ends_the_delivery_and_reopening_it_restores_the_delivery(
+    tmp_path,
+) -> None:
+    # The reviewed state covers the state of every comment, so any change to one after the
+    # package was prepared ends the delivery. Here no comment is written and none is
+    # reopened: a note that was open when the package was prepared is resolved.
+    api, service, matter, note = _ready_with_an_open_note(tmp_path)
+    readers = READERS["routine"]
+    _offered(api, matter, readers)
+    assert _told(api, matter) == TOLD_READY
+    kept = _kept(service, matter)
+    events = event_types(service, matter)
+
+    # An answer to the note changes no comment's state and ends nothing.
+    service.respond_comment(
+        OWNER,
+        matter,
+        revision(service, matter),
+        comment_id=note,
+        body="An answer to the note, written after the package was prepared.",
+    )
+    _offered(api, matter, readers)
+    assert _told(api, matter) == TOLD_READY
+
+    service.resolve_comment(
+        APPROVER_LEAD,
+        matter,
+        revision(service, matter),
+        comment_id=note,
+        resolution="Read and noted; nothing changes in the package.",
+    )
+    assert state(service, matter) == "ready_for_delivery"
+    assert event_types(service, matter) == [*events, "comment_response_added", "comment_resolved"]
+    _refused(api, matter, readers, CHANGED)
+    assert _told(api, matter) == TOLD_ENDED
+    assert _kept(service, matter) == kept
+
+    # The way back is the opposite step: reopened, the note is in the state it had when the
+    # package was prepared. The delivery stands again, for every reader and in the status.
+    service.reopen_comment(
+        OWNER,
+        matter,
+        revision(service, matter),
+        comment_id=note,
+        reason="The note stays open until the delivery is accepted.",
+    )
+    assert state(service, matter) == "ready_for_delivery"
+    assert event_types(service, matter)[-1] == "comment_reopened"
+    _offered(api, matter, readers)
+    assert _told(api, matter) == TOLD_READY
+    assert _kept(service, matter) == kept
+
+    # It is the delivery the requester can accept, and the accepted package stays open.
+    service.accept_delivery(REQUESTER, matter, revision(service, matter), note=ACCEPTANCE)
+    row = _view(api, OWNER, matter)["matter"]
+    assert (row["state"], row["closed_outcome"]) == ("closed", "delivered_locally_and_accepted")
+    _offered(api, matter, readers)
 
 
 def test_an_open_question_overrides_the_action_after_a_delivery_ended(tmp_path) -> None:

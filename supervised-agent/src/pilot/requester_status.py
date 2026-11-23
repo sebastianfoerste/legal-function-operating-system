@@ -8,11 +8,11 @@ in legal typed for the requester are shown as written: the reason for a running 
 (ADR 0010).
 
 Each state has one stage, with one exception that the service decides and hands in. A
-matter can stay ``ready_for_delivery`` after its delivery ended: a comment written or
-reopened after the package was prepared, or another final approver in place of the one
-who approved, leaves no approved package to accept. The requester is then shown "In
-review", because legal has to act before a package can be offered again (ADR 0011, note
-of 2026-11-23).
+matter can stay ``ready_for_delivery`` after its delivery ended: a comment written,
+resolved or reopened after the package was prepared (any change to the state of a
+comment), or another final approver in place of the one who approved, leaves no approved
+package to accept. The requester is then shown "In review", because legal has to act
+before a package can be offered again (ADR 0011, note of 2026-11-23).
 """
 
 from __future__ import annotations

@@ -274,8 +274,9 @@ needs `X-Pilot-Actor`.
 The package is served only while its delivery stands: the matter is `ready_for_delivery`
 and the evidence `delivery_manifest_current` passes, or the matter is `closed` with the
 outcome `delivered_locally_and_accepted`. A withdrawal, a revision request, a new version,
-a comment written after the package was prepared or another final approver assigned in
-place of the one who approved ends the delivery. The route then answers 403
+a comment written, resolved or reopened after the package was prepared (any change to the
+state of a comment) or another final approver assigned in place of the one who approved
+ends the delivery. The route then answers 403
 `permission_denied` with a sentence that says why, and the stored manifest and its files
 are kept. The matter view (`GET /pilot/api/matters/{id}`) carries the same answer for both
 kinds of reader as `package`: `{"may_open": true, "reason": null}` while the package may
