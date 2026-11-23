@@ -51,13 +51,14 @@ cite approved local resources or return an insufficient-evidence result.
 
 The clause playbook checks a processing agreement (German: *Auftragsverarbeitungsvertrag*,
 AVV) against each requirement of Article 28(3) GDPR and returns `pass`, `review`, or
-`missing` per requirement, with the pinpoint citation, a short quote of the statutory
-wording and the matched clause excerpt. Each requirement is split into the elements
-the statute names: lit. a needs documented instructions *and* the third-country
-transfer wording, lit. f needs breach notification (Art. 33, 34) *and* DPIA or prior
-consultation (Art. 35, 36) unless the clause refers to Articles 32 to 36 as a whole,
-and lit. h needs the information to demonstrate compliance *and* audits including
-inspections. A clause passes only when every element is found; otherwise it is marked
+`missing` per requirement, with the pinpoint citation, the statutory wording of the point
+in full (as published in the Official Journal, OJ L 119, 4.5.2016) and the matched clause
+excerpt. Each requirement is split into the elements the statute names: lit. a needs
+documented instructions *and* the third-country transfer wording; lit. f needs the
+security of processing (Art. 32), personal data breaches (Art. 33 and 34, one element),
+the data protection impact assessment (Art. 35) *and* prior consultation (Art. 36),
+unless the clause refers to Articles 32 to 36 as a whole; lit. h needs the information
+to demonstrate compliance *and* audits including inspections. A clause passes only when every element is found; otherwise it is marked
 `review` with the missing elements listed (`missing_elements` in the JSON, a column in
 the Markdown). A matched term preceded by a negation within a few words ("no audits",
 "keine Überprüfung") is reported as negated and yields `review`. A `missing` requirement
@@ -75,8 +76,8 @@ to [`examples/dpa-review.md`](../examples/dpa-review.md) and
 [`examples/dpa-review.json`](../examples/dpa-review.json). DPA-001 passes every row.
 DPA-002 is marked `review` for lit. a (no third-country transfer wording), lit. c (no
 reference to Art. 32 DSGVO or technical and organisational measures), lit. f (breach
-notice only, no DPIA or prior consultation) and the UAbs. 2 row, and `missing` for
-lit. h. The review states a coverage result of the statutory wording. It does not state
+notice only: no security of processing, DPIA or prior consultation) and the UAbs. 2 row,
+and `missing` for lit. h. The review states a coverage result of the statutory wording. It does not state
 that an agreement is lawful, and it reads words, not meaning.
 
 The check itself is deterministic and makes no model call. When an agent prepares the

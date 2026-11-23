@@ -40,7 +40,11 @@ DPA_PLAYBOOK: tuple[dict[str, Any], ...] = (
         "statute": (
             "processes the personal data only on documented instructions from the "
             "controller, including with regard to transfers of personal data to a third "
-            "country or an international organisation"
+            "country or an international organisation, unless required to do so by Union "
+            "or Member State law to which the processor is subject; in such a case, the "
+            "processor shall inform the controller of that legal requirement before "
+            "processing, unless that law prohibits such information on important grounds "
+            "of public interest"
         ),
         "elements": (
             _element(
@@ -154,9 +158,10 @@ DPA_PLAYBOOK: tuple[dict[str, Any], ...] = (
         "citation": "Art. 28 Abs. 3 lit. e DSGVO",
         "required": True,
         "statute": (
-            "assists the controller by appropriate technical and organisational measures "
-            "for the fulfilment of the controller's obligation to respond to requests for "
-            "exercising the data subject's rights laid down in Chapter III"
+            "taking into account the nature of the processing, assists the controller by "
+            "appropriate technical and organisational measures, insofar as this is "
+            "possible, for the fulfilment of the controller's obligation to respond to "
+            "requests for exercising the data subject's rights laid down in Chapter III"
         ),
         "elements": (
             _element(
@@ -187,9 +192,22 @@ DPA_PLAYBOOK: tuple[dict[str, Any], ...] = (
             "to Articles 32 to 36 taking into account the nature of processing and the "
             "information available to the processor"
         ),
-        # A clause that refers to the whole range satisfies every element below.
+        # A clause that refers to the whole range satisfies every element below. Otherwise
+        # each Article the point names is an element of its own, except that Articles 33
+        # and 34 form one element, because both concern a personal data breach.
         "blanket_patterns": (_ARTICLE + r"32\s?(?:bis|to|-|–|—)\s?36\b",),
         "elements": (
+            _element(
+                "security_of_processing",
+                "Sicherheit der Verarbeitung (Art. 32)",
+                "Security of processing (Article 32)",
+                "Article 32: security of processing",
+                (
+                    r"sicherheit\s+der\s+verarbeitung",
+                    _ARTICLE + r"32\b",
+                    r"\bsecurity\s+of\s+(?:the\s+)?processing\b",
+                ),
+            ),
             _element(
                 "breach_notification",
                 "Meldung und Benachrichtigung bei Verletzungen des Schutzes personenbezogener Daten (Art. 33, 34)",
@@ -206,18 +224,27 @@ DPA_PLAYBOOK: tuple[dict[str, Any], ...] = (
                 ),
             ),
             _element(
-                "dpia_and_prior_consultation",
-                "Datenschutz-Folgenabschätzung und vorherige Konsultation (Art. 35, 36)",
-                "Data protection impact assessment and prior consultation (Articles 35 and 36)",
-                "Articles 35 and 36: data protection impact assessment and prior consultation of the supervisory authority",
+                "dpia",
+                "Datenschutz-Folgenabschätzung (Art. 35)",
+                "Data protection impact assessment (Article 35)",
+                "Article 35: data protection impact assessment",
                 (
                     r"datenschutz-?folgenabsch[aä]tzung",
                     r"\bdsfa\b",
-                    r"vorherige[n]?\s+konsultation",
-                    _ARTICLE + r"3[56]\b",
+                    _ARTICLE + r"35\b",
                     r"\bdata\s+protection\s+impact\s+assessments?\b",
                     r"\bimpact\s+assessments?\b",
                     r"\bdpias?\b",
+                ),
+            ),
+            _element(
+                "prior_consultation",
+                "Vorherige Konsultation der Aufsichtsbehörde (Art. 36)",
+                "Prior consultation of the supervisory authority (Article 36)",
+                "Article 36: prior consultation of the supervisory authority",
+                (
+                    r"vorherige[n]?\s+konsultation",
+                    _ARTICLE + r"36\b",
                     r"\bprior\s+consultation\b",
                 ),
             ),
@@ -232,7 +259,8 @@ DPA_PLAYBOOK: tuple[dict[str, Any], ...] = (
         "statute": (
             "at the choice of the controller, deletes or returns all the personal data to "
             "the controller after the end of the provision of services relating to "
-            "processing, and deletes existing copies"
+            "processing, and deletes existing copies unless Union or Member State law "
+            "requires storage of the personal data"
         ),
         "elements": (
             _element(
@@ -305,9 +333,9 @@ DPA_PLAYBOOK: tuple[dict[str, Any], ...] = (
         "citation": "Art. 28 Abs. 3 UAbs. 2 DSGVO",
         "required": False,
         "statute": (
-            "the processor shall immediately inform the controller if, in its opinion, an "
-            "instruction infringes this Regulation or other Union or Member State data "
-            "protection provisions"
+            "With regard to point (h) of the first subparagraph, the processor shall "
+            "immediately inform the controller if, in its opinion, an instruction infringes "
+            "this Regulation or other Union or Member State data protection provisions"
         ),
         "elements": (
             _element(
