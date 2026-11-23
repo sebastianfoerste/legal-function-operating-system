@@ -332,9 +332,10 @@ let the parties cap liability towards the injured person:
   "Member States shall ensure that the liability of an economic operator pursuant to this
   Directive is not, in relation to the injured person, limited or excluded by a
   contractual provision or by national law." It applies to products "placed on the market
-  or put into service after 9 December 2026" (Art. 2(1)). For products placed on the
-  market before then, Directive 85/374/EEC, Art. 12
-  ([31985L0374](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:31985L0374)),
+  or put into service after 8 December 2026" (Art. 2(1), as corrected by the corrigendum
+  of 7 May 2026, OJ L, 2026/90364). For products placed on the market or put into service
+  before 9 December 2026, Directive 85/374/EEC continues to apply (Art. 21), and its Art. 12
+  ([31985L0374](https://eur-lex.europa.eu/legal-content/EN/TXT/HTML/?uri=CELEX:31985L0374))
   has the same rule: "The liability of the producer arising from this Directive may not,
   in relation to the injured person, be limited or excluded by a provision limiting his
   liability or exempting him from liability."

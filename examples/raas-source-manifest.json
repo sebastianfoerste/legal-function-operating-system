@@ -1,8 +1,8 @@
 {
   "schema": "legal-function-os.source-manifest.v1",
   "verified_on": "2026-10-13",
-  "last_verified_on": "2026-10-31",
-  "source_digest": "913a6832aa1a2fdb09aa52fa036289c19a8c88ef55eb5aff492c6ec3f5265271",
+  "last_verified_on": "2026-11-23",
+  "source_digest": "327e886069be5c76171fb07bb07b4e91386bd283bc7b331bb12c8caf446cd111",
   "sources": [
     {
       "id": "EU-DATA-ACT",
@@ -66,7 +66,7 @@
       "url": "https://eur-lex.europa.eu/eli/dir/2024/2853/oj/eng",
       "pinpoint": "Articles 2, 4, 7 to 11, 21, and 22",
       "legal_effect": "directive_requires_national_implementation",
-      "verified_on": "2026-10-31",
+      "verified_on": "2026-11-23",
       "timing": "Member States must transpose the Directive by 9 December 2026 (Article 22). It applies to products placed on the market or put into service after 8 December 2026 (Article 2(1), as corrected by the corrigendum of 7 May 2026); products placed on the market or put into service on or before that date are outside its scope."
     },
     {

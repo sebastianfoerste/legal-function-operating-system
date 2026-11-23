@@ -194,6 +194,24 @@ class RaaSDealDeskTests(unittest.TestCase):
         self.assertIn("20 January 2027", directive["timing"])
         self.assertIn("2023/1230", directive["timing"])
 
+    def test_product_liability_scope_follows_the_corrected_article_2_1(self):
+        # Corrigendum to Directive (EU) 2024/2853, OJ L, 2026/90364, 7.5.2026: Article
+        # 2(1) reads "after 8 December 2026", not "after 9 December 2026" as first
+        # published. Article 21 keeps Directive 85/374/EEC for products placed on the
+        # market or put into service before 9 December 2026.
+        reg_006 = next(
+            item for item in self.pack.regulatory_readiness if item.control_id == "REG-006"
+        )
+        self.assertEqual(reg_006.source_id, "EU-PRODUCT-LIABILITY")
+        self.assertIn("after 8 December 2026", reg_006.deal_relevance)
+        product_liability = next(
+            item for item in SOURCE_MANIFEST if item["id"] == "EU-PRODUCT-LIABILITY"
+        )
+        self.assertIn("after 8 December 2026", product_liability["timing"])
+        self.assertIn("corrigendum of 7 May 2026", product_liability["timing"])
+        rendered = render_raas_markdown(self.pack) + render_raas_html(self.pack)
+        self.assertNotIn("after 9 December 2026", rendered)
+
     def test_pack_states_the_scenario_date_next_to_the_verification_range(self):
         markdown = render_raas_markdown(self.pack)
         signing = DEAL["requested_signing_date"]
