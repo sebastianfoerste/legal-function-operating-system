@@ -250,6 +250,7 @@ class ChangelogPointersTest(unittest.TestCase):
             '(see the entry "Pilot: a matter legal received is no longer left out")',
             'The entry on drafts said "(the entry at the top of this section)".',
             'That pointer and two others, which said "below" and "above", now name the entry.',
+            "The test refuses `the entry above` and `(see the entry 'Pilot: no such entry')`.",
             "Entries were then added above the one it meant, so it pointed to another entry.",
             "a question can depend only on an answer given above it, which is checked",
             'The status above that line still read "Ready for you".',
