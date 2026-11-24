@@ -103,6 +103,12 @@ DELIVERY_ENDED = (
     "The package prepared earlier is no longer approved, because the matter changed after "
     "it was prepared. Legal has to review the matter again before a package is ready for you."
 )
+APPROVED = "The review is approved. The package for the customer is being prepared."
+NO_PACKAGE = (
+    "The review was approved, but a package for the customer cannot be prepared from that "
+    "approval as the matter stands now. Legal has to work on the matter again before a "
+    "package is ready for you."
+)
 SNOOZE = {
     "since": "2026-11-02T08:00:00Z",
     "until": None,
@@ -166,6 +172,98 @@ def test_every_other_state_ignores_whether_a_delivery_stands(state: str) -> None
         for stands in (True, False):
             assert requester_status(state, delivery_stands=stands, **given) == expected, given
         assert expected["explanation"] != DELIVERY_ENDED
+
+
+def test_an_approval_a_package_can_be_prepared_from_is_approved_as_before() -> None:
+    approved = requester_status("approved")
+    assert (approved["stage"], approved["label"], approved["explanation"]) == (
+        "approved",
+        "Approved",
+        APPROVED,
+    )
+    assert approved["your_action"] == "No action needed from you."
+    assert not approved["waiting_on_you"]
+    # Saying that a package can be prepared changes nothing: it is what the function assumed.
+    assert requester_status("approved", package_can_be_prepared=True) == approved
+    asked = requester_status("approved", open_questions=1, package_can_be_prepared=True)
+    assert asked == requester_status("approved", open_questions=1)
+    assert (asked["stage"], asked["explanation"]) == ("approved", APPROVED)
+    assert asked["your_action"] == "Answer the open question below." and asked["waiting_on_you"]
+
+
+def test_an_approval_no_package_can_be_prepared_from_is_shown_in_review() -> None:
+    # The matter is approved, but `prepare_delivery` would be refused: the approval no
+    # longer counts, or it never allowed a package. No package is being prepared, and the
+    # requester is not told that one is.
+    status = requester_status("approved", package_can_be_prepared=False)
+    assert (status["stage"], status["label"]) == ("in_review", "In review")
+    assert status["explanation"] == NO_PACKAGE
+    assert status["your_action"] == "No action needed from you."
+    assert not status["waiting_on_you"]
+    # One of the six stages is current, and the list is the six stages as they are.
+    assert [(s["id"], s["label"]) for s in status["stages"]] == list(REQUESTER_STAGES)
+    assert [s["id"] for s in status["stages"] if s["current"]] == ["in_review"]
+    assert (status["snooze"], status["closure"]) == (None, None)
+    # Everything else is what "In review" gives a matter in review.
+    in_review = requester_status("review")
+    assert {**status, "explanation": in_review["explanation"]} == in_review
+    # The sentence names no cause: no comment, approver, hold, document or check.
+    for word in ("comment", "approver", "hold", "document", "check", "because", "changed"):
+        assert word not in NO_PACKAGE.lower(), word
+
+    # An open question to the requester still overrides the action.
+    one = requester_status("approved", open_questions=1, package_can_be_prepared=False)
+    assert (one["stage"], one["explanation"]) == ("in_review", NO_PACKAGE)
+    assert one["your_action"] == "Answer the open question below." and one["waiting_on_you"]
+    two = requester_status("approved", open_questions=2, package_can_be_prepared=False)
+    assert two["your_action"] == "Answer the 2 open questions below." and two["waiting_on_you"]
+
+
+@pytest.mark.parametrize("state", [s for s in STATES if s != "approved"])
+def test_every_other_state_ignores_whether_a_package_can_be_prepared(state: str) -> None:
+    for given in (
+        {},
+        {"open_questions": 1},
+        {"closed_outcome": "withdrawn_without_delivery"},
+        {"closed_outcome": "delivered_locally_and_accepted", "open_questions": 2},
+        {"snooze": SNOOZE},
+        {"closure": CLOSURE},
+        {"delivery_stands": False},
+    ):
+        expected = requester_status(state, **given)
+        for can in (True, False):
+            told = requester_status(state, package_can_be_prepared=can, **given)
+            assert told == expected, given
+        assert expected["explanation"] != NO_PACKAGE
+
+
+@pytest.mark.parametrize("state", STATES)
+def test_each_of_the_two_facts_is_read_for_its_own_state_only(state: str) -> None:
+    # The service hands in both facts for every matter. `ready_for_delivery` reads whether
+    # the delivery stands, `approved` reads whether a package can be prepared, and no
+    # state reads both or the other one.
+    told = {
+        (stands, can): requester_status(state, delivery_stands=stands, package_can_be_prepared=can)
+        for stands in (True, False)
+        for can in (True, False)
+    }
+    plain = requester_status(state)
+    assert told[True, True] == plain
+    if state == "ready_for_delivery":
+        assert told[True, False] == plain and plain["explanation"] == READY
+        assert told[False, True] == told[False, False]
+        assert told[False, False]["explanation"] == DELIVERY_ENDED
+    elif state == "approved":
+        # In `approved` no delivery stands, so the service hands in "false" for that fact.
+        assert told[False, True] == plain and plain["explanation"] == APPROVED
+        assert told[True, False] == told[False, False]
+        assert told[False, False]["explanation"] == NO_PACKAGE
+    else:
+        assert all(status == plain for status in told.values())
+    # Whatever the facts say, the stage is one of the six and exactly one is current.
+    for status in told.values():
+        assert [(s["id"], s["label"]) for s in status["stages"]] == list(REQUESTER_STAGES)
+        assert [s["id"] for s in status["stages"] if s["current"]] == [status["stage"]]
 
 
 def test_requester_view_carries_status_but_no_internal_detail(tmp_path) -> None:

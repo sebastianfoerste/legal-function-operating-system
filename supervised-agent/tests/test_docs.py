@@ -56,14 +56,16 @@ def test_readme_counts_and_lists_every_mcp_style_tool():
 # by their path under the directory it runs in, and leaves out what a .gitignore or the
 # machine's own exclude file names, such as a developer's .vscode/mcp.json. NUL ends each path.
 GIT_LISTING = ("git", "ls-files", "--cached", "--others", "--exclude-standard", "-z")
-# A hook or a wrapper script can export these to point git at another repository or index.
-# The question is about the checkout this directory is in, so git is asked without them.
+# A hook or a wrapper script can export these to point git at another repository, index or
+# object store. The question is about the checkout this directory is in, so git is asked
+# without them.
 GIT_REPOSITORY_VARIABLES = frozenset(
     {
         "GIT_DIR",
         "GIT_WORK_TREE",
         "GIT_INDEX_FILE",
         "GIT_COMMON_DIR",
+        "GIT_OBJECT_DIRECTORY",
     }
 )
 # Where git cannot say, every directory is walked, hidden or not, except the ones a tool
@@ -85,6 +87,20 @@ MACHINE_LOCAL_DIRECTORIES = frozenset(
         ".pilot",
         ".playwright-mcp",
     }
+)
+# Which search answered. Git and the walk do not find the same files: the walk also finds a
+# file git ignores, and it does not find a file git tracks inside a machine-local directory.
+# So the search says which of them answered, and a guard that finds a file passes that on.
+GIT_ANSWERED = "git listed the files it tracks or would add here"
+GIT_NOT_ASKED = (
+    "git could not be asked here (it is not installed, this is no checkout, or its command "
+    "failed, as it does when its ownership check refuses a checkout that belongs to another "
+    "user), so every directory outside the machine-local ones was walked; a file that git "
+    "ignores is found that way too"
+)
+GIT_LISTED_NOTHING = (
+    "git listed no file here, so every directory outside the machine-local ones was walked; "
+    "a file that git ignores is found that way too"
 )
 
 
@@ -111,22 +127,40 @@ def _walked(root: Path) -> list[str]:
     return found
 
 
-def _files_named(root: Path, *names: str, listing: Sequence[str] = GIT_LISTING) -> list[str]:
-    """The files with one of these names that ``root`` ships, by their path under it.
+def _files_named(
+    root: Path, *names: str, listing: Sequence[str] = GIT_LISTING
+) -> tuple[list[str], str]:
+    """The files with one of these names that ``root`` ships, and which search answered.
 
-    In a git checkout these are the files git tracks or would add under ``root``, whether
-    ``root`` is the repository or a directory in it. Where git cannot say, they are the
-    files the walk finds: without a checkout, without git, when the command fails, and when
-    it lists nothing at all, as it does for a copy of the tree inside a directory that
-    another checkout ignores.
+    The files are given by their path under ``root``. In a git checkout they are the files
+    git tracks or would add under ``root``, whether ``root`` is the repository or a
+    directory in it. Where git cannot say, they are the files the walk finds: without a
+    checkout, without git, when the command fails, as it does when git's ownership check
+    refuses a checkout that belongs to another user, and when it lists nothing at all, as
+    it does for a copy of the tree inside a directory that another checkout ignores. The
+    second value is GIT_ANSWERED, GIT_NOT_ASKED or GIT_LISTED_NOTHING.
     """
 
     listed = _git(root, listing)
     if listed:
         paths = [os.fsdecode(path) for path in listed.split(b"\0") if path]
+        answered = GIT_ANSWERED
     else:
         paths = _walked(root)
-    return sorted(path for path in paths if path.rsplit("/", 1)[-1] in names)
+        answered = GIT_NOT_ASKED if listed is None else GIT_LISTED_NOTHING
+    return sorted(path for path in paths if path.rsplit("/", 1)[-1] in names), answered
+
+
+def _require_no_client_configuration(root: Path, listing: Sequence[str] = GIT_LISTING) -> None:
+    """Fail if the search finds an ``mcp.json`` or ``.mcp.json`` under ``root``.
+
+    The message names the files and says which search answered. A walk that finds no such
+    file passes: a copy of the tree without git is a legitimate place to run the suite.
+    """
+
+    found, answered = _files_named(root, "mcp.json", ".mcp.json", listing=listing)
+    if found:
+        raise AssertionError(f"found {', '.join(found)}: {answered}")
 
 
 def test_readme_says_how_the_tools_are_reached_and_that_no_mcp_client_can():
@@ -154,14 +188,22 @@ def test_the_agent_ships_no_mcp_client_configuration():
     # client can use. A file that comes back fails here, wherever it is in the agent, a
     # hidden directory included, if git tracks it or would add it. A file git ignores, such
     # as a developer's own .vscode/mcp.json, is not shipped and does not fail. Where git
-    # cannot say, every directory is searched except the machine-local ones above.
-    assert _files_named(AGENT_ROOT, "mcp.json", ".mcp.json") == []
+    # cannot say, every directory is searched except the machine-local ones above. That
+    # search also finds an ignored file and misses a tracked one inside a machine-local
+    # directory, so a failure says which search answered. The walk alone fails nothing.
+    _require_no_client_configuration(AGENT_ROOT)
 
 
 # A program that stands in for git: this interpreter, started without the site module and
 # without its environment variables, so nothing of the machine is printed or read.
 PYTHON = (sys.executable, "-I", "-S", "-c")
 FAILS_AFTER_A_LISTING = "import sys; sys.stdout.write('docs/notes.md\\0'); sys.exit(128)"
+# What git does in a checkout that belongs to another user and is not listed in
+# safe.directory: it lists nothing, says why on standard error and exits with 128.
+REFUSES_THE_CHECKOUT = (
+    "import sys; sys.stderr.write('fatal: detected dubious ownership in repository\\n'); "
+    "sys.exit(128)"
+)
 
 
 def _write(root: Path, *names: str) -> None:
@@ -174,13 +216,22 @@ def _write(root: Path, *names: str) -> None:
 def test_in_a_checkout_the_search_asks_git_what_is_shipped(tmp_path, monkeypatch):
     if shutil.which("git") is None:
         pytest.skip("git is not installed")
-    # The ignore rules of this checkout decide, not the configuration of the machine.
+    # The ignore rules of this checkout decide, not the configuration of the machine: not
+    # the user's files, and not the system's (GIT_CONFIG_NOSYSTEM also keeps a file named
+    # by GIT_CONFIG_SYSTEM from being read).
     home = tmp_path / "home"
     home.mkdir()
     monkeypatch.setenv("HOME", str(home))
     monkeypatch.setenv("XDG_CONFIG_HOME", str(home / "config"))
     monkeypatch.setenv("GIT_CONFIG_GLOBAL", os.devnull)
     monkeypatch.setenv("GIT_CONFIG_NOSYSTEM", "1")
+    # Nor configuration handed over in the environment. A count of 0 leaves every
+    # GIT_CONFIG_KEY_<n> and GIT_CONFIG_VALUE_<n> pair unread, and GIT_CONFIG_PARAMETERS is
+    # what `git -c` exports to the commands it starts. Some machines set such variables,
+    # for example to rewrite URLs, and a core.excludesFile given that way would decide what
+    # git lists here.
+    monkeypatch.setenv("GIT_CONFIG_COUNT", "0")
+    monkeypatch.setenv("GIT_CONFIG_PARAMETERS", "")
     # The agent is a directory of the checkout here, as in the parent repository.
     checkout = tmp_path / "checkout"
     agent = checkout / "agent"
@@ -215,24 +266,27 @@ def test_in_a_checkout_the_search_asks_git_what_is_shipped(tmp_path, monkeypatch
         "node_modules/package/mcp.json",  # git decides here, not the list of names
         "runtime/mcp.json",
     ]
-    assert _files_named(agent, "mcp.json", ".mcp.json") == shipped
+    assert _files_named(agent, "mcp.json", ".mcp.json") == (shipped, GIT_ANSWERED)
     # The agent is the repository itself in a standalone export.
-    assert _files_named(checkout, "mcp.json", ".mcp.json") == sorted(
-        [*(f"agent/{path}" for path in shipped), "mcp.json", "plugin/.mcp.json"]
+    assert _files_named(checkout, "mcp.json", ".mcp.json") == (
+        sorted([*(f"agent/{path}" for path in shipped), "mcp.json", "plugin/.mcp.json"]),
+        GIT_ANSWERED,
     )
-    # Variables that point git somewhere else change nothing.
+    # Variables that point git somewhere else change nothing. With an object store that
+    # does not exist, git would not find the checkout at all.
     monkeypatch.setenv("GIT_DIR", str(tmp_path / "elsewhere.git"))
     monkeypatch.setenv("GIT_WORK_TREE", str(tmp_path))
     monkeypatch.setenv("GIT_INDEX_FILE", str(tmp_path / "elsewhere.index"))
     monkeypatch.setenv("GIT_COMMON_DIR", str(tmp_path / "elsewhere.git"))
-    assert _files_named(agent, "mcp.json", ".mcp.json") == shipped
+    monkeypatch.setenv("GIT_OBJECT_DIRECTORY", str(tmp_path / "elsewhere.git" / "objects"))
+    assert _files_named(agent, "mcp.json", ".mcp.json") == (shipped, GIT_ANSWERED)
     # A directory in no checkout: git is not allowed to look above it, says so, and the walk
     # answers. Nothing is ignored there, and the machine-local directories are left out.
     plain = tmp_path / "plain"
     _write(plain, ".vscode/mcp.json", "node_modules/package/mcp.json")
     monkeypatch.setenv("GIT_CEILING_DIRECTORIES", str(tmp_path))
     assert _git(plain, GIT_LISTING) is None
-    assert _files_named(plain, "mcp.json", ".mcp.json") == [".vscode/mcp.json"]
+    assert _files_named(plain, "mcp.json", ".mcp.json") == ([".vscode/mcp.json"], GIT_NOT_ASKED)
 
 
 def test_without_git_the_search_walks_all_but_the_machine_local_directories(tmp_path):
@@ -251,19 +305,56 @@ def test_without_git_the_search_walks_all_but_the_machine_local_directories(tmp_
     )
     # Git is taken away by the command, so this does not need a machine without git: a
     # program that does not exist, one that fails with git's exit status after it listed a
-    # file, and one that lists nothing.
-    for case, listing in (
-        ("no such program", (str(tmp_path / "git-is-not-installed"), *GIT_LISTING[1:])),
-        ("fails after a listing", (*PYTHON, FAILS_AFTER_A_LISTING)),
-        ("lists nothing", (*PYTHON, "")),
+    # file, one that refuses as git's ownership check does, and one that lists nothing. The
+    # search says in each case that the walk answered, and why.
+    walked = [
+        ".cursor/mcp.json",
+        ".mcp.json",
+        ".vscode/mcp.json",
+        "docs/.hidden/.mcp.json",
+        "mcp.json",
+    ]
+    for case, listing, answered in (
+        (
+            "no such program",
+            (str(tmp_path / "git-is-not-installed"), *GIT_LISTING[1:]),
+            GIT_NOT_ASKED,
+        ),
+        ("fails after a listing", (*PYTHON, FAILS_AFTER_A_LISTING), GIT_NOT_ASKED),
+        ("refuses the checkout", (*PYTHON, REFUSES_THE_CHECKOUT), GIT_NOT_ASKED),
+        ("lists nothing", (*PYTHON, ""), GIT_LISTED_NOTHING),
     ):
-        assert _files_named(tree, "mcp.json", ".mcp.json", listing=listing) == [
-            ".cursor/mcp.json",
-            ".mcp.json",
-            ".vscode/mcp.json",
-            "docs/.hidden/.mcp.json",
-            "mcp.json",
-        ], case
+        found = _files_named(tree, "mcp.json", ".mcp.json", listing=listing)
+        assert found == (walked, answered), case
+    # What a reader of a failing guard is told when the walk answered.
+    for sentence in (GIT_NOT_ASKED, GIT_LISTED_NOTHING):
+        assert "so every directory outside the machine-local ones was walked" in sentence
+        assert "a file that git ignores is found that way too" in sentence
+    assert GIT_NOT_ASKED.startswith("git could not be asked here (")
+    assert "its ownership check" in GIT_NOT_ASKED and "walked" not in GIT_ANSWERED
+
+
+def test_a_guard_that_finds_a_file_says_which_search_answered(tmp_path):
+    # Git and the walk do not find the same files, so a failure names the search. Here git
+    # refuses as its ownership check does, and the walk finds a file that the agent's own
+    # .gitignore leaves out where git answers.
+    refused = (*PYTHON, REFUSES_THE_CHECKOUT)
+    tree = tmp_path / "tree"
+    _write(tree, "README.md", ".vscode/mcp.json", "node_modules/package/mcp.json")
+    with pytest.raises(AssertionError) as failure:
+        _require_no_client_configuration(tree, refused)
+    assert str(failure.value) == f"found .vscode/mcp.json: {GIT_NOT_ASKED}"
+    # The walk alone fails nothing: a copy of the tree without git, or one git refuses to
+    # answer for, passes while the walk finds no such file in it. The file under
+    # node_modules is still there, and the walk does not look there.
+    (tree / ".vscode" / "mcp.json").unlink()
+    _require_no_client_configuration(tree, refused)
+    _require_no_client_configuration(tree, (str(tmp_path / "git-is-not-installed"), "ls-files"))
+    # Where git answers, the message says so. A command that lists two such files stands in.
+    lists_two = "import sys; sys.stdout.write('docs/mcp.json\\0README.md\\0.mcp.json\\0')"
+    with pytest.raises(AssertionError) as failure:
+        _require_no_client_configuration(tree, (*PYTHON, lists_two))
+    assert str(failure.value) == f"found .mcp.json, docs/mcp.json: {GIT_ANSWERED}"
 
 
 def test_features_lists_only_files_that_exist():

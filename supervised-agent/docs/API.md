@@ -291,6 +291,35 @@ the delivery stands but its
 `customer-package.html` is missing from the export folder, the route answers 404
 `not_found` and names the missing file.
 
+`requester_status` also goes by whether a package can be prepared. A matter that is
+`approved` while `prepare_delivery` would be refused has the stage `in_review` and the
+label "In review", not `approved` and "Approved". Its explanation is "The review was
+approved, but a package for the customer cannot be prepared from that approval as the
+matter stands now. Legal has to work on the matter again before a package is ready for
+you." and, unless a question to the requester is open, its next step is "No action needed
+from you.". The service asks the evidence that transition needs (`export_gate_passes`)
+once, for the requester's view and for their matter list. The explanation names no cause,
+and the requester's view carries none of the gate's checks or reasons. A reviewer's view
+is unchanged: it lists `prepare_delivery` under `allowed` with that evidence, and the
+gate's checks under `eligibility`.
+
+`package` is the answer to whether a package may be opened. The lists of manifests in the
+matter view do not say it. In a requester's view, `delivery` holds the manifest of the
+package that may be opened now and nothing else: one manifest while `package.may_open` is
+true, and an empty list when no package was prepared or its delivery has ended. An earlier
+package of the same matter is not listed. A reviewer's view has no `delivery`. Its
+`manifests` holds every manifest stored for the matter, internal review drafts and
+packages whose delivery has ended included, as the record of what was written.
+
+`GET /pilot/api/matters` gives each matter as `matter_id`, `title`, `state`,
+`current_version`, `revision` and `closed_outcome`. `state` is the pilot state, for every
+role. For a business requester each entry also carries `requester_status_label`, the
+`label` of the `requester_status` in their view of that matter, for example "In review"
+for a matter that is `ready_for_delivery` after its delivery ended and "Closed: withdrawn
+without delivery" for a withdrawn one. The service puts both together in one place, so
+the list and the view cannot differ. The review room shows a requester that label in the
+list and every other role the pilot state. No other role's entry has the key.
+
 Answers to a refused request or command:
 
 | Status | `error` | Meaning |

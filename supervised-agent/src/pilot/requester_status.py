@@ -7,12 +7,25 @@ in legal typed for the requester are shown as written: the reason for a running 
 (and its question, if any), and the reason legal closed the request in triage
 (ADR 0010).
 
-Each state has one stage, with one exception that the service decides and hands in. A
+Each state has one stage, with two exceptions that the service decides and hands in. A
 matter can stay ``ready_for_delivery`` after its delivery ended: a comment written,
 resolved or reopened after the package was prepared (any change to the state of a
 comment), or another final approver in place of the one who approved, leaves no approved
 package to accept. The requester is then shown "In review", because legal has to act
 before a package can be offered again (ADR 0011, note of 2026-11-23).
+
+A matter can also be ``approved`` while ``prepare_delivery`` would be refused, so that no
+package can be prepared from the approval as the matter stands. The approval may no
+longer count (a comment written, resolved or reopened after it, or another final
+approver), or it may never have allowed a package (a pilot scope hold applied when it was
+given, or a listed matter document is unchecked). The requester is then shown "In review"
+as well, and is not told that a package is being prepared. The explanation names no
+cause: the causes differ, some of them are internal to legal, and the sentence is true in
+every one (ADR 0011, note of 2026-11-24).
+
+The service puts the facts together in one place, ``PilotService._requester_status``,
+for the requester's matter view and for their matter list. The list shows the label of
+this status, so it cannot show a requester a pilot state that the status contradicts.
 """
 
 from __future__ import annotations
@@ -58,6 +71,16 @@ _DELIVERY_ENDED = (
     "The package prepared earlier is no longer approved, because the matter changed after "
     "it was prepared. Legal has to review the matter again before a package is ready for you."
 )
+# Approved, but ``prepare_delivery`` would be refused. No stage is added here either: the
+# matter is with legal again. The sentence names no cause, on purpose. A comment or an
+# approver may have changed after the approval, or the approval may never have allowed a
+# package, and the sentence has to be true of each. No reviewer, check, hold or comment is
+# named to the requester.
+_NO_PACKAGE_FROM_APPROVAL = (
+    "The review was approved, but a package for the customer cannot be prepared from that "
+    "approval as the matter stands now. Legal has to work on the matter again before a "
+    "package is ready for you."
+)
 # A request legal closed in triage says so, whatever outcome text is stored.
 _CLOSED_IN_TRIAGE = {
     "declined": ("Closed: declined by legal", "Legal declined this request. The reason is below."),
@@ -81,6 +104,7 @@ def requester_status(
     snooze: dict[str, Any] | None = None,
     closure: dict[str, Any] | None = None,
     delivery_stands: bool = True,
+    package_can_be_prepared: bool = True,
 ) -> dict[str, Any]:
     """Map a pilot state to the requester's stage, explanation and next action.
 
@@ -91,12 +115,24 @@ def requester_status(
     work it out again. It is read only for ``ready_for_delivery``: a matter in that state
     whose delivery has ended is shown "In review", and is not told that an approved
     package is ready or to accept delivery. Every other state ignores it.
+
+    ``package_can_be_prepared`` says whether ``prepare_delivery`` would pass now. The
+    service decides that too (``PilotService._requester_status`` asks the evidence the
+    transition itself asks) and this function does not work it out again. It is read only
+    for ``approved``: a matter in that state from whose approval no package can be
+    prepared is shown "In review", and is not told that a package is being prepared.
+    Every other state ignores it.
     """
 
     ended = state == "ready_for_delivery" and not delivery_stands
-    stage = "in_review" if ended else _STAGE_OF_STATE[state]
+    no_package = state == "approved" and not package_can_be_prepared
+    stage = "in_review" if ended or no_package else _STAGE_OF_STATE[state]
     label = dict(REQUESTER_STAGES)[stage]
-    explanation = _DELIVERY_ENDED if ended else _EXPLANATION[stage]
+    explanation = (
+        _DELIVERY_ENDED
+        if ended
+        else _NO_PACKAGE_FROM_APPROVAL if no_package else _EXPLANATION[stage]
+    )
     if stage == "closed" and closed_outcome:
         label = f"Closed: {closed_outcome.replace('_', ' ')}"
     if state in _CLOSED_IN_TRIAGE:

@@ -292,3 +292,25 @@ def test_a_draft_is_left_out_whatever_its_events_carry(tmp_path: Path) -> None:
     assert _scripted_events(other, draft)["command_refused"] == [False]
     assert build_parent_outcome_view(other.store) == before
     assert _requests(other) == [delivered]
+
+
+def test_the_capability_record_says_which_matters_the_parent_ledger_holds() -> None:
+    # The sentences that describe the behaviour the tests above pin: when a matter enters
+    # the ledger, that a draft is not in the view, and that a submitted matter is never
+    # left out, because the ledger stops with an error that names it.
+    record = Path(__file__).resolve().parents[1] / "docs" / "pilot" / "CAPABILITY_RECORD.md"
+    [row] = [
+        line
+        for line in record.read_text(encoding="utf-8").splitlines()
+        if line.startswith("| `legal-function-os.service-event-ledger.v1`")
+    ]
+    for sentence in (
+        "A matter enters the ledger when it is submitted to legal, at the scripted time of "
+        "that submission.",
+        "A draft that was never submitted (no `intake_submitted` event) is not in the parent "
+        "outcome view.",
+        "A submitted matter is never left out: if its submission carries no scripted time, "
+        "the ledger has no first event for it, and `metrics.to_parent_ledger` stops with an "
+        "error that names the matter instead of building the view without it.",
+    ):
+        assert sentence in row, sentence

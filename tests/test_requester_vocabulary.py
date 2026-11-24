@@ -5,6 +5,8 @@ shared space keeps its own ``legal-function-os.shared-space.v1`` words: its ``in
 is the pilot's stage, ``blocked`` is a core flag and not a stage, and its two German
 next-step sentences are v1 values. A matter that stays ready for delivery after its
 delivery ended is shown "In review", and no stage is added for it (note of 2026-11-23).
+An approved matter from whose approval no package can be prepared is shown "In review"
+as well (note of 2026-11-24).
 These tests pin all of it, so that a change to any of it is deliberate. The pilot module
 is read by path: it needs nothing outside the standard library, and the agent's own
 dependencies are not installed for the core's tests.
@@ -117,6 +119,32 @@ class RequesterVocabularyTests(unittest.TestCase):
             self.assertEqual(ended["your_action"], "No action needed from you.")
             self.assertFalse(ended["waiting_on_you"])
             self.assertNotIn("accept delivery", ended["explanation"].lower())
+
+    def test_an_approval_that_gives_no_package_is_shown_in_review_and_adds_no_stage(self) -> None:
+        # ADR 0011, note of 2026-11-24. A matter can be approved while no package can be
+        # prepared from the approval. Its requester then sees "In review", one of the six
+        # stages, and is not told that a package is being prepared. No other state reads
+        # the answer, and `approved` does not read whether a delivery stands.
+        for state in _pilot_states():
+            can = self.pilot.requester_status(state)
+            cannot = self.pilot.requester_status(state, package_can_be_prepared=False)
+            self.assertEqual(tuple(s["id"] for s in cannot["stages"]), STAGE_IDS, state)
+            if state != "approved":
+                self.assertEqual(cannot, can, state)
+                continue
+            self.assertEqual((can["stage"], can["label"]), ("approved", "Approved"))
+            self.assertIn("being prepared", can["explanation"])
+            self.assertEqual(can, self.pilot.requester_status(state, delivery_stands=False))
+            self.assertEqual((cannot["stage"], cannot["label"]), ("in_review", "In review"))
+            self.assertEqual(cannot["your_action"], "No action needed from you.")
+            self.assertFalse(cannot["waiting_on_you"])
+            self.assertNotIn("being prepared", cannot["explanation"])
+            self.assertNotEqual(
+                cannot["explanation"],
+                self.pilot.requester_status(
+                    "ready_for_delivery", delivery_stands=False
+                )["explanation"],
+            )
 
     def test_the_core_in_review_is_the_pilot_stage(self) -> None:
         status = _core_entry()["status"]
