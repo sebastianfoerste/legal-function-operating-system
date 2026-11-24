@@ -175,13 +175,48 @@ class ResearchRulesTest(unittest.TestCase):
                 self.assertIsNone(re.search(r"\b[Rr]ules? \d", text))
 
 
+# How a changelog entry points to another place of the changelog by its position: "at the
+# top of this section", "the entry above", "below this entry", and "above" or "below" where
+# it ends a phrase, as in "(see the entry on drafts above)" or "the fix for drafts below,".
+# "Above" or "below" followed by what it is above or below ("the status above that line")
+# is no pointer, and neither is "or above" for a value.
+BY_POSITION = re.compile(
+    r"\b(?:top|bottom) of this (?:section|subsection|release|changelog)\b"
+    r"|\bentr(?:y|ies) (?:above|below)\b"
+    r"|\b(?:above|below) (?:this|that) (?:entry|one)\b"
+    r"|(?<!\bor )(?<!\band )\b(?:above|below)(?=\s*(?:[,.;:)(]|$))",
+    re.I,
+)
+# An entry is named in straight double quotes. A name in other quotes is not looked up by
+# the test below, so it is not accepted.
+IN_OTHER_QUOTES = re.compile(r"\bentr(?:y|ies),? ['‘’“”]", re.I)
+
+
+def _own_words(line: str) -> str:
+    """A line of the changelog without what it quotes: code and text in double quotes."""
+
+    return re.sub(r'"[^"]*"', '""', re.sub(r"`[^`]*`", "``", line))
+
+
+def _unnamed_pointers(line: str) -> list[str]:
+    """Where the line's own words point by position, or name an entry in other quotes."""
+
+    words = _own_words(line)
+    return [
+        found.group(0)
+        for pattern in (BY_POSITION, IN_OTHER_QUOTES)
+        for found in pattern.finditer(words)
+    ]
+
+
 class ChangelogPointersTest(unittest.TestCase):
     def test_a_changelog_entry_that_names_another_names_one_that_exists(self) -> None:
         # New entries go on top of each subsection, so "the entry at the top of this
         # section", "above" and "below" come to mean another entry, or none. An entry is
         # named by its opening words instead: `the entry "..."`. Every such name has to be
         # the opening of exactly one entry of the same release, so a reworded entry fails
-        # here until the sentences that name it follow.
+        # here until the sentences that name it follow. The next test refuses the pointers
+        # this one cannot look up.
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         named = 0
         for release in re.split(r"^## ", text, flags=re.M)[1:]:
@@ -191,6 +226,48 @@ class ChangelogPointersTest(unittest.TestCase):
                 with self.subTest(name):
                     self.assertEqual(sum(entry.startswith(name) for entry in entries), 1)
         self.assertTrue(named, "no entry is named anywhere in the changelog")
+
+    def test_no_changelog_entry_points_to_another_by_its_position(self) -> None:
+        # The test above looks up a name written as `entry "..."`. A pointer by position
+        # and a name in other quotes passed it unseen, and the first is the defect the rule
+        # was made for. Both are refused here, in every line of the changelog. What a line
+        # quotes, in double quotes or as code, is not its own wording: the entry that
+        # records the correction quotes the old pointers. The check reads words and does
+        # not understand a sentence, so a pointer worded in yet another way is not found.
+        for pointer in (
+            "stops the view with an error that names it (the entry at the top of this section).",
+            "Since the fix for unsubmitted drafts below, the ledger left out every matter.",
+            "keeps the assessment it had (see the entry on the pilot's records above).",
+            "(see the entry on drafts above)",
+            "which lists the five corrections below (the word filter and four more)",
+            "The entry above says why.",
+            "This is undone by the change recorded below this entry.",
+            "(see the entry 'Pilot: a matter legal never received')",
+        ):
+            with self.subTest(pointer):
+                self.assertEqual(len(_unnamed_pointers(pointer)), 1)
+        for ordinary in (
+            '(see the entry "Pilot: a matter legal received is no longer left out")',
+            'The entry on drafts said "(the entry at the top of this section)".',
+            'That pointer and two others, which said "below" and "above", now name the entry.',
+            "Entries were then added above the one it meant, so it pointed to another entry.",
+            "a question can depend only on an answer given above it, which is checked",
+            'The status above that line still read "Ready for you".',
+            "the room showed the sentence and, right below it, the button",
+            '`init` writes "Value in band or above." for the high risk sentences.',
+            "A dispute value of EUR 250,000 or above.",
+            "The audit entry's time and the `closed` entry, if one is missing",
+        ):
+            with self.subTest(ordinary):
+                self.assertEqual(_unnamed_pointers(ordinary), [])
+        lines = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8").splitlines()
+        for number, line in enumerate(lines, 1):
+            with self.subTest(line=number):
+                self.assertEqual(
+                    _unnamed_pointers(line),
+                    [],
+                    'name the entry by its opening words instead: the entry "..."',
+                )
 
 
 FOLLOW_UPS = "Follow-ups after the owner decisions (2026-11-19)"
@@ -622,6 +699,21 @@ def _definition(source: str, name: str) -> str:
     return match.group(0).rstrip() + "\n"
 
 
+def _function(source: str, name: str) -> str:
+    """One function or method of a module as Python writes it back out.
+
+    Its decorators, its signature and its statements, without comments and without the
+    layout of the file. The module is parsed, not imported.
+    """
+
+    [found] = [
+        node
+        for node in ast.walk(ast.parse(source))
+        if isinstance(node, ast.FunctionDef) and node.name == name
+    ]
+    return ast.unparse(found)
+
+
 # A program that stands in for git: this interpreter, started without the site module and
 # without its environment variables, so nothing of the machine is printed or read.
 PYTHON = (sys.executable, "-I", "-S", "-c")
@@ -756,6 +848,27 @@ class OwnerChoicesTest(unittest.TestCase):
         names = ast.literal_eval(written[written.index("{") : written.rindex("}") + 1])
         self.assertEqual(names, set(MACHINE_LOCAL_DIRECTORIES))
         self.assertIn(".git", names)
+        # Each suite's guard is the shared helper, asked about the agent, and nothing else.
+        # A guard that compares the files of the search itself still fails when a file
+        # comes back, but is silent again about which search answered.
+        for source, guard in (
+            (
+                agents,
+                "def test_the_agent_ships_no_mcp_client_configuration():\n"
+                "    _require_no_client_configuration(AGENT_ROOT)\n",
+            ),
+            (
+                mine,
+                "def test_the_removed_agent_configuration_stays_removed(self) -> None:\n"
+                '    _require_no_client_configuration(ROOT / "supervised-agent")\n',
+            ),
+        ):
+            name = guard[len("def ") : guard.index("(")]
+            with self.subTest(name):
+                self.assertEqual(_function(source, name), ast.unparse(ast.parse(guard)))
+        self.assertEqual(
+            _definition(agents, "AGENT_ROOT"), "AGENT_ROOT = Path(__file__).resolve().parents[1]\n"
+        )
 
     @unittest.skipUnless(shutil.which("git"), "git is not installed")
     def test_in_a_checkout_the_search_asks_git_what_is_shipped(self) -> None:

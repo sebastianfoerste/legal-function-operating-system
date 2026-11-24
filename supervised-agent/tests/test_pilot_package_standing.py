@@ -2112,6 +2112,12 @@ def test_the_capability_record_says_when_the_package_is_opened_and_what_is_shown
 def test_the_records_say_what_a_version_that_cannot_be_read_does() -> None:
     # The words the service answers with, as the behaviour test above compares them.
     named = '"version N of matter X cannot be read from the store"'
+    # The two sentences of the page, as its script writes them. The browser test reads them
+    # on the page (tests/test_review_room_browser.py).
+    not_loaded = '"The matter list could not be loaded."'
+    nothing_visible = '"No matter is visible to this role."'
+    for sentence in (not_loaded, nothing_visible):
+        assert REVIEW_ROOM_HTML.count(sentence) == 1, sentence
     runbook = (DOCS / "pilot" / "RUNBOOK.md").read_text(encoding="utf-8")
     [row] = [line for line in runbook.splitlines() if "cannot be read from the store" in line]
     assert row == (
@@ -2121,7 +2127,10 @@ def test_the_records_say_what_a_version_that_cannot_be_read_does() -> None:
         "stops with the same error, because no status is made up for the matter and it is not "
         "left out of the list, while the requester's other matters still answer on their own "
         "route and a reviewer's list, which reads no version, is not affected; preserve the "
-        "store file and inform the pilot lead, as for a chain that fails verification. |"
+        "store file and inform the pilot lead, as for a chain that fails verification. In the "
+        f"review room that requester reads {not_loaded} and this error where the list was. "
+        "While the fault lasts the room shows them no entry, so they can open none of their "
+        "matters from the page, the readable ones included. |"
     )
     # It stands in the troubleshooting table, below the row on the event chain.
     rows = runbook.split("## 9. Recovery and troubleshooting", 1)[1].splitlines()
@@ -2136,6 +2145,8 @@ def test_the_records_say_what_a_version_that_cannot_be_read_does() -> None:
         "If the store holds one that cannot be read, a requester's list answers as that "
         f"matter's own view does, with 422 `invalid_command` and {named}, and gives no entries: "
         "no label is made up for the matter and the matter is not left out.",
+        f"The review room then shows {not_loaded} and that message where the list was.",
+        f"It says {nothing_visible} only for a list that loaded and is empty.",
         "| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored matter "
         "version that cannot be read (the message names the matter and the version) |",
     ):

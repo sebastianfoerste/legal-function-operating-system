@@ -322,7 +322,9 @@ list and every other role the pilot state. No other role's entry has the key. Th
 built from each matter's current version. If the store holds one that cannot be read, a
 requester's list answers as that matter's own view does, with 422 `invalid_command` and
 "version N of matter X cannot be read from the store", and gives no entries: no label is
-made up for the matter and the matter is not left out.
+made up for the matter and the matter is not left out. The review room then shows "The
+matter list could not be loaded." and that message where the list was. It says "No matter
+is visible to this role." only for a list that loaded and is empty.
 
 Answers to a refused request or command:
 
