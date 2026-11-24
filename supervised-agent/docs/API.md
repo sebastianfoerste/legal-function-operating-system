@@ -318,7 +318,11 @@ role. For a business requester each entry also carries `requester_status_label`,
 for a matter that is `ready_for_delivery` after its delivery ended and "Closed: withdrawn
 without delivery" for a withdrawn one. The service puts both together in one place, so
 the list and the view cannot differ. The review room shows a requester that label in the
-list and every other role the pilot state. No other role's entry has the key.
+list and every other role the pilot state. No other role's entry has the key. The label is
+built from each matter's current version. If the store holds one that cannot be read, a
+requester's list answers as that matter's own view does, with 422 `invalid_command` and
+"version N of matter X cannot be read from the store", and gives no entries: no label is
+made up for the matter and the matter is not left out.
 
 Answers to a refused request or command:
 
@@ -332,7 +336,7 @@ Answers to a refused request or command:
 | 409 | `stale_submission` | The matter changed; `current_revision` is returned |
 | 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |
 | 409 | `export_blocked` | The export gate refused; `checks` lists each condition |
-| 422 | `invalid_command` | Unknown command or invalid arguments |
+| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored matter version that cannot be read (the message names the matter and the version) |
 
 Scripted fixture timestamps cannot be set through this API.
 

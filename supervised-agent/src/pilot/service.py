@@ -394,7 +394,34 @@ class PilotService:
         ).fetchone()
         if row is None:
             raise NotFoundError(f"matter {matter_id} has no version {version}")
-        return VersionBody.model_validate_json(row["body"]), row
+        return PilotService._version_body(row), row
+
+    @staticmethod
+    def _version_body(row: sqlite3.Row) -> VersionBody:
+        """The body of a stored matter version, or an error that names the matter.
+
+        A body that cannot be read is a fault in the store: it is not what the application
+        wrote. It is not hidden and nothing is put in its place. The matter's own view
+        stops here, and so does the matter list of its requester, which reads the current
+        version of every matter it lists: no status is invented for the matter and the
+        matter is not left out. The error therefore names the matter and the version. It
+        says how many problems the stored text has and in which field of the version the
+        first one is, and it repeats nothing of that text, which can hold what a requester
+        is not shown: deeper parts of a location can be keys of the stored text, so only
+        the field is named.
+        """
+
+        try:
+            return VersionBody.model_validate_json(row["body"])
+        except ValidationError as error:
+            problems = error.errors(include_url=False, include_context=False, include_input=False)
+            where = problems[0]["loc"]
+            first = f"in the field {where[0]}" if where else "in the text as a whole"
+            raise InvalidCommandError(
+                f"version {row['version']} of matter {row['matter_id']} cannot be read from the "
+                f"store: {len(problems)} problem(s) in the stored version, the first {first} "
+                f"({problems[0]['type']})"
+            ) from error
 
     @staticmethod
     def _assigned(connection: sqlite3.Connection, matter_id: str) -> dict[str, list[str]]:
@@ -2457,6 +2484,11 @@ class PilotService:
         A business requester's entry also carries ``requester_status_label``, the label of
         the status their matter view gives, so the list does not show them a pilot state
         that the status contradicts. Every other role gets the entry as it always was.
+
+        The label is built from each matter's current version. If the store holds one that
+        cannot be read, the requester's list stops with the error that matter's own view
+        gives, which names the matter (``_version_body``). No label is invented for it and
+        the matter is not left out, so the fault is not hidden.
         """
 
         with self.store.reading() as connection:
@@ -2787,7 +2819,7 @@ class PilotService:
             for row in connection.execute(
                 "SELECT * FROM matter_versions WHERE matter_id = ? ORDER BY version", (matter_id,)
             ):
-                body = VersionBody.model_validate_json(row["body"])
+                body = self._version_body(row)
                 versions.append(
                     {
                         "version": row["version"],
