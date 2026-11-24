@@ -326,6 +326,17 @@ made up for the matter and the matter is not left out. The review room then show
 matter list could not be loaded." and that message where the list was. It says "No matter
 is visible to this role." only for a list that loaded and is empty.
 
+The status also reads the matter's comments, in every state, and it asks the export gate
+while the matter is `approved` or `ready_for_delivery`. The gate reads the proposed changes
+of the current version and the records of the actors who signed off or approved. If one of
+these rows cannot be read, the requester's view and list answer in the same way, with "a
+comment on matter X", "a proposed change of version N of matter X" or "the record of an
+actor who decided on matter X", followed by "cannot be read from the store". The message
+names the matter and the kind of row, says how many problems the stored text has and in
+which field the first one is, and repeats nothing of that text; the third names no actor. A
+request whose own actor record cannot be read answers "the record of actor A cannot be read
+from the store".
+
 Answers to a refused request or command:
 
 | Status | `error` | Meaning |
@@ -338,7 +349,7 @@ Answers to a refused request or command:
 | 409 | `stale_submission` | The matter changed; `current_revision` is returned |
 | 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |
 | 409 | `export_blocked` | The export gate refused; `checks` lists each condition |
-| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored matter version that cannot be read (the message names the matter and the version) |
+| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored matter version, comment, proposed change or actor record that cannot be read (the message names the matter, or the actor whose own record it is, and repeats nothing of the stored text) |
 
 Scripted fixture timestamps cannot be set through this API.
 

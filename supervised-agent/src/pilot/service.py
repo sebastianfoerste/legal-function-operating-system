@@ -19,7 +19,7 @@ import unicodedata
 from dataclasses import dataclass, field
 from datetime import date, timedelta
 from pathlib import Path
-from typing import Any
+from typing import Any, TypeVar
 
 from pydantic import BaseModel, Field, ValidationError
 
@@ -186,6 +186,9 @@ class VersionBody(BaseModel):
     document_readable: bool
     document_problem: str | None = None
     missing_facts: list[str] = Field(default_factory=list)
+
+
+_Row = TypeVar("_Row", bound=BaseModel)
 
 
 @dataclass
@@ -363,7 +366,18 @@ class PilotService:
         return [Actor.model_validate_json(row["body"]) for row in rows]
 
     @staticmethod
-    def _actor(connection: sqlite3.Connection, actor_id: str) -> Actor:
+    def _actor(
+        connection: sqlite3.Connection, actor_id: str, decided_on: str | None = None
+    ) -> Actor:
+        """The stored record of an actor.
+
+        ``decided_on`` is given where the record is read because that actor signed off or
+        approved a matter. A record that cannot be read then names that matter and not the
+        actor, because the requester's status asks the export gate, which reads those
+        records, and who decided on a matter is not shown to its requester. Otherwise the
+        caller named the actor, or is the actor, and the error names the record.
+        """
+
         row = connection.execute(
             "SELECT body FROM actors WHERE actor_id = ?", (actor_id,)
         ).fetchone()
@@ -371,7 +385,12 @@ class PilotService:
             raise PermissionDeniedError(
                 f"unknown actor {actor_id!r}: a supplied name is not an identity"
             )
-        return Actor.model_validate_json(row["body"])
+        what = (
+            f"the record of actor {actor_id}"
+            if decided_on is None
+            else f"the record of an actor who decided on matter {decided_on}"
+        )
+        return PilotService._stored(Actor, row["body"], what, "record")
 
     # ------------------------------------------------------------- loading
 
@@ -411,16 +430,32 @@ class PilotService:
         the field is named.
         """
 
+        what = f"version {row['version']} of matter {row['matter_id']}"
+        return PilotService._stored(VersionBody, row["body"], what, "version")
+
+    @staticmethod
+    def _stored(model: type[_Row], text: str, what: str, noun: str) -> _Row:
+        """A stored row as the application wrote it, or an error that says which row it is.
+
+        The rule of ``_version_body``, for every row the requester's view and matter list
+        read: the version, the matter's comments and, where the status asks the export
+        gate, the proposed changes and the records of the actors who decided. A row that
+        cannot be read stops the request with an error that says what the row is
+        (``what``, which names the matter and never a reviewer), how many problems its text
+        has and in which field the first one is. The validation library's own message is
+        not passed on: it quotes the stored text, which can hold what a requester is not
+        shown, such as the rationale of a change or the text of a comment among reviewers.
+        """
+
         try:
-            return VersionBody.model_validate_json(row["body"])
+            return model.model_validate_json(text)
         except ValidationError as error:
             problems = error.errors(include_url=False, include_context=False, include_input=False)
             where = problems[0]["loc"]
             first = f"in the field {where[0]}" if where else "in the text as a whole"
             raise InvalidCommandError(
-                f"version {row['version']} of matter {row['matter_id']} cannot be read from the "
-                f"store: {len(problems)} problem(s) in the stored version, the first {first} "
-                f"({problems[0]['type']})"
+                f"{what} cannot be read from the store: {len(problems)} problem(s) in the "
+                f"stored {noun}, the first {first} ({problems[0]['type']})"
             ) from error
 
     @staticmethod
@@ -441,7 +476,8 @@ class PilotService:
             "SELECT body FROM changes WHERE matter_id = ? AND version = ? ORDER BY position",
             (matter_id, version),
         ).fetchall()
-        return [StoredChange.model_validate_json(row["body"]) for row in rows]
+        what = f"a proposed change of version {version} of matter {matter_id}"
+        return [PilotService._stored(StoredChange, row["body"], what, "change") for row in rows]
 
     @staticmethod
     def _findings(connection: sqlite3.Connection, matter_id: str, version: int) -> list[Finding]:
@@ -456,7 +492,8 @@ class PilotService:
         rows = connection.execute(
             "SELECT body FROM comments WHERE matter_id = ? ORDER BY rowid", (matter_id,)
         ).fetchall()
-        return [Comment.model_validate_json(row["body"]) for row in rows]
+        what = f"a comment on matter {matter_id}"
+        return [PilotService._stored(Comment, row["body"], what, "comment") for row in rows]
 
     @staticmethod
     def _save_comment(connection: sqlite3.Connection, comment: Comment) -> None:
@@ -956,7 +993,7 @@ class PilotService:
             for row in rows:
                 if row["kind"] != kind:
                     continue
-                actor = self._actor(ctx.connection, row["actor_id"])
+                actor = self._actor(ctx.connection, row["actor_id"], decided_on=ctx.matter_id)
                 # A decision only counts while its author is still assigned in that role.
                 if actor.actor_id in assigned.get(actor.role, []) and accept(actor):
                     return row
@@ -2488,7 +2525,9 @@ class PilotService:
         The label is built from each matter's current version. If the store holds one that
         cannot be read, the requester's list stops with the error that matter's own view
         gives, which names the matter (``_version_body``). No label is invented for it and
-        the matter is not left out, so the fault is not hidden.
+        the matter is not left out, so the fault is not hidden. The same holds for the other
+        rows the status reads (``_stored``): the matter's comments and, where the export gate
+        is asked, its proposed changes and the records of the actors who decided.
         """
 
         with self.store.reading() as connection:
