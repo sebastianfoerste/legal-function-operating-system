@@ -133,7 +133,8 @@ matter changed after it was prepared. Legal has to review the matter again befor
 package is ready for you." and the next step "No action needed from you.". An open
 question to the requester still replaces that next step, as it does in every stage but
 `closed`. A `ready_for_delivery` matter whose delivery stands is `ready`, as before, and
-every other state shows the stage Decision 5 lists.
+every other state shows the stage Decision 5 lists, except `approved` in the one case the
+note of 2026-11-24 below adds.
 
 - **Why `in_review`.** The state machine has two transitions from `ready_for_delivery`.
   `accept_delivery` is the requester's, and its evidence `delivery_manifest_current`
@@ -188,6 +189,73 @@ every other state shows the stage Decision 5 lists.
   (`supervised-agent/tests/test_pilot_package_standing.py`), and the page in a browser,
   the pill in the matter list included
   (`supervised-agent/tests/test_review_room_browser.py`).
+
+Note (2026-11-24): a second state now shows another of the six stages in one case. A
+matter can be `approved` while `prepare_delivery` would be refused, so that no package can
+be prepared from the approval as the matter stands. The requester's view still said
+"Approved" and "The review is approved. The package for the customer is being prepared.".
+Such a matter is now shown as `in_review` (In review), with the explanation "The review
+was approved, but a package for the customer cannot be prepared from that approval as the
+matter stands now. Legal has to work on the matter again before a package is ready for
+you." and the next step "No action needed from you.". An open question to the requester
+still replaces that next step. An `approved` matter from whose approval a package can be
+prepared is `approved`, as before. `ready_for_delivery` and `approved` are the two states
+with such a case, and every other state shows the stage Decision 5 lists.
+
+- **Four ways it happens.** A comment was written, resolved or reopened after the
+  approval, in other words any change to the state of a comment. Another final approver
+  was assigned in place of the one who approved. A pilot scope hold applied when the
+  matter was approved: an amendment after triage can bring a matter under a charter
+  exclusion, and `approve` does not ask `pilot_scope_met`. A listed matter document is
+  unchecked: the pilot gives the assessment no folder to check it in, so the approval does
+  not allow export. In the first two the approval no longer counts. In the last two it
+  never allowed a package, and nothing changed after it.
+- **Why the explanation names no cause.** "The approval no longer counts because the
+  matter changed after it was given" would be true in the first two ways and false in the
+  last two. The sentence that is shown is true in every case in which `prepare_delivery`
+  is refused. It also keeps what is internal to legal out of the requester's view: no
+  reviewer, no check name, no hold reason and no comment text is shown.
+- **Why `in_review`, and why the next step stands.** In each of the four ways a package
+  can be prepared only after someone in legal acts, and people in legal can run every
+  command that leads to one, so the matter does not wait for its requester.
+  - A comment that was resolved or reopened after the approval can be put back into the
+    state it had at the approval: a reviewer reopens it, or it is resolved again. In place
+    of another approver, the matter owner can assign the earlier approver again. The
+    stage is then `approved` again.
+  - A comment written after the approval cannot be taken back, and a new approver cannot
+    approve from `approved`, because `approve` is not open from that state. A reviewer
+    then requests a revision that names an open comment, the matter owner answers it and
+    submits the revision, a reviewer resumes the review, the final approver approves and
+    the matter owner prepares the package.
+  - Under a scope hold, or with an unchecked listed document, a review and a new approval
+    change nothing. `amend_matter` has to make a version without the excluded input or
+    without the listed document, and the matter owner may run it as well as the
+    requester. `resume_review`, `approve` and `prepare_delivery` follow. The only other
+    way out is to withdraw the matter.
+  - A question to the requester that is reopened after the approval is one such comment.
+    The requester is then asked to answer it, as in every stage but `closed`, and its
+    author can resolve it again on the answer it already has.
+- **The status follows the evidence, not a stored flag.** The service asks the evidence
+  that `prepare_delivery` itself needs, `export_gate_passes`, as the state machine lists
+  it. It asks once, in `PilotService._requester_status`, the function the requester's view
+  and matter list share. `requester_status` receives the answer as
+  `package_can_be_prepared` and does not work it out again. It reads that answer only for
+  `approved`, as it reads `delivery_stands` only for `ready_for_delivery`. As soon as a
+  package can be prepared again, the stage is `approved` again.
+- **A known limit, recorded and not closed.** A matter can be approved while a pilot scope
+  hold applies or a listed matter document is unchecked, and can then get no package
+  until it is amended or withdrawn. Whether `approve` should refuse such a matter is a
+  change to the state machine that the owner decides separately. This note changes only
+  what the requester is told.
+- **Unchanged.** The stored state, the state machine, the export gate,
+  `legal-workflow-controls.v1` and every schema. A reviewer's view and matter list are
+  unchanged, and their list shows the pilot state, `approved`.
+- **Tests.** `tests/test_requester_vocabulary.py` now also pins that `approved` shows
+  `in_review` when no package can be prepared from the approval and that every other
+  state ignores that answer. The agent's suite pins the wording and the two answers side
+  by side (`supervised-agent/tests/test_pilot_intake_ux.py`), and the requester's view and
+  matter list in each of the four ways, the ways back to "Approved" and a reviewer's view
+  and list (`supervised-agent/tests/test_pilot_package_standing.py`).
 
 ## Alternatives rejected
 

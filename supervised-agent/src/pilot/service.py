@@ -2499,11 +2499,22 @@ class PilotService:
         the status in the view. ``standing`` is the caller's answer from
         ``_standing_package`` and ``comments`` are the matter's comments as the caller
         read them; neither is worked out again. Reads only.
+
+        Whether a package can be prepared now is decided here, once, and by asking: the
+        transition ``prepare_delivery`` as the state machine lists it from the matter's
+        state, and the evidence that transition names (``export_gate_passes``). No state
+        but ``approved`` has that transition, so the answer is false in every other
+        state, and ``requester_status`` reads it for ``approved`` only. An approved matter
+        whose ``prepare_delivery`` would be refused is therefore not shown to its
+        requester as a package that is being prepared, whatever the gate's reason is. The
+        reason itself is not handed on: it can name a reviewer, a check, a hold or a
+        comment, and none of those is the requester's to see.
         """
 
         _, events, now = self._events_and_now(ctx.connection, ctx.matter_id)
         snooze = latest_snooze(events, *matter_clock(events, now))
         questions = [c for c in comments if c.addressed_to == "business_requester"]
+        prepare = find_transition(ctx.matter["state"], "prepare_delivery")
         return requester_status(
             ctx.matter["state"],
             closed_outcome=ctx.matter["closed_outcome"],
@@ -2513,6 +2524,8 @@ class PilotService:
             # The same answer as "package" in the matter view, so the status cannot tell
             # the requester to accept a delivery that the room no longer offers.
             delivery_stands=standing is not None,
+            package_can_be_prepared=prepare is not None
+            and all(item["ok"] for item in self._evidence(ctx, prepare.evidence)),
         )
 
     def view_matter(self, actor_id: str, matter_id: str) -> dict[str, Any]:

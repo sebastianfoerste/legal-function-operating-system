@@ -291,6 +291,18 @@ the delivery stands but its
 `customer-package.html` is missing from the export folder, the route answers 404
 `not_found` and names the missing file.
 
+`requester_status` also goes by whether a package can be prepared. A matter that is
+`approved` while `prepare_delivery` would be refused has the stage `in_review` and the
+label "In review", not `approved` and "Approved". Its explanation is "The review was
+approved, but a package for the customer cannot be prepared from that approval as the
+matter stands now. Legal has to work on the matter again before a package is ready for
+you." and, unless a question to the requester is open, its next step is "No action needed
+from you.". The service asks the evidence that transition needs (`export_gate_passes`)
+once, for the requester's view and for their matter list. The explanation names no cause,
+and the requester's view carries none of the gate's checks or reasons. A reviewer's view
+is unchanged: it lists `prepare_delivery` under `allowed` with that evidence, and the
+gate's checks under `eligibility`.
+
 `package` is the answer to whether a package may be opened. The lists of manifests in the
 matter view do not say it. In a requester's view, `delivery` holds the manifest of the
 package that may be opened now and nothing else: one manifest while `package.may_open` is

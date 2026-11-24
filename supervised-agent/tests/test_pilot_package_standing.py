@@ -8,8 +8,10 @@ refuses, the matter view says why, and the stored manifest and its files stay fo
 trail. A matter that stays ready for delivery after its delivery ended is shown to its
 requester as "In review", not as a package to accept. The requester's view lists only the
 manifest of the package that may be opened, and their matter list shows the label of their
-status in place of the pilot state. The last tests hold the runbook, the API guide and the
-capability record to the sentences that describe this. Everything here is synthetic.
+status in place of the pilot state. An approved matter from whose approval no package can
+be prepared is shown to its requester as "In review" too, and is not told that a package is
+being prepared. The last tests hold the runbook, the API guide and the capability record to
+the sentences that describe this. Everything here is synthetic.
 """
 
 from __future__ import annotations
@@ -1004,28 +1006,6 @@ def test_the_list_and_the_status_agree_at_every_step_of_a_scenario(
         assert ("approved", "Approved") in told and ("ready_for_delivery", "Ready for you") in told
 
 
-@pytest.mark.parametrize(
-    "end",
-    [_comment, _replace_the_approver],
-    ids=["a comment after the approval", "another final approver"],
-)
-def test_the_list_and_the_status_agree_when_an_approval_no_longer_counts(tmp_path, end) -> None:
-    # In "approved" a later comment, or another final approver, leaves `prepare_delivery`
-    # refused. What the requester is told then is the business of the status; the list
-    # says the same, whatever that is.
-    service = make_service(tmp_path)
-    matter = run_until(service, "routine", "A11")
-    api = PilotApi(service)
-    before = _listed_and_told(api, matter)
-    assert before == ("approved", "Approved")
-
-    end(service, matter)
-
-    allowed = {item["command"]: item for item in _view(api, OWNER, matter)["allowed"]}
-    assert [e["ok"] for e in allowed["prepare_delivery"]["evidence"]] == [False]
-    assert _listed_and_told(api, matter)[0] == "approved"
-
-
 def test_the_list_follows_the_delivery_while_the_matter_stays_ready(tmp_path) -> None:
     api, service, matter = _ready(tmp_path)
     assert _listed_and_told(api, matter) == ("ready_for_delivery", "Ready for you")
@@ -1037,6 +1017,558 @@ def test_the_list_follows_the_delivery_while_the_matter_stays_ready(tmp_path) ->
     assert _listed_and_told(api, matter) == ("ready_for_delivery", "Ready for you")
     service.accept_delivery(REQUESTER, matter, revision(service, matter), note=ACCEPTANCE)
     assert _listed_and_told(api, matter) == ("closed", "Closed: delivered locally and accepted")
+
+
+# -- what the requester is told while an approval gives no package --------------------
+
+# An approved matter is with the matter owner, who prepares the package. `prepare_delivery`
+# can be refused all the same: the approval no longer counts, or it never allowed a package.
+# The requester is then shown "In review", with a sentence that names no cause, and is not
+# told that a package is being prepared. The service asks the evidence `prepare_delivery`
+# needs and hands the answer to the status; these tests read it over the API.
+TOLD_APPROVED = (
+    "approved",
+    "Approved",
+    "The review is approved. The package for the customer is being prepared.",
+    "No action needed from you.",
+    False,
+)
+NO_PACKAGE = (
+    "The review was approved, but a package for the customer cannot be prepared from that "
+    "approval as the matter stands now. Legal has to work on the matter again before a "
+    "package is ready for you."
+)
+TOLD_NO_PACKAGE = ("in_review", "In review", NO_PACKAGE, "No action needed from you.", False)
+TOLD_IN_REVIEW = (
+    "in_review",
+    "In review",
+    "Reviewers are working on the customer's draft.",
+    "No action needed from you.",
+    False,
+)
+SECTION = {"anchor_kind": "deliverable_section", "anchor_id": "accepted_exceptions"}
+# A matter document listed by its hash. The pilot gives the assessment no folder to check it
+# in, so it stays "not_checked", and an approval then does not allow export.
+ORDER_FORM = {
+    "document_id": "order_form",
+    "title": "Synthetic order form",
+    "kind": "order_form",
+    "path": "order-form.txt",
+    "sha256": "a" * 64,
+    "source_ref": "synthetic:order-form",
+}
+# The keys of a reviewer's matter view over the API, presence included. No key is added.
+REVIEWER_VIEW_KEYS = [
+    "actor",
+    "allowed",
+    "also_open_by",
+    "assessment",
+    "assignments",
+    "audit_chain",
+    "changes",
+    "comments",
+    "decisions",
+    "eligibility",
+    "external_delivery_allowed",
+    "findings",
+    "identity_notice",
+    "intake",
+    "manifests",
+    "matter",
+    "package",
+    "presence_notice",
+    "readiness",
+    "required_facts",
+    "snooze",
+    "snooze_limits",
+    "source_support",
+    "timeline",
+    "timing",
+    "version",
+    "versions",
+    "view",
+]
+
+
+def _post(api: PilotApi, actor: str, matter: str, command: str, **args: Any) -> tuple[int, Any]:
+    status, answer, _ = api.handle(
+        "POST",
+        f"/pilot/api/matters/{matter}/commands",
+        {"X-Pilot-Actor": actor},
+        {"command": command, "expected_revision": revision(api.service, matter), "args": args},
+    )
+    return status, answer
+
+
+def _do(api: PilotApi, actor: str, matter: str, command: str, **args: Any) -> dict[str, Any]:
+    """Run a command over the API, as the room does. It has to be accepted."""
+
+    status, answer = _post(api, actor, matter, command, **args)
+    assert status == 200, (actor, command, answer)
+    view: dict[str, Any] = answer
+    return view
+
+
+def _comment_id(api: PilotApi, matter: str, body: str) -> str:
+    [found] = [c for c in _view(api, OWNER, matter)["comments"] if c["body"] == body]
+    return str(found["comment_id"])
+
+
+def _a_room(tmp_path: Path) -> tuple[PilotApi, PilotService]:
+    # The step clock, so that two readings of a view can be compared byte for byte.
+    service = make_service(tmp_path, clock=_StepClock())
+    return PilotApi(service), service
+
+
+def _a_comment_written_after_the_approval(tmp_path: Path) -> tuple[PilotApi, str, str]:
+    api, service = _a_room(tmp_path)
+    matter = run_until(service, "routine", "A11")
+    _do(api, APPROVER_LEAD, matter, "comment", body=LATE_NOTE, **SECTION)
+    return api, matter, APPROVER_LEAD
+
+
+def _a_note_resolved_after_the_approval(tmp_path: Path) -> tuple[PilotApi, str, str]:
+    # The note was open when the approval was given. Nothing is written after it.
+    api, service = _a_room(tmp_path)
+    matter = run_until(service, "routine", "A06")
+    _do(api, OWNER, matter, "comment", body=EARLY_NOTE, **SECTION)
+    _continue(service, "routine", "A06", "A11")
+    _do(
+        api,
+        APPROVER_LEAD,
+        matter,
+        "resolve_comment",
+        comment_id=_comment_id(api, matter, EARLY_NOTE),
+        resolution="Read and noted; nothing changes in the package.",
+    )
+    return api, matter, APPROVER_LEAD
+
+
+def _a_note_reopened_after_the_approval(tmp_path: Path) -> tuple[PilotApi, str, str]:
+    # The note was resolved when the approval was given.
+    api, service = _a_room(tmp_path)
+    matter = run_until(service, "routine", "A06")
+    _do(api, OWNER, matter, "comment", body=EARLY_NOTE, **SECTION)
+    note = _comment_id(api, matter, EARLY_NOTE)
+    _do(api, OWNER, matter, "resolve_comment", comment_id=note, resolution="Read and noted.")
+    _continue(service, "routine", "A06", "A11")
+    _do(api, OWNER, matter, "reopen_comment", comment_id=note, reason="One more look at it.")
+    return api, matter, APPROVER_LEAD
+
+
+def _another_final_approver(tmp_path: Path) -> tuple[PilotApi, str, str]:
+    api, service = _a_room(tmp_path)
+    matter = run_until(service, "routine", "A11")
+    _do(api, OWNER, matter, "assign", role="final_approver", assignee_id=APPROVER_GC)
+    return api, matter, APPROVER_GC
+
+
+def _a_scope_hold_when_the_matter_was_approved(tmp_path: Path) -> tuple[PilotApi, str, str]:
+    # After triage the requester changes a routing input, and the new version is outside the
+    # pilot charter. `approve` does not ask `pilot_scope_met`, so the matter is approved.
+    api, service = _a_room(tmp_path)
+    matter = run_until(service, "routine", "A09")
+    _do(
+        api,
+        REQUESTER,
+        matter,
+        "amend_matter",
+        reason="The customer now asks for uncapped liability.",
+        routing_fields={"uncapped_liability": True},
+    )
+    _do(api, OWNER, matter, "resume_review")
+    _do(api, OWNER, matter, "assign", role="final_approver", assignee_id=APPROVER_GC)
+    _do(api, APPROVER_GC, matter, "approve", note=APPROVAL)
+    return api, matter, APPROVER_GC
+
+
+def _an_unchecked_listed_document(tmp_path: Path) -> tuple[PilotApi, str, str]:
+    api, service = _a_room(tmp_path)
+    matter = run_until(service, "routine", "A09")
+    _do(
+        api,
+        OWNER,
+        matter,
+        "amend_matter",
+        reason="The order form belongs to the matter file.",
+        matter_fields={"documents": [ORDER_FORM]},
+    )
+    _do(api, OWNER, matter, "resume_review")
+    _do(api, APPROVER_LEAD, matter, "approve", note=APPROVAL)
+    return api, matter, APPROVER_LEAD
+
+
+# Each way an approved matter gets no package, and the gate check that then fails.
+NO_PACKAGE_CASES = [
+    pytest.param(
+        _a_comment_written_after_the_approval,
+        "required_reviewer_decisions",
+        id="a comment written after the approval",
+    ),
+    pytest.param(
+        _a_note_resolved_after_the_approval,
+        "required_reviewer_decisions",
+        id="a comment resolved after the approval",
+    ),
+    pytest.param(
+        _a_note_reopened_after_the_approval,
+        "required_reviewer_decisions",
+        id="a comment reopened after the approval",
+    ),
+    pytest.param(
+        _another_final_approver, "required_reviewer_decisions", id="another final approver"
+    ),
+    pytest.param(
+        _a_scope_hold_when_the_matter_was_approved,
+        "no_unresolved_blockers",
+        id="a pilot scope hold at the approval",
+    ),
+    pytest.param(
+        _an_unchecked_listed_document, "assessment_approved", id="an unchecked listed document"
+    ),
+]
+
+
+def _why_no_package_can_be_prepared(api: PilotApi, matter: str) -> str:
+    """`prepare_delivery` is refused for the matter owner. The gate's reason, as legal reads it."""
+
+    allowed = {item["command"]: item for item in _view(api, OWNER, matter)["allowed"]}
+    assert sorted(allowed) == ["prepare_delivery", "request_revision"]
+    [evidence] = allowed["prepare_delivery"]["evidence"]
+    assert (evidence["name"], evidence["ok"]) == ("export_gate_passes", False)
+    status, answer = _post(api, OWNER, matter, "prepare_delivery")
+    assert (status, answer["error"]) == (409, "transition_blocked")
+    assert [e["name"] for e in answer["evidence"] if not e["ok"]] == ["export_gate_passes"]
+    assert state(api.service, matter) == "approved"
+    return str(evidence["detail"])
+
+
+def _what_only_legal_reads(api: PilotApi, matter: str) -> list[str]:
+    """The reviewers, the gate's checks and reasons, the holds and every comment's text."""
+
+    owner = _view(api, OWNER, matter)
+    reviewers = [
+        actor
+        for role, actors in owner["assignments"].items()
+        if role != "business_requester"
+        for actor in actors
+    ]
+    names = [a.display_name for a in api.service.list_actors() if a.actor_id in reviewers]
+    checks = owner["eligibility"]["checks"]
+    failing = [check["detail"] for check in checks if check["status"] != "pass"]
+    assert reviewers and len(names) == len(reviewers) and len(checks) == 11 and failing
+    return [
+        *reviewers,
+        *names,
+        *(check["check_id"] for check in checks),
+        *failing,
+        "export_gate_passes",
+        "prepare_delivery",
+        *owner["version"]["scope_exclusions"],
+        *(comment["body"] for comment in owner["comments"]),
+    ]
+
+
+@pytest.mark.parametrize(("case", "check"), NO_PACKAGE_CASES)
+def test_the_requester_is_not_told_a_package_is_being_prepared_when_none_can_be(
+    tmp_path, case, check: str
+) -> None:
+    api, matter, _ = case(tmp_path)
+    service = api.service
+    assert state(service, matter) == "approved"
+    assert _why_no_package_can_be_prepared(api, matter).startswith(f"{check}: ")
+    with service.store.reading() as connection:
+        stored = list(connection.iterdump())
+
+    # The view and the list, read over the API: "In review" in both, and the same in both.
+    view = _view(api, REQUESTER, matter)
+    assert view["matter"]["state"] == "approved"
+    assert view["package"] == {"may_open": False, "reason": None} and view["delivery"] == []
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    assert view["requester_status"]["label"] == "In review"
+    [entry] = [m for m in _list(api, REQUESTER) if m["matter_id"] == matter]
+    assert (entry["state"], entry["requester_status_label"]) == ("approved", "In review")
+    assert _listed_and_told(api, matter) == ("approved", "In review")
+
+    # The sentence names no cause, and nothing else in the answers does: no reviewer, no
+    # check, no hold reason and no comment text reaches the requester.
+    told = (encode(view) + encode({"matters": _list(api, REQUESTER)})).decode("utf-8")
+    for text in _what_only_legal_reads(api, matter):
+        assert text and text not in told, text
+
+    # Reading the status changed nothing: no row of any table, and so no state and no event.
+    with service.store.reading() as connection:
+        assert list(connection.iterdump()) == stored
+    # A reviewer's view has no requester status, as before, and no key that it did not have.
+    owner = _view(api, OWNER, matter)
+    assert "requester_status" not in owner and sorted(owner) == REVIEWER_VIEW_KEYS
+
+
+@pytest.mark.parametrize(("case", "check"), NO_PACKAGE_CASES)
+def test_a_reviewers_view_and_list_do_not_go_through_the_requester_status(
+    tmp_path, monkeypatch, case, check: str
+) -> None:
+    api, matter, approver = case(tmp_path)
+    service = api.service
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    clock = service.clock
+    assert isinstance(clock, _StepClock)
+
+    def answers() -> dict[str, tuple[bytes, bytes]]:
+        read = {}
+        for actor in (OWNER, approver):
+            # The same reading of the clock for each view, so that two can be compared.
+            clock.reads = 100_000
+            view = service.view_matter(actor, matter)
+            status, listed, _ = api.handle("GET", "/pilot/api/matters", {"X-Pilot-Actor": actor})
+            assert status == 200 and "requester_status" not in view
+            read[actor] = (encode(view), encode(listed))
+        return read
+
+    before = answers()
+    # The list of a reviewer is the six stored columns of each matter, byte for byte.
+    with service.store.reading() as connection:
+        row = connection.execute("SELECT * FROM matters WHERE matter_id = ?", (matter,)).fetchone()
+    as_stored = encode({"matters": [{key: row[key] for key in LIST_KEYS}]})
+    assert {listed for _, listed in before.values()} == {as_stored}
+
+    def refuse(*args: Any, **kwargs: Any) -> None:
+        raise AssertionError("a reviewer's answer asked for the requester's status")
+
+    # With the requester's status out of reach, every reviewer's answer is the same bytes:
+    # nothing a reviewer reads is built from it, so nothing they read moved with it.
+    monkeypatch.setattr(PilotService, "_requester_status", refuse)
+    monkeypatch.setattr("src.pilot.service.requester_status", refuse)
+    assert answers() == before
+    # The requester's own view and list do ask for it.
+    for read in (
+        lambda: service.view_matter(REQUESTER, matter),
+        lambda: service.list_matters(REQUESTER),
+    ):
+        with pytest.raises(AssertionError, match="asked for the requester's status"):
+            read()
+
+
+def test_the_status_reads_approved_again_when_a_package_can_be_prepared_again(tmp_path) -> None:
+    # The status follows the evidence. A comment put back into the state it had at the
+    # approval, or the earlier approver assigned again, lets `prepare_delivery` pass again.
+    api, matter, approver = _a_note_resolved_after_the_approval(tmp_path / "resolved")
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    note = _comment_id(api, matter, EARLY_NOTE)
+    _do(api, approver, matter, "reopen_comment", comment_id=note, reason="It stays open for now.")
+    assert state(api.service, matter) == "approved"
+    assert _told(api, matter) == TOLD_APPROVED
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+    _do(api, OWNER, matter, "prepare_delivery")
+    assert _told(api, matter) == TOLD_READY
+    assert _listed_and_told(api, matter) == ("ready_for_delivery", "Ready for you")
+
+    api, matter, approver = _a_note_reopened_after_the_approval(tmp_path / "reopened")
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    note = _comment_id(api, matter, EARLY_NOTE)
+    _do(api, approver, matter, "resolve_comment", comment_id=note, resolution="Read again.")
+    assert _told(api, matter) == TOLD_APPROVED
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+
+    api, matter, _ = _another_final_approver(tmp_path / "approver")
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    # The new approver cannot approve from here: `approve` is not open from `approved`.
+    status, answer = _post(api, APPROVER_GC, matter, "approve", note=APPROVAL)
+    assert (status, answer["error"]) == (409, "transition_blocked")
+    _do(api, OWNER, matter, "assign", role="final_approver", assignee_id=APPROVER_LEAD)
+    assert _told(api, matter) == TOLD_APPROVED
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+    _do(api, OWNER, matter, "prepare_delivery")
+    assert _told(api, matter) == TOLD_READY
+
+
+def test_a_comment_written_after_the_approval_takes_a_new_review_and_approval(tmp_path) -> None:
+    api, matter, approver = _a_comment_written_after_the_approval(tmp_path)
+    late = _comment_id(api, matter, LATE_NOTE)
+
+    # A new comment cannot be taken back: resolved, it still is not the state approved on.
+    _do(api, OWNER, matter, "resolve_comment", comment_id=late, resolution="Read and noted.")
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    # Legal moves the matter without the requester. A revision request has to name an open
+    # comment, so a reviewer reopens this one (or writes another) and asks for the revision.
+    revision = {"comment_ids": [late], "note": "The late note has to be answered before delivery."}
+    status, answer = _post(api, approver, matter, "request_revision", **revision)
+    assert (status, answer["error"]) == (409, "transition_blocked")
+    assert [e["name"] for e in answer["evidence"] if not e["ok"]] == ["revision_reason_recorded"]
+    _do(api, OWNER, matter, "reopen_comment", comment_id=late, reason="It has to be answered.")
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    _do(api, approver, matter, "request_revision", **revision)
+    # From here the state says "In review" by itself, with its ordinary explanation.
+    assert state(api.service, matter) == "revision_requested"
+    assert _told(api, matter) == TOLD_IN_REVIEW
+    _do(api, OWNER, matter, "respond_comment", comment_id=late, body="Answered; no change.")
+    _do(api, OWNER, matter, "submit_revision", note="The late note is answered.")
+    _do(api, approver, matter, "resume_review")
+    assert _told(api, matter) == TOLD_IN_REVIEW
+    _do(api, approver, matter, "approve", note=APPROVAL)
+    assert state(api.service, matter) == "approved"
+    assert _told(api, matter) == TOLD_APPROVED
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+    _do(api, OWNER, matter, "prepare_delivery")
+    assert _told(api, matter) == TOLD_READY
+
+
+@pytest.mark.parametrize(
+    ("case", "amendment"),
+    [
+        pytest.param(
+            _a_scope_hold_when_the_matter_was_approved,
+            {
+                "reason": "The customer dropped the request for uncapped liability.",
+                "routing_fields": {"uncapped_liability": False},
+            },
+            id="a pilot scope hold at the approval",
+        ),
+        pytest.param(
+            _an_unchecked_listed_document,
+            {
+                "reason": "The order form is not part of this review.",
+                "matter_fields": {"documents": []},
+            },
+            id="an unchecked listed document",
+        ),
+    ],
+)
+def test_an_approval_that_never_allowed_a_package_gets_one_only_after_an_amendment(
+    tmp_path, case, amendment: dict[str, Any]
+) -> None:
+    # The known limit, pinned as it is. `approve` accepted the matter, the approval is the
+    # one that counts, and nothing changed after it. Still no package can be prepared.
+    api, matter, approver = case(tmp_path)
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    owner = _view(api, OWNER, matter)
+    assert owner["matter"]["current_version"] == 2
+    assert event_types(api.service, matter)[-1] == "approved"
+    approvals = [d for d in owner["decisions"] if d["kind"] == "final_approval"]
+    assert (approvals[-1]["version"], approvals[-1]["invalidated_at"]) == (2, None)
+    assert owner["assessment"]["review_state"] == "approved"
+
+    # A review and a new approval do not help: the hold, or the document, is still there.
+    _do(api, approver, matter, "comment", body=LATE_NOTE, **SECTION)
+    late = _comment_id(api, matter, LATE_NOTE)
+    _do(
+        api,
+        approver,
+        matter,
+        "request_revision",
+        comment_ids=[late],
+        note="The matter has to be reviewed again before delivery.",
+    )
+    _do(api, OWNER, matter, "respond_comment", comment_id=late, body="Reviewed; no change.")
+    _do(api, OWNER, matter, "submit_revision", note="Reviewed again; nothing changed.")
+    _do(api, approver, matter, "resume_review")
+    assert _told(api, matter) == TOLD_IN_REVIEW
+    _do(api, approver, matter, "approve", note=APPROVAL)
+    assert state(api.service, matter) == "approved"
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    assert _listed_and_told(api, matter) == ("approved", "In review")
+
+    # The way out is an amendment that makes a version without the hold or the document.
+    # The matter owner can make it, so nobody has to wait for the requester.
+    _do(api, OWNER, matter, "amend_matter", **amendment)
+    assert state(api.service, matter) == "revised"
+    assert _view(api, OWNER, matter)["matter"]["current_version"] == 3
+    assert _told(api, matter) == TOLD_IN_REVIEW
+    _do(api, OWNER, matter, "resume_review")
+    _do(api, approver, matter, "approve", note=APPROVAL)
+    assert state(api.service, matter) == "approved"
+    assert _told(api, matter) == TOLD_APPROVED
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+    _do(api, OWNER, matter, "prepare_delivery")
+    assert _told(api, matter) == TOLD_READY
+    assert _listed_and_told(api, matter) == ("ready_for_delivery", "Ready for you")
+
+
+@pytest.mark.parametrize(
+    ("case", "amendment"),
+    [
+        pytest.param(
+            _a_scope_hold_when_the_matter_was_approved,
+            {"routing_fields": {"uncapped_liability": False}},
+            id="a pilot scope hold at the approval",
+        ),
+        pytest.param(
+            _an_unchecked_listed_document,
+            {"matter_fields": {"documents": []}},
+            id="an unchecked listed document",
+        ),
+    ],
+)
+def test_the_requester_may_amend_or_withdraw_such_a_matter_as_well(
+    tmp_path, case, amendment: dict[str, Any]
+) -> None:
+    # Nothing is needed from the requester, and nothing is closed to them either: as in
+    # every open state they may amend the matter, and they or the matter owner may withdraw it.
+    api, matter, _ = case(tmp_path / "amended")
+    assert _told(api, matter) == TOLD_NO_PACKAGE
+    _do(api, REQUESTER, matter, "amend_matter", reason="Changed by the requester.", **amendment)
+    assert state(api.service, matter) == "revised"
+    assert _told(api, matter) == TOLD_IN_REVIEW
+
+    for actor in (OWNER, REQUESTER):
+        api, matter, _ = case(tmp_path / f"withdrawn-by-{actor}")
+        assert _listed_and_told(api, matter) == ("approved", "In review")
+        _do(api, actor, matter, "withdraw", note=REASON)
+        assert _listed_and_told(api, matter) == ("closed", "Closed: withdrawn without delivery")
+
+
+def test_an_open_question_overrides_the_action_while_an_approval_gives_no_package(
+    tmp_path,
+) -> None:
+    api, service = _a_room(tmp_path)
+    matter = run_until(service, "specialist-revision", "B42")
+    assert state(service, matter) == "approved"
+    assert _told(api, matter) == TOLD_APPROVED
+    [question] = _view(api, REQUESTER, matter)["clarifications"]
+    assert question["state"] == "resolved"
+
+    # The owner reopens the question that was put to the requester. An open question blocks
+    # the gate and changes the reviewed state, and the requester has a question to answer.
+    asked = ("in_review", "In review", NO_PACKAGE, "Answer the open question below.", True)
+    for answered_again in (False, True):
+        _do(
+            api,
+            OWNER,
+            matter,
+            "reopen_comment",
+            comment_id=question["comment_id"],
+            reason="The answer needs one more detail before delivery.",
+        )
+        reason = _why_no_package_can_be_prepared(api, matter)
+        assert reason.startswith("no_unresolved_blockers: ")
+        assert "required_reviewer_decisions" in reason
+        assert _told(api, matter) == asked
+        assert _listed_and_told(api, matter) == ("approved", "In review")
+        if answered_again:
+            # The requester answers; the question stays open until its author resolves it.
+            _do(
+                api,
+                REQUESTER,
+                matter,
+                "respond_comment",
+                comment_id=question["comment_id"],
+                body="The detail is in section 3 of the order form.",
+            )
+            assert _told(api, matter) == asked
+        # Its author resolves it again, the first time on the answer it already has, so
+        # legal can move the matter without the requester. Resolved again, the comments are
+        # in the state the approval was given on.
+        _do(
+            api,
+            OWNER,
+            matter,
+            "resolve_comment",
+            comment_id=question["comment_id"],
+            resolution="Answer read; nothing changes in the package.",
+            evidence_refs=["synthetic:order-form-section-3"],
+        )
+        assert _told(api, matter) == TOLD_APPROVED
+        assert _listed_and_told(api, matter) == ("approved", "Approved")
 
 
 # -- a delivered and accepted matter ------------------------------------------------
@@ -1268,11 +1800,76 @@ def test_the_runbook_says_what_a_requester_is_shown_once_a_delivery_has_ended() 
         "`prepare_delivery` again. While the matter is still `ready_for_delivery`, its "
         f'requester reads "{label}", in the status and in their matter list; a reviewer starts '
         "with `request_revision`. After the new final approval the requester reads "
-        f'"Approved", and "{TOLD_READY[1]}" once the new package is prepared. A withdrawn '
-        "matter stays closed. |"
+        f'"{TOLD_APPROVED[1]}", if a package can be prepared from it (the row above), and '
+        f'"{TOLD_READY[1]}" once the new package is prepared. A withdrawn matter stays closed. |'
     )
     # The row said "until then", as if the requester read "In review" up to the new package.
     assert 'shows its requester "In review" until then' not in runbook
+
+
+def test_the_runbook_says_what_a_requester_is_shown_while_an_approval_gives_no_package() -> None:
+    # The same for an approved matter whose `prepare_delivery` would be refused: the
+    # sentences are built from the label, the explanation and the next step that the tests
+    # above compare with the API's answers.
+    runbook = (DOCS / "pilot" / "RUNBOOK.md").read_text(encoding="utf-8")
+    paragraphs = runbook.split("\n\n")
+    [section_7] = [
+        paragraph
+        for paragraph in paragraphs
+        if paragraph.startswith("The requester's status also goes by whether a package can be")
+    ]
+    # It follows the paragraph on a delivery that has ended, in section 7.
+    before = paragraphs[paragraphs.index(section_7) - 1]
+    assert before.startswith("A stored manifest alone does not open a package either.")
+    stage, label, explanation, action, _ = TOLD_NO_PACKAGE
+    assert (stage, label, TOLD_APPROVED[1]) == ("in_review", "In review", "Approved")
+    for sentence in (
+        # The four ways.
+        "A matter can be `approved` while `prepare_delivery` would be refused: a comment was "
+        "written, resolved or reopened after the approval (any change to the state of a "
+        "comment), another final approver was assigned in place of the one who approved, a "
+        "pilot scope hold applied when the matter was approved, or a listed matter document is "
+        "unchecked.",
+        # The stage, the explanation and the next step.
+        f'Such a matter is shown to its requester as "{label}", not as "{TOLD_APPROVED[1]}", '
+        "in the status and in their matter list.",
+        f'The explanation reads "{explanation}", and the next step is "{action}" unless a '
+        "question to the requester is open.",
+        "The explanation names no cause, and no reviewer, check, hold reason or comment text "
+        "is shown to the requester.",
+        # The way back, and what stays as it was.
+        "The service asks the evidence `prepare_delivery` itself needs (`export_gate_passes`), "
+        f'so the status reads "{TOLD_APPROVED[1]}" again as soon as a package can be prepared '
+        "again.",
+        "The state itself does not change, and a reviewer's view and matter list are "
+        "unchanged: their list shows the pilot state, `approved`.",
+        "The row for a refused `prepare_delivery` in section 9 says how the matter gets out in "
+        "each case.",
+    ):
+        assert sentence in section_7, sentence
+
+    # The troubleshooting row: one row, in full. It records the known limit as well.
+    [row] = [line for line in runbook.splitlines() if line.startswith("| `prepare_delivery` ")]
+    assert row == (
+        '| `prepare_delivery` refused | Open "Export eligibility" in the review room; each '
+        "failing check names its cause. While the matter stays `approved`, its requester reads "
+        f'"{label}" and, unless a question to them is open, "{action}", in the status and in '
+        "their matter list, and is not told that a package is being prepared (section 7). If a "
+        "comment was resolved or reopened after the approval, put it back into the state it had "
+        "at the approval (reopen it, or resolve it again). If another final approver was "
+        "assigned, the matter owner assigns the earlier approver again. The requester then "
+        f'reads "{TOLD_APPROVED[1]}" again. A comment written after the approval cannot be '
+        "taken back, and a new approver cannot approve from `approved`: a reviewer runs "
+        "`request_revision` on an open comment, the matter owner answers it and runs "
+        "`submit_revision`, and after `resume_review` and a new final approval "
+        "`prepare_delivery` passes. Known limit: `approve` does not refuse a matter under a "
+        "pilot scope hold (`no_unresolved_blockers` names the hold) or with an unchecked listed "
+        "matter document (`assessment_approved` fails although the matter is approved), and a "
+        "review and a new approval do not help. Such a matter gets a package only after "
+        "`amend_matter` makes a version without the excluded input or the listed document, "
+        "which the matter owner or the requester may run, followed by `resume_review`, a new "
+        "final approval and `prepare_delivery`. The only other way out is to withdraw it. |"
+    )
 
 
 def test_the_api_guide_says_what_the_views_and_the_list_carry() -> None:
@@ -1315,6 +1912,23 @@ def test_the_api_guide_says_what_the_views_and_the_list_carry() -> None:
         "The review room shows a requester that label in the list and every other role the "
         "pilot state.",
         "No other role's entry has the key.",
+    ):
+        assert sentence in room, sentence
+
+    # The second answer the status goes by: whether a package can be prepared.
+    stage, label, explanation, action, _ = TOLD_NO_PACKAGE
+    for sentence in (
+        "`requester_status` also goes by whether a package can be prepared.",
+        "A matter that is `approved` while `prepare_delivery` would be refused has the stage "
+        f'`{stage}` and the label "{label}", not `{TOLD_APPROVED[0]}` and "{TOLD_APPROVED[1]}".',
+        f'Its explanation is "{explanation}" and, unless a question to the requester is open, '
+        f'its next step is "{action}".',
+        "The service asks the evidence that transition needs (`export_gate_passes`) once, for "
+        "the requester's view and for their matter list.",
+        "The explanation names no cause, and the requester's view carries none of the gate's "
+        "checks or reasons.",
+        "A reviewer's view is unchanged: it lists `prepare_delivery` under `allowed` with that "
+        "evidence, and the gate's checks under `eligibility`.",
     ):
         assert sentence in room, sentence
 

@@ -348,7 +348,8 @@ ENDED_DELIVERY_NOTE = (
     "An open question to the requester still replaces that next step, as it does in every "
     "stage but `closed`.",
     "A `ready_for_delivery` matter whose delivery stands is `ready`, as before, and every "
-    "other state shows the stage Decision 5 lists.",
+    "other state shows the stage Decision 5 lists, except `approved` in the one case the note "
+    "of 2026-11-24 below adds.",
     # Why that stage: what the state machine leaves open.
     "The state machine has two transitions from `ready_for_delivery`.",
     "`accept_delivery` is the requester's, and its evidence `delivery_manifest_current` fails.",
@@ -385,14 +386,97 @@ ENDED_DELIVERY_NOTE = (
     "**Unchanged.** The stored state, the state machine, the export gate and "
     "`legal-workflow-controls.v1`. No manifest is deleted or rewritten.",
 )
-# F3 of the plan: the stage of a matter whose delivery ended, where the spec says it and
-# where its acceptance says it.
+# The note of 2026-11-24 in the same record, on an approved matter from whose approval no
+# package can be prepared: what the requester is shown, the four ways it happens, why the
+# explanation names no cause, who can move the matter in each way, where the answer comes
+# from and the limit that is recorded and not closed. In the order of the note.
+NO_PACKAGE_NOTE = (
+    "Note (2026-11-24): a second state now shows another of the six stages in one case.",
+    "A matter can be `approved` while `prepare_delivery` would be refused, so that no package "
+    "can be prepared from the approval as the matter stands.",
+    # The stage, the explanation and the next step.
+    'Such a matter is now shown as `in_review` (In review), with the explanation "The review '
+    "was approved, but a package for the customer cannot be prepared from that approval as "
+    "the matter stands now. Legal has to work on the matter again before a package is ready "
+    'for you." and the next step "No action needed from you.".',
+    "An open question to the requester still replaces that next step.",
+    "An `approved` matter from whose approval a package can be prepared is `approved`, as "
+    "before.",
+    "`ready_for_delivery` and `approved` are the two states with such a case, and every other "
+    "state shows the stage Decision 5 lists.",
+    # The four ways.
+    "A comment was written, resolved or reopened after the approval, in other words any "
+    "change to the state of a comment.",
+    "Another final approver was assigned in place of the one who approved.",
+    "A pilot scope hold applied when the matter was approved: an amendment after triage can "
+    "bring a matter under a charter exclusion, and `approve` does not ask `pilot_scope_met`.",
+    "A listed matter document is unchecked: the pilot gives the assessment no folder to check "
+    "it in, so the approval does not allow export.",
+    "In the first two the approval no longer counts.",
+    "In the last two it never allowed a package, and nothing changed after it.",
+    # No cause is named.
+    '"The approval no longer counts because the matter changed after it was given" would be '
+    "true in the first two ways and false in the last two.",
+    "The sentence that is shown is true in every case in which `prepare_delivery` is refused.",
+    "no reviewer, no check name, no hold reason and no comment text is shown.",
+    # Who can move the matter, in each way.
+    "In each of the four ways a package can be prepared only after someone in legal acts, "
+    "and people in legal can run every command that leads to one, so the matter does not "
+    "wait for its requester.",
+    "A comment that was resolved or reopened after the approval can be put back into the "
+    "state it had at the approval: a reviewer reopens it, or it is resolved again.",
+    "In place of another approver, the matter owner can assign the earlier approver again.",
+    "The stage is then `approved` again.",
+    "A comment written after the approval cannot be taken back, and a new approver cannot "
+    "approve from `approved`, because `approve` is not open from that state.",
+    "A reviewer then requests a revision that names an open comment, the matter owner answers "
+    "it and submits the revision, a reviewer resumes the review, the final approver approves "
+    "and the matter owner prepares the package.",
+    "Under a scope hold, or with an unchecked listed document, a review and a new approval "
+    "change nothing.",
+    "`amend_matter` has to make a version without the excluded input or without the listed "
+    "document, and the matter owner may run it as well as the requester.",
+    "`resume_review`, `approve` and `prepare_delivery` follow.",
+    "The only other way out is to withdraw the matter.",
+    "A question to the requester that is reopened after the approval is one such comment.",
+    "The requester is then asked to answer it, as in every stage but `closed`, and its author "
+    "can resolve it again on the answer it already has.",
+    # Where the answer comes from.
+    "The service asks the evidence that `prepare_delivery` itself needs, `export_gate_passes`, "
+    "as the state machine lists it.",
+    "It asks once, in `PilotService._requester_status`, the function the requester's view and "
+    "matter list share.",
+    "`requester_status` receives the answer as `package_can_be_prepared` and does not work it "
+    "out again.",
+    "It reads that answer only for `approved`, as it reads `delivery_stands` only for "
+    "`ready_for_delivery`.",
+    "As soon as a package can be prepared again, the stage is `approved` again.",
+    # The limit, and what did not change.
+    "A matter can be approved while a pilot scope hold applies or a listed matter document is "
+    "unchecked, and can then get no package until it is amended or withdrawn.",
+    "Whether `approve` should refuse such a matter is a change to the state machine that the "
+    "owner decides separately.",
+    "This note changes only what the requester is told.",
+    "**Unchanged.** The stored state, the state machine, the export gate, "
+    "`legal-workflow-controls.v1` and every schema.",
+    "A reviewer's view and matter list are unchanged, and their list shows the pilot state, "
+    "`approved`.",
+)
+# F3 of the plan: the two states that show "In review" in one case each, where the spec says
+# it and where its acceptance says it.
 F3_EXCEPTION = (
-    "Since 2026-11-23 there is one exception: a matter that stays ready for delivery after "
-    'its delivery ended is shown as "In review", with its own explanation and nothing to '
-    "accept ([ADR 0011](../adr/0011-requester-vocabulary.md), note of that day).",
+    "There are two exceptions.",
+    "Since 2026-11-23 a matter that stays ready for delivery after its delivery ended is shown "
+    'as "In review", with its own explanation and nothing to accept ([ADR '
+    "0011](../adr/0011-requester-vocabulary.md), note of that day).",
+    "Since 2026-11-24 an approved matter from whose approval no package can be prepared is "
+    'shown as "In review" as well, with its own explanation, and is not told that a package '
+    "is being prepared (the same record, note of that day).",
     "Every pilot state maps to exactly one stage, except that `ready_for_delivery` shows "
-    '"In review" while its delivery has ended.',
+    '"In review" while its delivery has ended and `approved` shows "In review" while no '
+    "package can be prepared from the approval.",
+    "`tests/test_requester_vocabulary.py` pins the six stage ids, the stage of every pilot "
+    "state, the two exceptions and the core's words (ADR 0011).",
 )
 # The agent ships what git tracks or would add. `git ls-files` with these options lists both,
 # by their path under the directory it runs in, and leaves out what a .gitignore or the
@@ -852,38 +936,78 @@ class OwnerChoicesTest(unittest.TestCase):
             )
 
 
-class EndedDeliveryRecordsTest(unittest.TestCase):
-    """What the records of 2026-11-23 say a requester is shown once a delivery has ended."""
+def _dated_notes() -> tuple[str, str, str]:
+    """ADR 0011 up to its two dated notes, and each note, flattened.
 
-    def test_the_vocabulary_record_says_what_the_requester_is_shown(self) -> None:
-        text = (ROOT / "docs" / "adr" / "0011-requester-vocabulary.md").read_text(encoding="utf-8")
-        # The note of that day, after the decision and its confirmation and before the
-        # alternatives. It runs to the next heading and includes its list.
-        self.assertEqual(len(re.findall(r"^Note \(2026-11-23\):", text, re.M)), 1)
-        before, after = text.split("\nNote (2026-11-23):", 1)
-        self.assertIn("\nConfirmed: 2026-11-20,", before)
-        note, rest = after.split("\n## ", 1)
-        self.assertTrue(rest.startswith("Alternatives rejected\n"), rest[:40])
-        note = _flat("Note (2026-11-23):" + note)
+    The notes stand after the decision and its confirmation and before the alternatives,
+    the older one first. Each runs to the next note or heading and includes its list.
+    """
+
+    text = (ROOT / "docs" / "adr" / "0011-requester-vocabulary.md").read_text(encoding="utf-8")
+    for day in ("2026-11-23", "2026-11-24"):
+        assert len(re.findall(rf"^Note \({day}\):", text, re.M)) == 1, day
+    before, after = text.split("\nNote (2026-11-23):", 1)
+    assert "\nConfirmed: 2026-11-20," in before
+    first, after = after.split("\nNote (2026-11-24):", 1)
+    second, rest = after.split("\n## ", 1)
+    assert rest.startswith("Alternatives rejected\n"), rest[:40]
+    assert "\n## " not in first and "\nNote (" not in first + second
+    return (
+        _flat(before),
+        _flat("Note (2026-11-23):" + first),
+        _flat("Note (2026-11-24):" + second),
+    )
+
+
+class EndedDeliveryRecordsTest(unittest.TestCase):
+    """What the records say a requester is shown where a state alone would mislead them.
+
+    Once a delivery has ended (2026-11-23), and while an approval gives no package
+    (2026-11-24).
+    """
+
+    def assert_in_order(self, note: str, sentences: tuple[str, ...]) -> None:
         place = 0
-        for sentence in ENDED_DELIVERY_NOTE:
+        for sentence in sentences:
             with self.subTest(sentence):
                 self.assertIn(sentence, note)
                 # In the order of the record, so no sentence is counted for another place.
                 self.assertGreaterEqual(note.find(sentence, place), place)
                 place = note.find(sentence, place) + len(sentence)
-        self.assertTrue(note.startswith(ENDED_DELIVERY_NOTE[0]))
-        # The note changes what one state shows. It adds no stage: Decision 1 stands.
-        self.assertIn("Every pilot state maps to one of the six", _flat(before))
+        self.assertTrue(note.startswith(sentences[0]))
 
-    def test_the_plan_names_the_exception_for_an_ended_delivery(self) -> None:
+    def test_the_vocabulary_record_says_what_the_requester_is_shown(self) -> None:
+        before, note, _ = _dated_notes()
+        self.assert_in_order(note, ENDED_DELIVERY_NOTE)
+        # The note changes what one state shows. It adds no stage: Decision 1 stands.
+        self.assertIn("Every pilot state maps to one of the six", before)
+        # What it said before the note of 2026-11-24 named a second state.
+        self.assertNotIn("every other state shows the stage Decision 5 lists.", note)
+
+    def test_the_vocabulary_record_says_what_an_approval_without_a_package_shows(self) -> None:
+        before, earlier, note = _dated_notes()
+        self.assert_in_order(note, NO_PACKAGE_NOTE)
+        # No stage is added for it either, and the earlier note keeps its own subject.
+        self.assertIn("Every pilot state maps to one of the six", before)
+        self.assertNotIn("package_can_be_prepared", earlier)
+        # The wording that was decided against, because two of the four ways make it false,
+        # is quoted once, to say so, and is not what the requester is shown.
+        self.assertEqual(note.count("The approval no longer counts because the matter changed"), 1)
+
+    def test_the_plan_names_the_two_exceptions(self) -> None:
         plan = (RESEARCH / "adaptation-plan.md").read_text(encoding="utf-8")
         spec = _flat(_section(plan, "F3. Requester status (built)"))
+        place = 0
         for sentence in F3_EXCEPTION:
             with self.subTest(sentence):
                 self.assertIn(sentence, spec)
-        # Without the exception the acceptance line is no longer true.
+                self.assertGreaterEqual(spec.find(sentence, place), place)
+                place = spec.find(sentence, place) + len(sentence)
+        # Without the exceptions the acceptance line is no longer true, and one alone is
+        # no longer all of them.
         self.assertNotIn("Every pilot state maps to exactly one stage.", spec)
+        self.assertNotIn("there is one exception", spec)
+        self.assertNotIn('"In review" while its delivery has ended.', spec)
 
 
 if __name__ == "__main__":
