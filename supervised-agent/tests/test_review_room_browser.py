@@ -25,6 +25,7 @@ from src.pilot.store import PilotStore
 from src.pilot.timeline import event_class
 from tests.pilot_support import (
     APPROVER_LEAD,
+    OTHER_OWNER,
     OWNER,
     REQUESTER,
     make_service,
@@ -607,6 +608,42 @@ try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
 """
 
 
+LIST_FAULT_SCRIPT = r"""
+let chromium;
+try { ({ chromium } = require("playwright")); } catch (e) { process.exit(3); }
+(async () => {
+  let browser;
+  try { browser = await chromium.launch(); } catch (e) { process.exit(3); }
+  const [base, ...actors] = process.argv.slice(2);
+  const out = {};
+  const errors = [];
+  for (const actor of actors) {
+    const page = await (await browser.newContext({ viewport: { width: 1280, height: 900 } })).newPage();
+    page.on("pageerror", (e) => errors.push(e.message));
+    page.on("dialog", (d) => { errors.push("dialog: " + d.message()); d.dismiss(); });
+    await page.goto(base + "/pilot");
+    await page.waitForSelector("#actor option", { state: "attached" });
+    // The page first loads the list of the role its select starts with. Once that list is
+    // there it is emptied, so what is read below is the answer for the chosen role.
+    await page.waitForSelector("#list > *", { state: "attached" });
+    await page.evaluate(() => document.getElementById("list").replaceChildren());
+    await page.selectOption("#actor", actor);
+    await page.waitForSelector("#list > *", { state: "attached" });
+    out[actor] = {
+      entries: await page.locator("#list button.matter strong").allInnerTexts(),
+      alert: await page.locator("#list [role='alert'] > *").allInnerTexts(),
+      muted: await page.locator("#list p.muted").allInnerTexts(),
+      scenarios: await page.locator("#create button.matter").count(),
+      reads: await page.locator("body").innerText(),
+    };
+  }
+  out.errors = errors;
+  console.log(JSON.stringify(out));
+  await browser.close();
+})().catch((e) => { console.error(e); process.exit(1); });
+"""
+
+
 def _node_env() -> dict[str, str] | None:
     node, npm = shutil.which("node"), shutil.which("npm")
     if not node or not npm:
@@ -964,6 +1001,62 @@ def test_the_room_offers_acceptance_only_beside_a_package_that_may_be_opened(
     assert "ready_for_delivery" not in out["requesterReads"]
     # A reviewer's list is as it was: the pilot state, whatever became of the delivery.
     assert out["ownerPills"] == {standing: ["ready for delivery"], ended: ["ready for delivery"]}
+
+
+def test_the_room_says_when_the_matter_list_could_not_be_loaded(tmp_path, monkeypatch) -> None:
+    service = make_service(tmp_path)
+    good = run_until(service, "routine", "A06")
+    bad = run_until(service, "specialist-revision", "B10")
+    # One stored version the application cannot read. A requester's list reads the current
+    # version of every matter it lists, so the server answers their list with an error
+    # (tests/test_pilot_package_standing.py). A reviewer's list reads no version.
+    with service.store.transaction() as connection:
+        connection.execute(
+            "UPDATE matter_versions SET body = substr(body, 1, 200) WHERE matter_id = ? AND "
+            "version = (SELECT current_version FROM matters WHERE matter_id = ?)",
+            (bad, bad),
+        )
+    api = PilotApi(service)
+    status, answer, _ = api.handle("GET", "/pilot/api/matters", {"X-Pilot-Actor": REQUESTER})
+    assert status == 422 and answer["message"].startswith(f"version 2 of matter {bad} cannot")
+    assert service.list_matters(OTHER_OWNER) == []
+    out = _run_node(
+        tmp_path, monkeypatch, service, LIST_FAULT_SCRIPT, REQUESTER, OWNER, OTHER_OWNER
+    )
+    nothing_visible = "No matter is visible to this role."
+    not_loaded = "The matter list could not be loaded."
+
+    assert out["errors"] == []
+    # The requester is told that the list could not be loaded, and why, in the server's
+    # words. The page used to say that no matter is visible to the role, which was untrue:
+    # the requester has two matters. No entry is shown, so none of them can be opened from
+    # the list, the readable one included. Opening a new matter is still offered.
+    requester = out[REQUESTER]
+    assert requester["alert"] == [not_loaded, answer["message"]]
+    assert requester["entries"] == [] and requester["muted"] == []
+    assert nothing_visible not in requester["reads"]
+    assert requester["scenarios"] > 0
+    # A reviewer's list is not affected: both matters, and no error.
+    assert out[OWNER]["entries"] == [good, bad]
+    assert out[OWNER]["alert"] == [] and not_loaded not in out[OWNER]["reads"]
+    # A list that loaded and is empty still says so, and is not called an error.
+    assert out[OTHER_OWNER]["entries"] == [] and out[OTHER_OWNER]["alert"] == []
+    assert out[OTHER_OWNER]["muted"] == [nothing_visible]
+
+    # The room says it for any answer that is not the list, not only for that one. With the
+    # row of the current version gone, the requester's list answers 404 and another message
+    # (tests/test_pilot_package_standing.py), and the page shows that one.
+    with service.store.transaction() as connection:
+        connection.execute("DELETE FROM matter_versions WHERE matter_id = ?", (bad,))
+    status, answer, _ = api.handle("GET", "/pilot/api/matters", {"X-Pilot-Actor": REQUESTER})
+    assert (status, answer["message"]) == (404, f"matter {bad} has no version 2")
+    out = _run_node(tmp_path, monkeypatch, service, LIST_FAULT_SCRIPT, REQUESTER, OWNER)
+    assert out["errors"] == []
+    requester = out[REQUESTER]
+    assert requester["alert"] == [not_loaded, f"matter {bad} has no version 2"]
+    assert requester["entries"] == [] and requester["muted"] == []
+    assert nothing_visible not in requester["reads"]
+    assert out[OWNER]["entries"] == [good, bad] and out[OWNER]["alert"] == []
 
 
 def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:

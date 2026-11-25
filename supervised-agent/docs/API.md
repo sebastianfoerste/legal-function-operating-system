@@ -318,7 +318,30 @@ role. For a business requester each entry also carries `requester_status_label`,
 for a matter that is `ready_for_delivery` after its delivery ended and "Closed: withdrawn
 without delivery" for a withdrawn one. The service puts both together in one place, so
 the list and the view cannot differ. The review room shows a requester that label in the
-list and every other role the pilot state. No other role's entry has the key.
+list and every other role the pilot state. No other role's entry has the key. The label is
+built from each matter's current version. If the store holds one that cannot be read, a
+requester's list answers as that matter's own view does, with 422 `invalid_command` and
+"version N of matter X cannot be read from the store", and gives no entries: no label is
+made up for the matter and the matter is not left out. The review room then shows "The
+matter list could not be loaded." and that message where the list was. It says "No matter
+is visible to this role." only for a list that loaded and is empty.
+
+The status also reads the matter's comments, in every state, and it asks the export gate
+while the matter is `approved` or `ready_for_delivery`. The gate reads the proposed changes
+of the current version and the records of the actors who signed off or approved. If one of
+these rows cannot be read, the requester's view and list answer in the same way, with "a
+comment on matter X", "a proposed change of version N of matter X" or "the record of an
+actor who decided on matter X", followed by "cannot be read from the store". The message
+names the matter and the kind of row, says how many problems the stored text has and in
+which field the first one is, and repeats nothing of that text; the third names no actor. A
+request whose own actor record cannot be read answers "the record of actor A cannot be read
+from the store". The same message names the actor a matter owner names in `assign` and, to
+a reviewer, an actor assigned to the matter. For an assigned actor who has signed off or
+approved, a reviewer can be answered with the message on an actor who decided instead. Two
+kinds of stored row do not get such a message. A stored finding, which no requester's view
+reads, and the actor records where all of them are read at once (`GET /pilot/api/actors`,
+`prepare_delivery` and `export_internal_review`) still answer 422 `invalid_command` with
+the validation library's own message, which quotes the stored text.
 
 Answers to a refused request or command:
 
@@ -332,7 +355,7 @@ Answers to a refused request or command:
 | 409 | `stale_submission` | The matter changed; `current_revision` is returned |
 | 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |
 | 409 | `export_blocked` | The export gate refused; `checks` lists each condition |
-| 422 | `invalid_command` | Unknown command or invalid arguments |
+| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored row that cannot be read. For a matter version, a comment, a proposed change and an actor record that is read on its own, the message names the matter or the actor and repeats nothing of the stored text. For a stored finding, and where every actor record is read at once (`GET /pilot/api/actors`, `prepare_delivery`, `export_internal_review`), it is the validation library's own message, which quotes the stored text |
 
 Scripted fixture timestamps cannot be set through this API.
 

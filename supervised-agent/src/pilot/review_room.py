@@ -245,8 +245,12 @@ const splitRefs = (text) => text.split(",").map((r) => r.trim()).filter(Boolean)
 const note = (label, min, hint) => ({name: "note", label, kind: "textarea", min, hint: hint || ("At least " + min + " characters.")});
 // ------------------------------------------------------------------- matters
 async function loadList() {
-  const {payload} = await api("GET", "/matters");
+  const {status, payload} = await api("GET", "/matters");
   const list = $("list"); list.replaceChildren();
+  // An answer that is not the list is not an empty list. The room says that the list could
+  // not be loaded and gives the server's reason, in the list itself, where it stays until
+  // the list loads again. No matter can be opened from the list while it is in this state.
+  if (status !== 200) list.append(h("div", {class: "error-summary", role: "alert"}, h("h3", null, "The matter list could not be loaded."), h("p", null, payload.message || "The server gave no reason.")));
   for (const matter of payload.matters || []) {
     // A requester's entry carries the label of their status, the one the matter itself shows
     // under "Status". Every other role's entry has none, and the pill shows the pilot state.
@@ -255,7 +259,7 @@ async function loadList() {
     list.append(h("button", {class: "matter", "aria-current": matter.matter_id === state.matterId ? "true" : null, onclick: () => loadMatter(matter.matter_id)},
       h("strong", null, matter.matter_id), h("br"), matter.title, h("br"), h("span", {class: label ? "pill stage" : "pill"}, label || words(matter.state)), "v" + matter.current_version));
   }
-  if (!(payload.matters || []).length) list.append(h("p", {class: "muted"}, "No matter is visible to this role."));
+  if (status === 200 && !(payload.matters || []).length) list.append(h("p", {class: "muted"}, "No matter is visible to this role."));
   const create = $("create"); create.replaceChildren();
   const actor = state.actors.find((a) => a.actor_id === state.actor);
   if (actor && actor.role === "business_requester") {

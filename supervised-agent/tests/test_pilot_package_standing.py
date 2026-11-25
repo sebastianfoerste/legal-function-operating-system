@@ -28,7 +28,7 @@ from src.pilot.api import PilotApi, encode
 from src.pilot.fixtures import build_synthetic_msa
 from src.pilot.review_room import REVIEW_ROOM_HTML
 from src.pilot.scenario_runner import ScenarioRunner
-from src.pilot.service import PilotService
+from src.pilot.service import PilotService, VersionBody
 from tests.pilot_support import (
     APPROVER_GC,
     APPROVER_LEAD,
@@ -1019,6 +1019,538 @@ def test_the_list_follows_the_delivery_while_the_matter_stays_ready(tmp_path) ->
     assert _listed_and_told(api, matter) == ("closed", "Closed: delivered locally and accepted")
 
 
+# -- a matter whose stored version cannot be read --------------------------------------
+
+# A requester's list builds the status of each matter from its current version. A version
+# body the application cannot read is a fault in the store. It is not hidden: the list stops
+# with the error that matter's own view gives, no label is invented for the matter and the
+# matter is not left out. The error names the matter and the version, and repeats nothing
+# of the stored text.
+A_KEY_IN_THE_STORE = "A key written into the store by hand"
+
+
+def _retyped(body: str, **fields: Any) -> str:
+    return json.dumps({**json.loads(body), **fields})
+
+
+def _a_fact_under_a_key_of_its_own(body: str) -> str:
+    stored = json.loads(body)
+    stored["intake"]["facts"] = {A_KEY_IN_THE_STORE: 5}
+    return json.dumps(stored)
+
+
+ONE_PROBLEM_IN_THE_TEXT = (
+    "1 problem(s) in the stored version, the first in the text as a whole (json_invalid)"
+)
+UNREADABLE = [
+    pytest.param(lambda body: "not json", ONE_PROBLEM_IN_THE_TEXT, id="no JSON at all"),
+    pytest.param(lambda body: body[:200], ONE_PROBLEM_IN_THE_TEXT, id="JSON cut short"),
+    pytest.param(lambda body: "", ONE_PROBLEM_IN_THE_TEXT, id="an empty text"),
+    pytest.param(
+        lambda body: "{}",
+        f"{sum(f.is_required() for f in VersionBody.model_fields.values())} problem(s) in the "
+        "stored version, the first in the field version (missing)",
+        id="JSON of another shape",
+    ),
+    pytest.param(
+        lambda body: _retyped(body, required_final_tier=7, scope_exclusions="none"),
+        "2 problem(s) in the stored version, the first in the field required_final_tier "
+        "(string_type)",
+        id="two fields of another type",
+    ),
+    pytest.param(
+        _a_fact_under_a_key_of_its_own,
+        "1 problem(s) in the stored version, the first in the field intake (string_type)",
+        id="a key of the stored text",
+    ),
+]
+
+
+def _get(api: PilotApi, actor: str, path: str) -> tuple[int, Any]:
+    status, answer, _ = api.handle("GET", path, {"X-Pilot-Actor": actor})
+    return status, answer
+
+
+def _two_matters_in_review(tmp_path: Path) -> tuple[PilotApi, str, str, int]:
+    """Two matters of one requester, and the current version of the second."""
+
+    service = make_service(tmp_path, clock=_StepClock())
+    api = PilotApi(service)
+    good = run_until(service, "routine", "A06")
+    bad = run_until(service, "specialist-revision", "B10")
+    assert [(m["matter_id"], m["requester_status_label"]) for m in _list(api, REQUESTER)] == [
+        (good, "In review"),
+        (bad, "In review"),
+    ]
+    version = _view(api, OWNER, bad)["matter"]["current_version"]
+    assert version == 2
+    return api, good, bad, version
+
+
+def _stored_body(service: PilotService, matter: str, version: int) -> str:
+    with service.store.reading() as connection:
+        row = connection.execute(
+            "SELECT body FROM matter_versions WHERE matter_id = ? AND version = ?",
+            (matter, version),
+        ).fetchone()
+    return str(row["body"])
+
+
+def _store_body(service: PilotService, matter: str, version: int, body: str) -> None:
+    with service.store.transaction() as connection:
+        connection.execute(
+            "UPDATE matter_versions SET body = ? WHERE matter_id = ? AND version = ?",
+            (body, matter, version),
+        )
+
+
+@pytest.mark.parametrize(("damage", "problem"), UNREADABLE)
+def test_a_version_that_cannot_be_read_stops_the_requesters_list_and_names_the_matter(
+    tmp_path, damage: Callable[[str], str], problem: str
+) -> None:
+    api, good, bad, version = _two_matters_in_review(tmp_path)
+    service = api.service
+    stored = _stored_body(service, bad, version)
+    _store_body(service, bad, version, damage(stored))
+
+    refused = (
+        422,
+        {
+            "error": "invalid_command",
+            "message": f"version {version} of matter {bad} cannot be read from the store: {problem}",
+        },
+    )
+    # The matter's own view stops, for its requester and for a reviewer.
+    for actor in (REQUESTER, OWNER):
+        assert _get(api, actor, f"/pilot/api/matters/{bad}") == refused
+    # The requester's list stops with the same error. It has no entry for the matter, so no
+    # label was made up for it, and no shorter list either, so the matter was not left out.
+    assert _get(api, REQUESTER, "/pilot/api/matters") == refused
+    # The error repeats nothing of the stored text: no value, and no key of it.
+    told = encode(refused[1]).decode("utf-8")
+    for text in (stored[:40], stored[160:200], A_KEY_IN_THE_STORE, "input_value", "pydantic"):
+        assert text not in told, text
+
+    # The fault is one matter's. The other one still opens for the requester, and a
+    # reviewer's list, which reads no version, gives both matters as they are stored.
+    assert _told(api, good)[:2] == ("in_review", "In review")
+    assert [(m["matter_id"], m["state"]) for m in _list(api, OWNER)] == [
+        (good, "review"),
+        (bad, "review"),
+    ]
+    # With the body as the application wrote it, the list answers again.
+    _store_body(service, bad, version, stored)
+    assert _listed_and_told(api, bad) == ("review", "In review")
+
+
+def test_a_matter_without_its_current_version_stops_the_requesters_list_as_its_view(
+    tmp_path,
+) -> None:
+    # The neighbouring fault, where the error always named the matter: the row is gone.
+    api, good, bad, version = _two_matters_in_review(tmp_path)
+    with api.service.store.transaction() as connection:
+        connection.execute("DELETE FROM matter_versions WHERE matter_id = ?", (bad,))
+    refused = (404, {"error": "not_found", "message": f"matter {bad} has no version {version}"})
+    for actor in (REQUESTER, OWNER):
+        assert _get(api, actor, f"/pilot/api/matters/{bad}") == refused
+    assert _get(api, REQUESTER, "/pilot/api/matters") == refused
+    assert _told(api, good)[:2] == ("in_review", "In review")
+    assert [m["matter_id"] for m in _list(api, OWNER)] == [good, bad]
+
+
+def test_the_history_names_an_earlier_version_that_cannot_be_read(tmp_path) -> None:
+    # The view and the list read the current version only. The history reads every version,
+    # and names the one it cannot read in the same words.
+    api, _, bad, version = _two_matters_in_review(tmp_path)
+    _store_body(api.service, bad, version - 1, "not json")
+    assert _listed_and_told(api, bad) == ("review", "In review")
+    assert _view(api, OWNER, bad)["matter"]["current_version"] == version
+    assert _get(api, OWNER, f"/pilot/api/matters/{bad}/history") == (
+        422,
+        {
+            "error": "invalid_command",
+            "message": f"version {version - 1} of matter {bad} cannot be read from the store: "
+            f"{ONE_PROBLEM_IN_THE_TEXT}",
+        },
+    )
+
+
+# -- the other stored rows a requester's status reads ---------------------------------
+
+# A requester's view and matter list read the matter's comments in every state. In
+# `approved` and `ready_for_delivery` their status also asks the export gate, which reads
+# the proposed changes of the current version and the records of the actors who signed
+# off or approved. One of these rows that the application cannot read stops the view and
+# the list as an unreadable version does. The error names the matter and the kind of row.
+# It names no reviewer and repeats nothing of the stored text, which holds what a
+# requester is not shown: the rationale of a change, a comment among reviewers, who
+# approved. The validation library's own message quoted that text.
+NOT_FOR_THE_REQUESTER = "Words in the store that a requester is not shown"
+# The kind of row, how it is found for a matter, and what the error calls it.
+A_CHANGE, A_COMMENT = "a proposed change", "a comment"
+AN_APPROVER, A_SPECIALIST = "the approver's record", "the specialist's record"
+DECIDED = "the record of an actor who decided on matter {matter}"
+STORED_ROWS = {
+    A_CHANGE: (
+        "SELECT rowid FROM changes WHERE matter_id = :matter AND version = (SELECT "
+        "current_version FROM matters WHERE matter_id = :matter) ORDER BY position LIMIT 1",
+        "changes",
+        "a proposed change of version {version} of matter {matter}",
+        "change",
+    ),
+    A_COMMENT: (
+        "SELECT rowid FROM comments WHERE matter_id = :matter ORDER BY rowid LIMIT 1",
+        "comments",
+        "a comment on matter {matter}",
+        "comment",
+    ),
+    AN_APPROVER: (
+        f"SELECT rowid FROM actors WHERE actor_id = '{APPROVER_GC}' AND :matter != ''",
+        "actors",
+        DECIDED,
+        "record",
+    ),
+    A_SPECIALIST: (
+        f"SELECT rowid FROM actors WHERE actor_id = '{SPECIALIST}' AND :matter != ''",
+        "actors",
+        DECIDED,
+        "record",
+    ),
+}
+# What is written over the row, and the problem the error gives for it. The retyped field
+# holds words of the store as a value, and for a comment and an actor also as a key.
+RETYPED = {
+    A_CHANGE: ("decision", NOT_FOR_THE_REQUESTER, "literal_error"),
+    A_COMMENT: ("body", {NOT_FOR_THE_REQUESTER: 1}, "string_type"),
+    AN_APPROVER: ("approval_tier", {NOT_FOR_THE_REQUESTER: 1}, "string_type"),
+    A_SPECIALIST: ("specialty", {NOT_FOR_THE_REQUESTER: 1}, "string_type"),
+}
+
+
+def _row(service: PilotService, kind: str, matter: str) -> tuple[int, str]:
+    """The row of this kind for the matter: its rowid and the text the application wrote."""
+
+    select, table = STORED_ROWS[kind][:2]
+    with service.store.reading() as connection:
+        (rowid,) = connection.execute(select, {"matter": matter}).fetchone()
+        (body,) = connection.execute(f"SELECT body FROM {table} WHERE rowid = ?", (rowid,))
+    return int(rowid), str(body[0])
+
+
+def _write_row(service: PilotService, kind: str, rowid: int, body: str) -> None:
+    with service.store.transaction() as connection:
+        connection.execute(
+            f"UPDATE {STORED_ROWS[kind][1]} SET body = ? WHERE rowid = ?", (body, rowid)
+        )
+
+
+def _cannot_be_read(kind: str, matter: str, version: int, problem: str) -> tuple[int, Any]:
+    _, _, what, noun = STORED_ROWS[kind]
+    named = what.format(version=version, matter=matter)
+    message = f"{named} cannot be read from the store: {problem.format(noun=noun)}"
+    return 422, {"error": "invalid_command", "message": message}
+
+
+@pytest.mark.parametrize("kind", list(STORED_ROWS))
+@pytest.mark.parametrize("cut_short", [True, False], ids=["JSON cut short", "a field retyped"])
+def test_another_row_that_cannot_be_read_names_the_matter_and_repeats_nothing(
+    tmp_path, kind: str, cut_short: bool
+) -> None:
+    service = make_service(tmp_path, clock=_StepClock())
+    api = PilotApi(service)
+    good = run_until(service, "routine", "A06")
+    bad = run_until(service, "specialist-revision", "B42")
+    assert _listed_and_told(api, bad) == ("approved", "Approved")
+    version = _view(api, OWNER, bad)["matter"]["current_version"]
+    # The two actors whose records the gate reads for this matter: who signed off, who approved.
+    with service.store.reading() as connection:
+        decided = connection.execute(
+            "SELECT DISTINCT kind, actor_id FROM decisions WHERE matter_id = ? AND kind IN "
+            "('specialist_signoff', 'final_approval') ORDER BY kind",
+            (bad,),
+        ).fetchall()
+    assert [tuple(row) for row in decided] == [
+        ("final_approval", APPROVER_GC),
+        ("specialist_signoff", SPECIALIST),
+    ]
+
+    rowid, stored = _row(service, kind, bad)
+    if cut_short:
+        damaged = stored[: len(stored) * 2 // 3]
+        problem = (
+            "1 problem(s) in the stored {noun}, the first in the text as a whole (json_invalid)"
+        )
+    else:
+        field, value, error = RETYPED[kind]
+        damaged = json.dumps({**json.loads(stored), field: value})
+        problem = f"1 problem(s) in the stored {{noun}}, the first in the field {field} ({error})"
+    _write_row(service, kind, rowid, damaged)
+
+    refused = _cannot_be_read(kind, bad, version, problem)
+    # The requester's view of the matter and their whole list stop with the error, and so
+    # does a reviewer's view of the matter: the row is read in one place for all of them.
+    assert _get(api, REQUESTER, f"/pilot/api/matters/{bad}") == refused
+    assert _get(api, REQUESTER, "/pilot/api/matters") == refused
+    assert _get(api, OWNER, f"/pilot/api/matters/{bad}") == refused
+    # It names the matter and no reviewer, and repeats nothing of the stored text: not its
+    # beginning, not the place where it breaks off, no value and no key.
+    told = encode(refused[1]).decode("utf-8")
+    assert bad in told
+    for text in (
+        stored[:30],
+        damaged[-30:],
+        NOT_FOR_THE_REQUESTER,
+        APPROVER_GC,
+        SPECIALIST,
+        "input_value",
+        "pydantic",
+    ):
+        assert text not in told, text
+
+    # The fault is one matter's. The other one opens, and a reviewer's list is unchanged.
+    assert _told(api, good)[:2] == ("in_review", "In review")
+    assert [(m["matter_id"], m["state"]) for m in _list(api, OWNER)] == [
+        (good, "review"),
+        (bad, "approved"),
+    ]
+    # With the row as the application wrote it, the view and the list answer again.
+    _write_row(service, kind, rowid, stored)
+    assert _listed_and_told(api, bad) == ("approved", "Approved")
+
+
+# Which of these rows a requester's view and list read in which state. The comments are
+# read in every state. The gate is asked only while the matter is approved, for whether a
+# package can be prepared, and while it is ready for delivery, for whether the delivery
+# stands. So a damaged change, or a damaged record of the approver or of the specialist who
+# signed off, stops a requester there and in no other state.
+READ_FOR_THE_REQUESTER = [
+    pytest.param("B10", "review", "In review", {A_COMMENT}, id="review"),
+    pytest.param("B42", "approved", "Approved", set(STORED_ROWS), id="approved"),
+    pytest.param(
+        "B44", "ready_for_delivery", "Ready for you", set(STORED_ROWS), id="ready for delivery"
+    ),
+    pytest.param(
+        "B45", "closed", "Closed: delivered locally and accepted", {A_COMMENT}, id="closed"
+    ),
+]
+
+
+@pytest.mark.parametrize(("step", "reached", "label", "read"), READ_FOR_THE_REQUESTER)
+def test_a_damaged_change_or_decider_stops_the_requester_only_where_the_gate_is_asked(
+    tmp_path, step: str, reached: str, label: str, read: set[str]
+) -> None:
+    service = make_service(tmp_path, clock=_StepClock())
+    api = PilotApi(service)
+    matter = run_until(service, "specialist-revision", step)
+    assert _listed_and_told(api, matter) == (reached, label)
+    version = _view(api, OWNER, matter)["matter"]["current_version"]
+    problem = "1 problem(s) in the stored {noun}, the first in the text as a whole (json_invalid)"
+    for kind in STORED_ROWS:
+        rowid, stored = _row(service, kind, matter)
+        _write_row(service, kind, rowid, stored[:20])
+        refused = _cannot_be_read(kind, matter, version, problem)
+        if kind in read:
+            assert _get(api, REQUESTER, f"/pilot/api/matters/{matter}") == refused, kind
+            assert _get(api, REQUESTER, "/pilot/api/matters") == refused, kind
+        else:
+            # Not read for the requester here: their view and list answer as before.
+            assert _listed_and_told(api, matter) == (reached, label), kind
+        _write_row(service, kind, rowid, stored)
+    assert _listed_and_told(api, matter) == (reached, label)
+
+
+def test_an_actors_own_record_that_cannot_be_read_names_the_actor(tmp_path) -> None:
+    # Every request reads the record of the actor who makes it. That record is the
+    # caller's own, so the error names it, and no matter. A reviewer's list reads no other
+    # actor's record and still answers. A reviewer's view of a matter reads the records of
+    # the actors assigned to it, and names the one it cannot read: who is assigned to a
+    # matter is a reviewer's to see.
+    service = make_service(tmp_path, clock=_StepClock())
+    api = PilotApi(service)
+    matter = run_until(service, "routine", "A06")
+    with service.store.transaction() as connection:
+        (stored,) = connection.execute(
+            "SELECT body FROM actors WHERE actor_id = ?", (REQUESTER,)
+        ).fetchone()
+        connection.execute(
+            "UPDATE actors SET body = ? WHERE actor_id = ?", (stored[:40], REQUESTER)
+        )
+    refused = (
+        422,
+        {
+            "error": "invalid_command",
+            "message": f"the record of actor {REQUESTER} cannot be read from the store: 1 "
+            "problem(s) in the stored record, the first in the text as a whole (json_invalid)",
+        },
+    )
+    assert _get(api, REQUESTER, "/pilot/api/matters") == refused
+    assert _get(api, REQUESTER, f"/pilot/api/matters/{matter}") == refused
+    assert [m["matter_id"] for m in _list(api, OWNER)] == [matter]
+    assert _get(api, OWNER, f"/pilot/api/matters/{matter}") == refused
+
+
+def _cut_the_record_of(service: PilotService, actor: str) -> str:
+    """Cut the stored record of an actor short; return it as the application wrote it."""
+
+    with service.store.transaction() as connection:
+        (stored,) = connection.execute(
+            "SELECT body FROM actors WHERE actor_id = ?", (actor,)
+        ).fetchone()
+        connection.execute("UPDATE actors SET body = ? WHERE actor_id = ?", (stored[:40], actor))
+    return str(stored)
+
+
+def _write_the_record_of(service: PilotService, actor: str, body: str) -> None:
+    with service.store.transaction() as connection:
+        connection.execute("UPDATE actors SET body = ? WHERE actor_id = ?", (body, actor))
+
+
+ONE_PROBLEM_IN_THE_RECORD = (
+    "1 problem(s) in the stored record, the first in the text as a whole (json_invalid)"
+)
+
+
+def _record_of(actor: str) -> tuple[int, Any]:
+    message = f"the record of actor {actor} cannot be read from the store: "
+    return 422, {"error": "invalid_command", "message": message + ONE_PROBLEM_IN_THE_RECORD}
+
+
+def test_the_error_names_an_actor_named_in_assign_and_to_a_reviewer_an_assigned_one(
+    tmp_path,
+) -> None:
+    # Beside the caller's own record the error names an actor in two more cases. A matter
+    # owner names an actor in `assign`: that actor made no request and is assigned to
+    # nothing. And a reviewer is answered with the record of an actor assigned to the
+    # matter. Once such an actor has signed off, the gate can read the record first, for
+    # that decision, and the reviewer then reads the sentence on an actor who decided.
+    service = make_service(tmp_path, clock=_StepClock())
+    api = PilotApi(service)
+    matter = run_until(service, "specialist-revision", "B10")
+    view = f"/pilot/api/matters/{matter}"
+
+    def decided() -> list[str]:
+        with service.store.reading() as connection:
+            rows = connection.execute(
+                "SELECT actor_id FROM decisions WHERE matter_id = ? AND kind IN "
+                "('specialist_signoff', 'final_approval') ORDER BY decision_id",
+                (matter,),
+            ).fetchall()
+        return [str(row["actor_id"]) for row in rows]
+
+    with service.store.reading() as connection:
+        assigned = service._assigned(connection, matter)
+    assert assigned["specialist_reviewer"] == [SPECIALIST]
+    assert assigned["final_approver"] == [APPROVER_GC]
+    assert (state(service, matter), decided()) == ("review", [])
+
+    # The lead approver is on no matter. The owner names them in `assign`.
+    stored = _cut_the_record_of(service, APPROVER_LEAD)
+    assert _post(
+        api, OWNER, matter, "assign", role="final_approver", assignee_id=APPROVER_LEAD
+    ) == _record_of(APPROVER_LEAD)
+    # Nothing else on the matter reads that record: both views of it still answer.
+    assert _get(api, OWNER, view)[0] == 200
+    assert _listed_and_told(api, matter) == ("review", "In review")
+    _write_the_record_of(service, APPROVER_LEAD, stored)
+
+    # An assigned actor who has not decided is named to a reviewer. The requester's view
+    # reads no such record in this state and still answers.
+    for actor in (SPECIALIST, APPROVER_GC):
+        stored = _cut_the_record_of(service, actor)
+        assert _get(api, OWNER, view) == _record_of(actor), actor
+        assert _listed_and_told(api, matter) == ("review", "In review")
+        _write_the_record_of(service, actor, stored)
+
+    # After the specialist's sign-off the matter is still in review. The owner's view now
+    # asks whether `approve` is open, which reads the record of who signed off before it
+    # reads the records of the assigned actors.
+    _continue(service, "specialist-revision", "B10", "B22")
+    assert (state(service, matter), decided()) == ("review", [SPECIALIST])
+    stored = _cut_the_record_of(service, SPECIALIST)
+    assert _get(api, OWNER, view) == (
+        422,
+        {
+            "error": "invalid_command",
+            "message": DECIDED.format(matter=matter)
+            + " cannot be read from the store: "
+            + ONE_PROBLEM_IN_THE_RECORD,
+        },
+    )
+    assert _listed_and_told(api, matter) == ("review", "In review")
+    _write_the_record_of(service, SPECIALIST, stored)
+    # The approver has not approved yet and is still named.
+    stored = _cut_the_record_of(service, APPROVER_GC)
+    assert _get(api, OWNER, view) == _record_of(APPROVER_GC)
+    _write_the_record_of(service, APPROVER_GC, stored)
+    assert _get(api, OWNER, view)[0] == 200
+
+
+# What these commits did not change. Two kinds of stored row are still read without the
+# helper that names the row: a finding, and the actor records where all of them are read at
+# once. They answer with the validation library's own message, which quotes the stored
+# text. The records say so, and this test holds the limit as it is: when one of these rows
+# gets the worded error, it fails and the records have to follow.
+A_FINDING = (
+    "SELECT rowid FROM findings WHERE matter_id = :matter AND version = (SELECT "
+    "current_version FROM matters WHERE matter_id = :matter) ORDER BY finding_key LIMIT 1"
+)
+
+
+def _the_librarys_message(answer: tuple[int, Any], model: str, quoted: str) -> None:
+    status, body = answer
+    assert (status, body["error"]) == (422, "invalid_command"), answer
+    message = body["message"]
+    assert message.startswith(f"1 validation error for {model}\n"), message
+    assert "cannot be read from the store" not in message
+    assert quoted in message, message
+
+
+def test_every_actor_read_at_once_and_a_finding_still_answer_with_the_librarys_message(
+    tmp_path,
+) -> None:
+    service = make_service(tmp_path, clock=_StepClock())
+    api = PilotApi(service)
+    matter = run_until(service, "specialist-revision", "B42")
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+    view = f"/pilot/api/matters/{matter}"
+
+    def written() -> tuple[int, int]:
+        with service.store.reading() as connection:
+            (manifests,) = connection.execute(
+                "SELECT COUNT(*) FROM deliverable_manifests WHERE matter_id = ?", (matter,)
+            ).fetchone()
+        return revision(service, matter), int(manifests)
+
+    before = written()
+    # The lead approver is on no matter, so no request reads that record on its own.
+    stored = _cut_the_record_of(service, APPROVER_LEAD)
+    quoted = stored[:12]
+    assert quoted == '{"actor_id":'
+    # The actor list, which anyone may read and the room loads first.
+    _the_librarys_message(_get(api, "", "/pilot/api/actors"), "Actor", quoted)
+    # The two commands that write files read every actor record for the names they print.
+    for command in ("prepare_delivery", "export_internal_review"):
+        _the_librarys_message(_post(api, OWNER, matter, command), "Actor", quoted)
+    # Nothing was written, and every view of the matter and both lists still answer.
+    assert (state(service, matter), written()) == ("approved", before)
+    assert _get(api, OWNER, view)[0] == 200
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+    assert [m["matter_id"] for m in _list(api, OWNER)] == [matter]
+    _write_the_record_of(service, APPROVER_LEAD, stored)
+    assert _get(api, "", "/pilot/api/actors")[0] == 200
+
+    # A finding of the current version. A reviewer's view reads it, a requester's does not.
+    with service.store.transaction() as connection:
+        (rowid,) = connection.execute(A_FINDING, {"matter": matter}).fetchone()
+        (finding,) = connection.execute(
+            "SELECT body FROM findings WHERE rowid = ?", (rowid,)
+        ).fetchone()
+        connection.execute("UPDATE findings SET body = ? WHERE rowid = ?", (finding[:40], rowid))
+    _the_librarys_message(_get(api, OWNER, view), "Finding", finding[:12])
+    assert _listed_and_told(api, matter) == ("approved", "Approved")
+    assert [m["matter_id"] for m in _list(api, OWNER)] == [matter]
+
+
 # -- what the requester is told while an approval gives no package --------------------
 
 # An approved matter is with the matter owner, who prepares the package. `prepare_delivery`
@@ -1951,3 +2483,119 @@ def test_the_capability_record_says_when_the_package_is_opened_and_what_is_shown
     )
     assert "`src/pilot/requester_status.py`" in modules and "`src/pilot/service.py`" in modules
     assert "`tests/test_pilot_package_standing.py`" in tests
+
+
+# The limit the behaviour test above holds as it is, in the words of the records.
+THE_LIBRARYS = "the validation library's own message, which quotes the stored text"
+
+
+def test_the_records_say_what_a_version_that_cannot_be_read_does() -> None:
+    # The words the service answers with, as the behaviour test above compares them.
+    named = '"version N of matter X cannot be read from the store"'
+    # The two sentences of the page, as its script writes them. The browser test reads them
+    # on the page (tests/test_review_room_browser.py).
+    not_loaded = '"The matter list could not be loaded."'
+    nothing_visible = '"No matter is visible to this role."'
+    for sentence in (not_loaded, nothing_visible):
+        assert REVIEW_ROOM_HTML.count(sentence) == 1, sentence
+    runbook = (DOCS / "pilot" / "RUNBOOK.md").read_text(encoding="utf-8")
+    [row] = [line for line in runbook.splitlines() if f"answers {named} |" in line]
+    assert row == (
+        f"| A matter view or a requester's matter list answers {named} | The store holds a "
+        "current version of that matter which the application cannot read, so the matter's own "
+        "view stops with this error for every reader and the whole matter list of its requester "
+        "stops with the same error, because no status is made up for the matter and it is not "
+        "left out of the list, while the requester's other matters still answer on their own "
+        "route and a reviewer's list, which reads no version, is not affected; preserve the "
+        "store file and inform the pilot lead, as for a chain that fails verification. In the "
+        f"review room that requester reads {not_loaded} and this error where the list was. "
+        "While the fault lasts the room shows them no entry, so they can open none of their "
+        "matters from the page, the readable ones included. |"
+    )
+    # It stands in the troubleshooting table, below the row on the event chain.
+    rows = runbook.split("## 9. Recovery and troubleshooting", 1)[1].splitlines()
+    assert rows[rows.index(row) - 1].startswith(
+        "| Event chain fails verification | Stop condition."
+    )
+
+    guide = " ".join((DOCS / "API.md").read_text(encoding="utf-8").split())
+    room = guide.split("## Pilot review-room API ", 1)[1].split(" ## ", 1)[0]
+    for sentence in (
+        "The label is built from each matter's current version.",
+        "If the store holds one that cannot be read, a requester's list answers as that "
+        f"matter's own view does, with 422 `invalid_command` and {named}, and gives no entries: "
+        "no label is made up for the matter and the matter is not left out.",
+        f"The review room then shows {not_loaded} and that message where the list was.",
+        f"It says {nothing_visible} only for a list that loaded and is empty.",
+        "| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored row that "
+        "cannot be read. For a matter version, a comment, a proposed change and an actor "
+        "record that is read on its own, the message names the matter or the actor and repeats "
+        "nothing of the stored text. For a stored finding, and where every actor record is "
+        "read at once (`GET /pilot/api/actors`, `prepare_delivery`, `export_internal_review`), "
+        f"it is {THE_LIBRARYS} |",
+    ):
+        assert sentence in room, sentence
+
+
+def test_the_records_say_what_another_row_that_cannot_be_read_does() -> None:
+    # What the service calls each row, as the behaviour tests above compare it.
+    comment, change, decided = (
+        '"' + STORED_ROWS[kind][2].format(version="N", matter="X") + '"'
+        for kind in (A_COMMENT, A_CHANGE, AN_APPROVER)
+    )
+    assert (comment, change, decided) == (
+        '"a comment on matter X"',
+        '"a proposed change of version N of matter X"',
+        '"the record of an actor who decided on matter X"',
+    )
+    cannot = '"cannot be read from the store"'
+    own = '"the record of actor A cannot be read from the store"'
+    runbook = (DOCS / "pilot" / "RUNBOOK.md").read_text(encoding="utf-8")
+    rows = runbook.split("## 9. Recovery and troubleshooting", 1)[1].splitlines()
+    [row] = [line for line in rows if comment in line]
+    assert row == (
+        f"| A matter view or a requester's matter list answers {comment}, {change} or {decided}, "
+        f"followed by {cannot} | The store holds such a row which the application cannot read, "
+        "and the view and the list stop as they do for a version that cannot be read (the row "
+        "above). For the requester a comment is read in every state, and a proposed change of "
+        "the current version or the record of an actor who signed off or approved only while "
+        "the matter is `approved` or `ready_for_delivery`, where the requester's status asks "
+        "the export gate. The error names the matter and the kind of row, names no reviewer "
+        f"and repeats nothing of the stored text. {own} names the record of the actor who made "
+        "the request, of the actor a matter owner names in `assign`, or, to a reviewer, that "
+        "of an actor assigned to the matter. For an assigned actor who has signed off or "
+        "approved, a reviewer can read the sentence on an actor who decided instead. The actor "
+        "list as a whole (`GET /pilot/api/actors`, which the room loads first, and "
+        "`prepare_delivery` and `export_internal_review`, which read every actor record) and a "
+        f"stored finding still answer with {THE_LIBRARYS}. Preserve the store file and inform "
+        "the pilot lead. |"
+    )
+    # "The row above" is the one on a version that cannot be read.
+    assert rows[rows.index(row) - 1].startswith(
+        "| A matter view or a requester's matter list answers "
+        '"version N of matter X cannot be read from the store" |'
+    )
+
+    guide = " ".join((DOCS / "API.md").read_text(encoding="utf-8").split())
+    room = guide.split("## Pilot review-room API ", 1)[1].split(" ## ", 1)[0]
+    for sentence in (
+        "The status also reads the matter's comments, in every state, and it asks the export "
+        "gate while the matter is `approved` or `ready_for_delivery`.",
+        "The gate reads the proposed changes of the current version and the records of the "
+        "actors who signed off or approved.",
+        "If one of these rows cannot be read, the requester's view and list answer in the same "
+        f"way, with {comment}, {change} or {decided}, followed by {cannot}.",
+        "The message names the matter and the kind of row, says how many problems the stored "
+        "text has and in which field the first one is, and repeats nothing of that text; the "
+        "third names no actor.",
+        f"A request whose own actor record cannot be read answers {own}.",
+        "The same message names the actor a matter owner names in `assign` and, to a reviewer, "
+        "an actor assigned to the matter.",
+        "For an assigned actor who has signed off or approved, a reviewer can be answered with "
+        "the message on an actor who decided instead.",
+        "Two kinds of stored row do not get such a message.",
+        "A stored finding, which no requester's view reads, and the actor records where all of "
+        "them are read at once (`GET /pilot/api/actors`, `prepare_delivery` and "
+        f"`export_internal_review`) still answer 422 `invalid_command` with {THE_LIBRARYS}.",
+    ):
+        assert sentence in room, sentence
