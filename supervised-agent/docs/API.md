@@ -335,7 +335,13 @@ actor who decided on matter X", followed by "cannot be read from the store". The
 names the matter and the kind of row, says how many problems the stored text has and in
 which field the first one is, and repeats nothing of that text; the third names no actor. A
 request whose own actor record cannot be read answers "the record of actor A cannot be read
-from the store".
+from the store". The same message names the actor a matter owner names in `assign` and, to
+a reviewer, an actor assigned to the matter. For an assigned actor who has signed off or
+approved, a reviewer can be answered with the message on an actor who decided instead. Two
+kinds of stored row do not get such a message. A stored finding, which no requester's view
+reads, and the actor records where all of them are read at once (`GET /pilot/api/actors`,
+`prepare_delivery` and `export_internal_review`) still answer 422 `invalid_command` with
+the validation library's own message, which quotes the stored text.
 
 Answers to a refused request or command:
 
@@ -349,7 +355,7 @@ Answers to a refused request or command:
 | 409 | `stale_submission` | The matter changed; `current_revision` is returned |
 | 409 | `transition_blocked` | Evidence is missing; `evidence` lists each item |
 | 409 | `export_blocked` | The export gate refused; `checks` lists each condition |
-| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored matter version, comment, proposed change or actor record that cannot be read (the message names the matter, or the actor whose own record it is, and repeats nothing of the stored text) |
+| 422 | `invalid_command` | Unknown command or invalid arguments, or a stored row that cannot be read. For a matter version, a comment, a proposed change and an actor record that is read on its own, the message names the matter or the actor and repeats nothing of the stored text. For a stored finding, and where every actor record is read at once (`GET /pilot/api/actors`, `prepare_delivery`, `export_internal_review`), it is the validation library's own message, which quotes the stored text |
 
 Scripted fixture timestamps cannot be set through this API.
 
