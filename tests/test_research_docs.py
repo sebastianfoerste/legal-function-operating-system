@@ -175,21 +175,46 @@ class ResearchRulesTest(unittest.TestCase):
                 self.assertIsNone(re.search(r"\b[Rr]ules? \d", text))
 
 
-# How a changelog entry points to another place of the changelog by its position: "at the
-# top of this section", "the entry above", "below this entry", and "above" or "below" where
-# it ends a phrase, as in "(see the entry on drafts above)" or "the fix for drafts below,".
-# "Above" or "below" followed by what it is above or below ("the status above that line")
-# is no pointer, and neither is "or above" for a value.
+# How a changelog entry points to another place of the changelog by its position. The six
+# parts of the pattern, in its order:
+#   1 "at the top of this section", "the bottom of the subsection", "the top of this list".
+#   2 "the entry above", "the entries just below", "the entry further down". What follows
+#     can be what the entry is above or below, as in "its entry below 320 px of width" or
+#     "the entry above the break": that is a place on a page and no pointer.
+#   3 "the above entry", "the previous entry", "the next entry but one".
+#   4 "the first entry of this section", "the last entry under Fixed".
+#   5 "below this entry", "above that one", "recorded below in this section".
+#   6 "above" or "below" where it ends a phrase, as in "(see the entry on drafts above)" or
+#     "the fix for drafts below,". A mark, a dash between spaces or the end of the line
+#     ends a phrase. "Above" or "below" followed by what it is above or below ("the status
+#     above that line") is no pointer, and neither is "or above" for a value.
 BY_POSITION = re.compile(
-    r"\b(?:top|bottom) of this (?:section|subsection|release|changelog)\b"
-    r"|\bentr(?:y|ies) (?:above|below)\b"
-    r"|\b(?:above|below) (?:this|that) (?:entry|one)\b"
-    r"|(?<!\bor )(?<!\band )\b(?:above|below)(?=\s*(?:[,.;:)(]|$))",
+    r"\b(?:top|bottom) of (?:this \w+|the (?:section|subsection|release|changelog))\b"
+    r"|\bentr(?:y|ies) (?:(?:directly |just |right )?(?:above|below)|further (?:up|down))\b"
+    r"(?! (?:(?:the|an?)\b|\d))"
+    r"|\b(?:above|below|previous|next|preceding|following) entr(?:y|ies)\b"
+    r"|\b(?:first|last) entr(?:y|ies) (?:(?:of|in) this \w+|under (?-i:[A-Z]))"
+    r"|\b(?:above|below) (?:(?:this|that) (?:entry|one)|in this \w+)\b"
+    r"|(?<!\bor )\b(?:above|below)(?=\s*(?:[,.;:)(!?\u2013\u2014]|-\s|$))",
     re.I,
 )
-# An entry is named in straight double quotes. A name in other quotes is not looked up by
-# the test below, so it is not accepted.
-IN_OTHER_QUOTES = re.compile(r"\bentr(?:y|ies),? ['‘’“”]", re.I)
+# An entry is named by its opening words in straight double quotes, after "entry" or
+# "entries" and, if the sentence wants one, "named", "called" or "titled". Several names can
+# follow each other with a comma, "and" or "or". The first test below looks up each name.
+NAMED = re.compile(
+    r'\bentr(?:y|ies),? (?:(?:named|called|titled) )?("[^"]+"(?:,? (?:(?:and|or) )?"[^"]+")*)',
+    re.I,
+)
+# A name in other quotes, or written as code, is not looked up, so it is not accepted.
+IN_OTHER_QUOTES = re.compile(
+    r"\bentr(?:y|ies),? (?:(?:named|called|titled) )?['‘’“”`]", re.I
+)
+
+
+def _named_entries(text: str) -> list[str]:
+    """The opening words by which the text names changelog entries."""
+
+    return [name for names in NAMED.findall(text) for name in re.findall(r'"([^"]+)"', names)]
 
 
 def _own_words(line: str) -> str:
@@ -215,13 +240,31 @@ class ChangelogPointersTest(unittest.TestCase):
         # section", "above" and "below" come to mean another entry, or none. An entry is
         # named by its opening words instead: `the entry "..."`. Every such name has to be
         # the opening of exactly one entry of the same release, so a reworded entry fails
-        # here until the sentences that name it follow. The next test refuses the pointers
-        # this one cannot look up.
+        # here until the sentences that name it follow. The names of a list are looked up
+        # one by one, also after "entries" and after "named", "called" or "titled". The next
+        # test refuses the pointers this one cannot look up.
+        for text, names in (
+            ('(see the entry "Pilot: one")', ["Pilot: one"]),
+            ('The matter list has its own entry, "Pilot: one". Tests:', ["Pilot: one"]),
+            ('(the entries "Pilot: one" and "Pilot: two")', ["Pilot: one", "Pilot: two"]),
+            (
+                '(the Entries, "Pilot: one", "Pilot: two", or "Pilot: three")',
+                ["Pilot: one", "Pilot: two", "Pilot: three"],
+            ),
+            ('(the entry named "Pilot: one")', ["Pilot: one"]),
+            ('(the entry called "Pilot: one")', ["Pilot: one"]),
+            ('(the entries titled "Pilot: one" or "Pilot: two")', ["Pilot: one", "Pilot: two"]),
+            # What an entry said is quoted, and names no entry.
+            ('The entry on drafts said "(the entry at the top of this section)".', []),
+            ('It is shown as "In review", in the entry and in the status "Approved".', []),
+        ):
+            with self.subTest(text):
+                self.assertEqual(_named_entries(text), names)
         text = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
         named = 0
         for release in re.split(r"^## ", text, flags=re.M)[1:]:
             entries = re.findall(r"^- (.+)$", release, re.M)
-            for name in re.findall(r'\bentry,? "([^"]+)"', release):
+            for name in _named_entries(release):
                 named += 1
                 with self.subTest(name):
                     self.assertEqual(sum(entry.startswith(name) for entry in entries), 1)
@@ -233,21 +276,78 @@ class ChangelogPointersTest(unittest.TestCase):
         # was made for. Both are refused here, in every line of the changelog. What a line
         # quotes, in double quotes or as code, is not its own wording: the entry that
         # records the correction quotes the old pointers. The check reads words and does
-        # not understand a sentence, so a pointer worded in yet another way is not found.
-        for pointer in (
-            "stops the view with an error that names it (the entry at the top of this section).",
-            "Since the fix for unsubmitted drafts below, the ledger left out every matter.",
-            "keeps the assessment it had (see the entry on the pilot's records above).",
-            "(see the entry on drafts above)",
-            "which lists the five corrections below (the word filter and four more)",
-            "The entry above says why.",
-            "This is undone by the change recorded below this entry.",
-            "(see the entry 'Pilot: a matter legal never received')",
+        # not understand a sentence, so it errs both ways. A pointer worded in yet another
+        # way is not found, for example "the entry above the one on drafts", which reads
+        # like a place on a page, or "two entries further on". And a sentence that points
+        # to no entry is refused where it ends a phrase with "above" or "below" or speaks
+        # of "the top of this changelog": it has to be reworded. Every alternative of the
+        # patterns, each word and each mark, is held by an example below, so that none can
+        # be taken out unseen.
+        for pointer, found in (
+            # 1
+            ("names it (the entry at the top of this section).", "top of this section"),
+            ("(the entry at the top of this list)", "top of this list"),
+            ("(the entry at the bottom of the section)", "bottom of the section"),
+            ("(the entry at the top of the subsection)", "top of the subsection"),
+            ("The fix at the top of the release says why.", "top of the release"),
+            ("(the entry at the top of the changelog)", "top of the changelog"),
+            # 2
+            ("The entry above says why.", "entry above"),
+            ("The entries below say why.", "entries below"),
+            ("(the entry directly below this)", "entry directly below"),
+            ("The entry just above says why.", "entry just above"),
+            ("The entry right below says why.", "entry right below"),
+            ("(the entry further down in the list)", "entry further down"),
+            ("The entry further up says why.", "entry further up"),
+            ("The entry above then said the opposite.", "entry above"),
+            ("The entry below answers it.", "entry below"),
+            # 3
+            ("(see the above entry for the reason)", "above entry"),
+            ("The below entries say why.", "below entries"),
+            ("(the previous entry has the reason)", "previous entry"),
+            ("(the next entry but one)", "next entry"),
+            ("The preceding entry says why.", "preceding entry"),
+            ("The following entries say why.", "following entries"),
+            # 4
+            ("(the first entry of this section)", "first entry of this section"),
+            ("(the last entries in this release)", "last entries in this release"),
+            ("(the last entry under Fixed)", "last entry under F"),
+            # 5
+            ("This is undone by the change recorded below this entry.", "below this entry"),
+            ("The correction above that one says why.", "above that one"),
+            ("(the fix for drafts recorded below in this section)", "below in this section"),
+            # 6
+            ("Since the fix for unsubmitted drafts below, the ledger left out a matter.", "below"),
+            ("The reason is given above.", "above"),
+            ("It is the fix for drafts below; the ledger follows it.", "below"),
+            ("The corrections are recorded below: the word filter and four more.", "below"),
+            ("keeps the assessment it had (see the entry on the pilot's records above).", "above"),
+            ("which lists the five corrections below (the word filter and four more)", "below"),
+            ("How could the fix for drafts above! It names the matter.", "above"),
+            ("Is it the fix for drafts below? It names the matter.", "below"),
+            ("(the entry on drafts above \u2013 it names the matter)", "above"),
+            ("(the entry on drafts above \u2014 it names the matter)", "above"),
+            ("(the entry on drafts above - it names the matter)", "above"),
+            ("The reason is with the fix for drafts below", "below"),
+            ("(see above and below)", "below"),
+            ("Below, the fix for drafts says why.", "Below"),
+            # A name that the test above does not look up.
+            ("(see the entry 'Pilot: a matter legal never received')", "entry '"),
+            ("(see the entry ‘Pilot: a matter legal never received’)", "entry ‘"),
+            ("(see the entries ’Pilot: a matter legal never received’)", "entries ’"),
+            ("(see the entry, “Pilot: a matter legal never received”)", "entry, “"),
+            ("(see the entry ”Pilot: a matter legal never received”)", "entry ”"),
+            ("(the entry `Pilot: no such entry anywhere`)", "entry `"),
+            ("Entry 'Pilot: no such entry anywhere' says why.", "Entry '"),
+            ("(the entry named 'Pilot: no such entry anywhere')", "entry named '"),
+            ("(the entry called 'Pilot: no such entry anywhere')", "entry called '"),
+            ("(the entry titled `Pilot: no such entry anywhere`)", "entry titled `"),
         ):
             with self.subTest(pointer):
-                self.assertEqual(len(_unnamed_pointers(pointer)), 1)
+                self.assertEqual(_unnamed_pointers(pointer), [found])
         for ordinary in (
             '(see the entry "Pilot: a matter legal received is no longer left out")',
+            '(the entries named "Pilot: one" and "Pilot: two")',
             'The entry on drafts said "(the entry at the top of this section)".',
             'That pointer and two others, which said "below" and "above", now name the entry.',
             "The test refuses `the entry above` and `(see the entry 'Pilot: no such entry')`.",
@@ -258,6 +358,18 @@ class ChangelogPointersTest(unittest.TestCase):
             '`init` writes "Value in band or above." for the high risk sentences.',
             "A dispute value of EUR 250,000 or above.",
             "The audit entry's time and the `closed` entry, if one is missing",
+            # A place on a page: what the entry is above or below follows.
+            "The pill may wrap inside its entry below 320 px of width.",
+            "A list entry below the selected one keeps its place.",
+            "The timeline shows the entry above the break in grey.",
+            "Each audit entry above the first unreadable one is still verified.",
+            "A list entry just above a closed one keeps its place.",
+            "The room scrolls to the entry below an open form.",
+            # Not the changelog's own parts, and no heading of it.
+            "The newest matter stands at the top of the list.",
+            "The last entry under review keeps its place in the list.",
+            "The first entry of the list is opened when the page loads.",
+            "the wording above-mentioned in the runbook",
         ):
             with self.subTest(ordinary):
                 self.assertEqual(_unnamed_pointers(ordinary), [])
@@ -267,7 +379,8 @@ class ChangelogPointersTest(unittest.TestCase):
                 self.assertEqual(
                     _unnamed_pointers(line),
                     [],
-                    'name the entry by its opening words instead: the entry "..."',
+                    'name the entry by its opening words instead: the entry "..."; a sentence '
+                    "that points to no entry and speaks of a place on a page has to be reworded",
                 )
 
 

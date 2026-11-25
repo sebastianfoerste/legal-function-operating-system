@@ -1043,6 +1043,21 @@ def test_the_room_says_when_the_matter_list_could_not_be_loaded(tmp_path, monkey
     assert out[OTHER_OWNER]["entries"] == [] and out[OTHER_OWNER]["alert"] == []
     assert out[OTHER_OWNER]["muted"] == [nothing_visible]
 
+    # The room says it for any answer that is not the list, not only for that one. With the
+    # row of the current version gone, the requester's list answers 404 and another message
+    # (tests/test_pilot_package_standing.py), and the page shows that one.
+    with service.store.transaction() as connection:
+        connection.execute("DELETE FROM matter_versions WHERE matter_id = ?", (bad,))
+    status, answer, _ = api.handle("GET", "/pilot/api/matters", {"X-Pilot-Actor": REQUESTER})
+    assert (status, answer["message"]) == (404, f"matter {bad} has no version 2")
+    out = _run_node(tmp_path, monkeypatch, service, LIST_FAULT_SCRIPT, REQUESTER, OWNER)
+    assert out["errors"] == []
+    requester = out[REQUESTER]
+    assert requester["alert"] == [not_loaded, f"matter {bad} has no version 2"]
+    assert requester["entries"] == [] and requester["muted"] == []
+    assert nothing_visible not in requester["reads"]
+    assert out[OWNER]["entries"] == [good, bad] and out[OWNER]["alert"] == []
+
 
 def test_triage_verbs_take_a_typed_reason_in_the_room(tmp_path, monkeypatch) -> None:
     clock = _SetClock("2026-11-02T08:00:00Z")
