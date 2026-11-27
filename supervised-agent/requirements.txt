@@ -2,9 +2,9 @@
 #    uv pip compile requirements.in -o requirements.txt --python-version 3.13
 annotated-types==0.7.0
     # via pydantic
-pydantic==2.14.3
+pydantic==2.14.4
     # via -r requirements.in
-pydantic-core==2.50.4
+pydantic-core==2.50.5
     # via pydantic
 typing-extensions==4.16.0
     # via
